@@ -1,4 +1,4 @@
-import {Column, Entity, JoinTable, ManyToMany, ManyToOne, RelationId} from 'typeorm';
+import {Column, Entity, ManyToOne, OneToMany, RelationId} from 'typeorm';
 import {Field, Float, InputType, ObjectType, registerEnumType} from '@nestjs/graphql';
 import {IsEnum, IsNumber} from 'class-validator';
 
@@ -43,9 +43,13 @@ export class Order extends CoreEntity {
   })
   restaurant?: Restaurant;
 
+  /**
+   * Was @ManyToMany with a join table, which states that a line item may belong
+   * to several orders — not true of the domain, and an extra table to traverse
+   * on every read.
+   */
   @Field(type => [OrderItem])
-  @ManyToMany(type => OrderItem, {eager: true})
-  @JoinTable()
+  @OneToMany(type => OrderItem, item => item.order, {eager: true, cascade: true})
   items: OrderItem[];
 
   @Column({nullable: true})

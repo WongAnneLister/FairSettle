@@ -82,9 +82,10 @@ export class OrderService {
             }
           }
           orderFinalPrice += dishFinalPrice;
-          orderItems.push(
-            await manager.save(manager.create(OrderItem, {dish, options: item.options})),
-          );
+          // Built, not saved. With cascade on Order.items the insert happens as
+          // part of saving the order, so there is no window in which an item
+          // exists without its order — the condition B4 had to clean up after.
+          orderItems.push(manager.create(OrderItem, {dish, options: item.options}));
         }
 
         const saved = await manager.save(
@@ -150,7 +151,11 @@ export class OrderService {
     try {
       const order = await this.orders.findOne({
         where: {id: getOrderInput.id},
-        relations: ['restaurant'],
+        // B14: Order.items is eager, but eager loading does not cascade to the
+        // item's own dish, so line items came back saying nothing about what was
+        // ordered. Requested explicitly rather than marking dish eager too —
+        // every eager relation is paid for by every query that touches an order.
+        relations: ['restaurant', 'items', 'items.dish'],
       });
       if (!order) {
         throw new NotFoundError('Order not found');
