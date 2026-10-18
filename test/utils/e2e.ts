@@ -15,6 +15,11 @@ export interface TestContext {
   dataSource: DataSource;
 }
 
+/** The ephemeral port an app bound to, for tests that need a real socket. */
+export function portOf(app: INestApplication): number {
+  return (app.getHttpServer().address() as {port: number}).port;
+}
+
 /**
  * Boots the real application against the test database.
  *
@@ -46,8 +51,14 @@ export async function createTestApp(): Promise<TestContext> {
  * TypeORM 0.3 removed the global getConnection(); the DataSource is resolved
  * from the application container instead.
  */
-export async function destroyTestApp({app, dataSource}: TestContext): Promise<void> {
-  if (dataSource?.isInitialized) {
+export async function destroyTestApp(
+  {app, dataSource}: TestContext,
+  options: {dropDatabase?: boolean} = {},
+): Promise<void> {
+  const {dropDatabase = true} = options;
+  // A test running two instances against one database must only let one of them
+  // drop it.
+  if (dropDatabase && dataSource?.isInitialized) {
     await dataSource.dropDatabase();
   }
   await app.close();
