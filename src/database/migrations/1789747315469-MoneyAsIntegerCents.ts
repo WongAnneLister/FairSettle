@@ -46,7 +46,7 @@ export class MoneyAsIntegerCents1789747315469 implements MigrationInterface {
       UPDATE "dish" d
          SET options = (
            SELECT jsonb_agg(
-             (${rekey('(opt - \'choices\')')})
+             (${rekey("(opt - 'choices')")})
              || CASE WHEN opt ? 'choices' AND jsonb_typeof(opt->'choices') = 'array'
                      THEN jsonb_build_object('choices', COALESCE((
                             SELECT jsonb_agg(${rekey('ch')})
