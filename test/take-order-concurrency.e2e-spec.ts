@@ -162,16 +162,12 @@ describe('takeOrder under concurrency (e2e)', () => {
     }
 
     const multiWinner = rounds.filter(r => r.winners.length !== 1);
-    expect(
-      multiWinner.map(r => ({order: r.orderId, winners: r.winners.length})),
-    ).toEqual([]);
+    expect(multiWinner.map(r => ({order: r.orderId, winners: r.winners.length}))).toEqual([]);
 
     rounds.forEach(round => {
       // Losing a race is a CONFLICT, not a FORBIDDEN: the caller was eligible
       // and should refresh, not be told they lack permission.
-      expect(round.loserCodes).toEqual(
-        Array(DRIVER_COUNT - 1).fill('CONFLICT'),
-      );
+      expect(round.loserCodes).toEqual(Array(DRIVER_COUNT - 1).fill('CONFLICT'));
     });
   });
 

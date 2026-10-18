@@ -213,21 +213,53 @@ export class OrderService {
 
   async takeOrder(driver: User, {id}: TakeOrderInput): Promise<TakeOrderOutput> {
     try {
+      // One atomic statement. The eligibility check lives in the WHERE clause,
+      // so the database decides the winner instead of the application guessing
+      // from a value it read moments earlier.
+      //
+      // Under PostgreSQL's default READ COMMITTED, a second concurrent UPDATE
+      // blocks on the first, then RE-EVALUATES its predicate against the newly
+      // committed row — finds driverId non-null, matches nothing, and reports
+      // affected = 0. That re-evaluation is the whole mechanism.
+      const claim = await this.orders
+        .createQueryBuilder()
+        .update(Order)
+        .set({driver})
+        .where('id = :id', {id})
+        .andWhere('"driverId" IS NULL')
+        .andWhere('status = :cooked', {cooked: OrderStatus.Cooked})
+        .execute();
+
+      if (claim.affected === 0) {
+        // Only on the losing path, so this read cannot reintroduce the race.
+        await this.explainFailedClaim(id);
+      }
+
       const order = await this.orders.findOne({where: {id}});
-      if (!order) {
-        throw new NotFoundError('Could not find order');
-      }
-      if (order.driver) {
-        // CONFLICT, not FORBIDDEN: the caller was eligible and lost a race, so
-        // the useful client response is "refresh the list", not "you may not".
-        throw new ConflictError('This order already has a driver');
-      }
-      await this.orders.save([{id, driver}]);
-      await this.pubsub.publish(NEW_ORDER_UPDATES, {orderUpdates: {...order, driver}});
+      await this.pubsub.publish(NEW_ORDER_UPDATES, {orderUpdates: order});
       return {ok: true};
     } catch (error) {
       return failure(error, this.logger, {op: 'takeOrder', driverId: driver.id, orderId: id});
     }
+  }
+
+  /**
+   * Turns "the conditional UPDATE matched nothing" into a specific reason.
+   *
+   * Always throws. Runs only after a claim has already failed, so the extra read
+   * costs nothing on the success path and cannot affect the outcome.
+   */
+  private async explainFailedClaim(id: number): Promise<never> {
+    const order = await this.orders.findOne({where: {id}});
+    if (!order) {
+      throw new NotFoundError('Could not find order');
+    }
+    if (order.driverId) {
+      // CONFLICT, not FORBIDDEN: the caller was eligible and lost a race, so
+      // the useful client response is "refresh the list", not "you may not".
+      throw new ConflictError('This order already has a driver');
+    }
+    throw new ConflictError(`Order is ${order.status}, not ${OrderStatus.Cooked}`);
   }
 
   canSeeOrder(user: User, order: Order): boolean {
