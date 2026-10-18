@@ -1,4 +1,4 @@
-import {Column, Entity, ManyToOne, OneToMany, RelationId} from 'typeorm';
+import {Column, Entity, Index, ManyToOne, OneToMany, RelationId} from 'typeorm';
 import {Field, Float, InputType, ObjectType, registerEnumType} from '@nestjs/graphql';
 import {IsEnum, IsNumber} from 'class-validator';
 
@@ -20,6 +20,13 @@ registerEnumType(OrderStatus, {name: 'OrderStatus'});
 @InputType('OrderInputType', {isAbstract: true})
 @ObjectType()
 @Entity()
+// One composite index per role's query path in getOrders. Status is the second
+// column in each because it is an equality filter applied on top of the owner
+// predicate, and leaving it off would still let the index serve the unfiltered
+// case.
+@Index(['restaurant', 'status'])
+@Index(['driver', 'status'])
+@Index(['customer', 'status'])
 export class Order extends CoreEntity {
   @Field(type => User, {nullable: true})
   @ManyToOne(type => User, user => user.orders, {onDelete: 'SET NULL', nullable: true, eager: true})

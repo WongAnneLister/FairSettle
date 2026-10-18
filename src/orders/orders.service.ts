@@ -22,6 +22,9 @@ import {TransitionActor, evaluateTransition} from './order-state-machine';
 import {OrderItem} from './entities/order-item.entity';
 import {Order, OrderStatus} from './entities/order.entity';
 
+/** Page size for getOrders. Matches the restaurants module. */
+const ORDERS_PAGE_SIZE = 25;
+
 @Injectable()
 export class OrderService {
   private readonly logger = new Logger(OrderService.name);
@@ -128,35 +131,51 @@ export class OrderService {
     }
   }
 
-  async getOrders(user: User, {status}: GetOrdersInput): Promise<GetOrdersOutput> {
+  async getOrders(user: User, {status, page}: GetOrdersInput): Promise<GetOrdersOutput> {
     try {
-      let orders: Order[];
-      if (user.role === UserRole.Client) {
-        orders = await this.orders.find({
-          where: {
-            customer: {id: user.id},
-            ...(status && {status}),
-          },
-        });
-      } else if (user.role === UserRole.Delivery) {
-        orders = await this.orders.find({
-          where: {
-            driver: {id: user.id},
-            ...(status && {status}),
-          },
-        });
-      } else if (user.role === UserRole.Owner) {
-        const restaurants = await this.restaurants.find({
-          where: {owner: {id: user.id}},
-          relations: ['orders'],
-        });
-        orders = restaurants.map(restaurant => restaurant.orders).flat(1);
-        if (status) {
-          orders = orders.filter(order => order.status === status);
-        }
+      // One query for every role. The Owner branch used to load every order of
+      // every restaurant the owner has — fully hydrated, because Order eagerly
+      // loads customer, driver, restaurant and items — and then filter by status
+      // in Node. A restaurant with three years of history returned one page by
+      // pulling tens of thousands of rows into process memory first.
+      const query = this.orders
+        .createQueryBuilder('order')
+        .leftJoinAndSelect('order.restaurant', 'restaurant')
+        .leftJoinAndSelect('order.items', 'item')
+        .leftJoinAndSelect('item.dish', 'dish')
+        .orderBy('order.createdAt', 'DESC')
+        // take/skip rather than limit/offset. limit/offset apply to the joined
+        // row set, so one order with three items would consume three rows of the
+        // page; take/skip make TypeORM paginate over distinct order ids first.
+        .take(ORDERS_PAGE_SIZE)
+        .skip((page - 1) * ORDERS_PAGE_SIZE);
+
+      switch (user.role) {
+        case UserRole.Client:
+          query.where('order.customerId = :userId', {userId: user.id});
+          break;
+        case UserRole.Delivery:
+          query.where('order.driverId = :userId', {userId: user.id});
+          break;
+        case UserRole.Owner:
+          query.where('restaurant.ownerId = :userId', {userId: user.id});
+          break;
+        default:
+          throw new ForbiddenError('Unknown role');
       }
 
-      return {ok: true, orders};
+      if (status) {
+        query.andWhere('order.status = :status', {status});
+      }
+
+      const [orders, totalResults] = await query.getManyAndCount();
+
+      return {
+        ok: true,
+        orders,
+        totalResults,
+        totalPages: Math.ceil(totalResults / ORDERS_PAGE_SIZE),
+      };
     } catch (error) {
       return failure(error, this.logger, {op: 'getOrders', userId: user.id, role: user.role});
     }
