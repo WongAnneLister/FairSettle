@@ -23,7 +23,7 @@ import {CategoryRepository} from './repositories/category.repository';
 export class RestaurantService {
   constructor(
     @InjectRepository(Restaurant) private readonly restaurants: Repository<Restaurant>,
-    @InjectRepository(Category) private readonly categories: CategoryRepository,
+    private readonly categories: CategoryRepository,
     @InjectRepository(Dish) private readonly dishes: Repository<Dish>,
   ) {}
 
@@ -48,7 +48,9 @@ export class RestaurantService {
     editRestaurantInput: EditRestaurentInput,
   ): Promise<EditRestaurentOutput> {
     try {
-      const restaurant = await this.restaurants.findOne(editRestaurantInput.restaurantId);
+      const restaurant = await this.restaurants.findOne({
+        where: {id: editRestaurantInput.restaurantId},
+      });
       if (!restaurant) {
         return {ok: false, error: 'Restaurant not found'};
       }
@@ -77,7 +79,9 @@ export class RestaurantService {
     deleteRestaurantInput: DeleteRestaurentInput,
   ): Promise<DeleteRestaurentOutput> {
     try {
-      const restaurant = await this.restaurants.findOne(deleteRestaurantInput.restaurantId);
+      const restaurant = await this.restaurants.findOne({
+        where: {id: deleteRestaurantInput.restaurantId},
+      });
       if (!restaurant) {
         return {ok: false, error: 'Restaurant not found'};
       }
@@ -112,7 +116,8 @@ export class RestaurantService {
 
   async findRestaurantById({restaurantId}: RestaurantInput): Promise<RestaurantOutput> {
     try {
-      const restaurant = await this.restaurants.findOne(restaurantId, {
+      const restaurant = await this.restaurants.findOne({
+        where: {id: restaurantId},
         relations: ['menu', 'category'],
       });
       if (!restaurant) {
@@ -146,7 +151,7 @@ export class RestaurantService {
   async myRestaurants(owner: User): Promise<MyRestaurantsOutput> {
     try {
       const restaurants = await this.restaurants.find({
-        where: {owner},
+        where: {owner: {id: owner.id}},
         relations: ['category'],
       });
       return {ok: true, restaurants};
@@ -161,7 +166,7 @@ export class RestaurantService {
   ): Promise<MyRestaurantOutput> {
     try {
       const restaurant = await this.restaurants.findOne({
-        where: {owner, id: myRestaurantInput.id},
+        where: {owner: {id: owner.id}, id: myRestaurantInput.id},
         relations: ['category', 'menu', 'orders'],
       });
       return {restaurant, ok: true};
@@ -184,12 +189,12 @@ export class RestaurantService {
 
   async findCategoryBySlug({slug, page}: CategoryInput): Promise<CategoryOutput> {
     try {
-      const category = await this.categories.findOne({slug});
+      const category = await this.categories.findOne({where: {slug}});
       if (!category) {
         return {ok: false, error: 'Category not found'};
       }
       const restaurants = await this.restaurants.find({
-        where: {category},
+        where: {category: {id: category.id}},
         take: 25,
         skip: (page - 1) * 25,
         order: {isPromoted: 'DESC'},
@@ -204,12 +209,14 @@ export class RestaurantService {
   }
 
   countRestaurants(category: Category): Promise<number> {
-    return this.restaurants.count({category});
+    return this.restaurants.count({where: {category: {id: category.id}}});
   }
 
   async createDish(owner: User, createDishInput: CreateDishInput): Promise<CreateDishOutput> {
     try {
-      const restaurant = await this.restaurants.findOne(createDishInput.restaurantId);
+      const restaurant = await this.restaurants.findOne({
+        where: {id: createDishInput.restaurantId},
+      });
       if (!restaurant) {
         return {ok: false, error: 'Restaurant not found'};
       }
@@ -226,7 +233,10 @@ export class RestaurantService {
 
   async editDish(owner: User, editDishInput: EditDishInput): Promise<EditDishOutput> {
     try {
-      const dish = await this.dishes.findOne(editDishInput.dishId, {relations: ['restaurant']});
+      const dish = await this.dishes.findOne({
+        where: {id: editDishInput.dishId},
+        relations: ['restaurant'],
+      });
       if (!dish) {
         return {ok: false, error: 'Dish not found'};
       }
@@ -247,7 +257,7 @@ export class RestaurantService {
 
   async deleteDish(owner: User, {dishId}: DeleteDishInput): Promise<DeleteDishOutput> {
     try {
-      const dish = await this.dishes.findOne(dishId, {relations: ['restaurant']});
+      const dish = await this.dishes.findOne({where: {id: dishId}, relations: ['restaurant']});
       if (!dish) {
         return {ok: false, error: 'Dish not found'};
       }

@@ -1,7 +1,9 @@
-version: '3'
 services:
   database:
-    image: 'postgres'
+    # Pinned rather than floating on `postgres:latest`: an untagged image means
+    # the database engine can change underneath the project between two runs of
+    # `docker compose up`.
+    image: 'postgres:16-alpine'
     restart: always
     environment:
       - POSTGRES_USER=adminer
@@ -11,3 +13,8 @@ services:
       - '5432:5432'
     volumes:
       - ./pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U adminer -d food_delivery']
+      interval: 5s
+      timeout: 5s
+      retries: 10

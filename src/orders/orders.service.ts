@@ -34,7 +34,7 @@ export class OrderService {
     {restaurantId, items}: CreateOrderInput,
   ): Promise<CreateOrderOutput> {
     try {
-      const restaurant = await this.restaurants.findOne(restaurantId);
+      const restaurant = await this.restaurants.findOne({where: {id: restaurantId}});
       if (!restaurant) {
         return {
           ok: false,
@@ -44,7 +44,7 @@ export class OrderService {
       let orderFinalPrice = 0;
       const orderItems: OrderItem[] = [];
       for (const item of items) {
-        const dish = await this.dishes.findOne(item.dishId);
+        const dish = await this.dishes.findOne({where: {id: item.dishId}});
         if (!dish) {
           return {
             ok: false,
@@ -100,20 +100,20 @@ export class OrderService {
       if (user.role === UserRole.Client) {
         orders = await this.orders.find({
           where: {
-            customer: user,
+            customer: {id: user.id},
             ...(status && {status}),
           },
         });
       } else if (user.role === UserRole.Delivery) {
         orders = await this.orders.find({
           where: {
-            driver: user,
+            driver: {id: user.id},
             ...(status && {status}),
           },
         });
       } else if (user.role === UserRole.Owner) {
         const restaurants = await this.restaurants.find({
-          where: {owner: user},
+          where: {owner: {id: user.id}},
           relations: ['orders'],
         });
         orders = restaurants.map(restaurant => restaurant.orders).flat(1);
@@ -130,7 +130,10 @@ export class OrderService {
 
   async getOrder(user: User, getOrderInput: GetOrderInput): Promise<GetOrderOutput> {
     try {
-      const order = await this.orders.findOne(getOrderInput.id, {relations: ['restaurant']});
+      const order = await this.orders.findOne({
+        where: {id: getOrderInput.id},
+        relations: ['restaurant'],
+      });
       if (!order) {
         return {
           ok: false,
@@ -156,7 +159,7 @@ export class OrderService {
 
   async editOrder(user: User, editOrderInput: EditOrderInput): Promise<EditOrderOutput> {
     try {
-      const order = await this.orders.findOne(editOrderInput.id);
+      const order = await this.orders.findOne({where: {id: editOrderInput.id}});
       if (!order) {
         return {
           ok: false,
@@ -210,7 +213,7 @@ export class OrderService {
 
   async takeOrder(driver: User, {id}: TakeOrderInput): Promise<TakeOrderOutput> {
     try {
-      const order = await this.orders.findOne(id);
+      const order = await this.orders.findOne({where: {id}});
       if (!order) {
         return {ok: false, error: 'Could not find order'};
       }

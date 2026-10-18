@@ -8,7 +8,15 @@ import {RestaurantService} from './restaurants.service';
 import {TypeOrmModule} from '@nestjs/typeorm';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Restaurant, CategoryRepository, Dish])],
-  providers: [RestaurantResolver, CategoryResolver, DishResolver, RestaurantService],
+  // CategoryRepository is no longer a forFeature() entry: under TypeORM 0.3 it
+  // is an ordinary provider that constructs itself from the DataSource.
+  imports: [TypeOrmModule.forFeature([Restaurant, Dish])],
+  providers: [
+    RestaurantResolver,
+    CategoryResolver,
+    DishResolver,
+    RestaurantService,
+    CategoryRepository,
+  ],
 })
 export class RestaurantsModule {}

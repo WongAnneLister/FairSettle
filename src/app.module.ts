@@ -14,8 +14,12 @@ import {UsersModule} from './users/users.module';
 import {environments} from './config/environments';
 import {schema} from './config/schema-validation';
 import {UploadsModule} from './uploads/uploads.module';
+import {ApolloDriver, ApolloDriverConfig} from '@nestjs/apollo';
 
 const TOKEN_KEY = 'Authorization';
+
+/** Per-connection scratch space graphql-ws threads from onConnect to context. */
+type GqlWsExtra = {token?: string};
 
 @Module({
   imports: [
@@ -25,20 +29,28 @@ const TOKEN_KEY = 'Authorization';
       ignoreEnvFile: process.env.NODE_ENV === 'production',
       validationSchema: schema,
     }),
-    GraphQLModule.forRoot({
-      installSubscriptionHandlers: true,
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
       autoSchemaFile: true,
       subscriptions: {
-        'subscriptions-transport-ws': {
-          onConnect: connectionParams => {
-            return {token: connectionParams[TOKEN_KEY]};
+        // subscriptions-transport-ws was unmaintained and is unsupported by
+        // Apollo Server 4+. graphql-ws hands the connection payload to
+        // onConnect once, so the token is stashed on `extra` for the context
+        // factory below to read on every subsequent operation.
+        'graphql-ws': {
+          onConnect: (context: {connectionParams?: Record<string, unknown>; extra: GqlWsExtra}) => {
+            const {connectionParams, extra} = context;
+            extra.token = connectionParams?.[TOKEN_KEY] as string | undefined;
           },
         },
       },
-      context: ({req}) => {
-        if (req) {
-          return {token: req.headers[TOKEN_KEY.toLowerCase()]};
+      context: (ctx: {req?: {headers: Record<string, string>}; extra?: GqlWsExtra}) => {
+        // HTTP operations carry the token on the request header;
+        // WebSocket operations carry it on `extra`, set by onConnect above.
+        if (ctx.req) {
+          return {token: ctx.req.headers[TOKEN_KEY.toLowerCase()]};
         }
+        return {token: ctx.extra?.token};
       },
     }),
     JwtModule.forRoot({secretKey: process.env.SECRET_KEY}),

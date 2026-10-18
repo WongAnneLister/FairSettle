@@ -20,7 +20,7 @@ export class PaymentService {
     {restaurantId, transactionId}: CreatePaymentInput,
   ): Promise<CreatePaymentOutput> {
     try {
-      const restaurant = await this.restaurants.findOne(restaurantId);
+      const restaurant = await this.restaurants.findOne({where: {id: restaurantId}});
       if (!restaurant) {
         return {ok: false, error: 'Could not found restaurant'};
       }
@@ -41,7 +41,7 @@ export class PaymentService {
 
   async getPayments(user: User): Promise<GetPaymentsOutput> {
     try {
-      const payments = await this.payments.find({user});
+      const payments = await this.payments.find({where: {user: {id: user.id}}});
       return {ok: true, payments};
     } catch (error) {
       return {ok: false, error: 'Could not load payments.'};
@@ -51,8 +51,10 @@ export class PaymentService {
   @Cron(CronExpression.EVERY_12_HOURS)
   async checkPromotedRestaurants() {
     const restaurants = await this.restaurants.find({
-      isPromoted: true,
-      promotedUntil: LessThan(new Date()),
+      where: {
+        isPromoted: true,
+        promotedUntil: LessThan(new Date()),
+      },
     });
     restaurants.forEach(async restaurant => {
       restaurant.isPromoted = false;

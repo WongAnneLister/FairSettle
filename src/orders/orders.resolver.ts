@@ -69,13 +69,13 @@ export class OrderResolver {
   })
   @Role(['Owner'])
   pendingOrders() {
-    return this.pubsub.asyncIterator(NEW_PENDING_ORDER);
+    return this.pubsub.asyncIterableIterator(NEW_PENDING_ORDER);
   }
 
   @Subscription(returns => Order)
   @Role(['Delivery'])
   cookedOrders() {
-    return this.pubsub.asyncIterator(NEW_COOKED_ORDER);
+    return this.pubsub.asyncIterableIterator(NEW_COOKED_ORDER);
   }
 
   @Subscription(returns => Order, {
@@ -93,7 +93,7 @@ export class OrderResolver {
   })
   @Role(['Any'])
   orderUpdates(@Args('input') orderUpdatesInput: OrderUpdatesInput) {
-    return this.pubsub.asyncIterator(NEW_ORDER_UPDATES);
+    return this.pubsub.asyncIterableIterator(NEW_ORDER_UPDATES);
   }
 
   @Mutation(returns => TakeOrderOutput)

@@ -140,7 +140,10 @@ describe('UserService', () => {
       usersRepository.findOne.mockResolvedValue(null);
       const result = await service.login(loginArgs);
       expect(usersRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(usersRepository.findOne).toHaveBeenCalledWith(expect.any(Object), expect.any(Object));
+      expect(usersRepository.findOne).toHaveBeenCalledWith({
+        where: {email: loginArgs.email},
+        select: ['email', 'password'],
+      });
       expect(result).toEqual({ok: false, error: 'User Not Found.'});
     });
 
@@ -218,7 +221,9 @@ describe('UserService', () => {
 
       await service.editProfile(editProfileArgs.userId, editProfileArgs.input);
       expect(usersRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(usersRepository.findOne).toHaveBeenCalledWith(editProfileArgs.userId);
+      expect(usersRepository.findOne).toHaveBeenCalledWith({
+        where: {id: editProfileArgs.userId},
+      });
 
       expect(emailVerificationRepository.create).toHaveBeenCalledWith({
         user: newUser,
@@ -265,10 +270,10 @@ describe('UserService', () => {
       const result = await service.verifyEmail('');
 
       expect(emailVerificationRepository.findOne).toHaveBeenCalledTimes(1);
-      expect(emailVerificationRepository.findOne).toHaveBeenCalledWith(
-        expect.any(Object),
-        expect.any(Object),
-      );
+      expect(emailVerificationRepository.findOne).toHaveBeenCalledWith({
+        where: {code: ''},
+        relations: ['user'],
+      });
 
       expect(usersRepository.save).toHaveBeenCalledTimes(1);
       expect(usersRepository.save).toHaveBeenCalledWith({

@@ -1,7 +1,8 @@
 import {MailerModule} from '@nestjs-modules/mailer';
 import {Global, Module} from '@nestjs/common';
 import {ConfigService} from '@nestjs/config';
-import {HandlebarsAdapter} from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+// mailer v2 ships an "exports" map, so reaching into dist/ no longer resolves.
+import {HandlebarsAdapter} from '@nestjs-modules/mailer/adapters/handlebars.adapter';
 import {join} from 'path';
 import {MailService} from './mail.service';
 

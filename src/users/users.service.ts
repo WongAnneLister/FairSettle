@@ -24,7 +24,7 @@ export class UsersService {
 
   async createAccount({email, password, role}: CreateAccountInput): Promise<CreateAccountOutput> {
     try {
-      const accountExists = await this.usersRepository.findOne({email});
+      const accountExists = await this.usersRepository.findOne({where: {email}});
 
       if (accountExists) {
         return {
@@ -50,7 +50,10 @@ export class UsersService {
 
   async login({email, password}: LoginInput): Promise<LoginOutput> {
     try {
-      const user = await this.usersRepository.findOne({email}, {select: ['email', 'password']});
+      const user = await this.usersRepository.findOne({
+        where: {email},
+        select: ['email', 'password'],
+      });
       if (!user) {
         return {ok: false, error: 'User Not Found.'};
       }
@@ -75,7 +78,7 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<UserProfileOutput> {
     try {
-      const user = await this.usersRepository.findOneOrFail({email});
+      const user = await this.usersRepository.findOneOrFail({where: {email}});
 
       if (user) {
         return {ok: true, user};
@@ -90,7 +93,7 @@ export class UsersService {
     {email, password}: EditProfileInput,
   ): Promise<EditProfileOutput> {
     try {
-      const user = await this.usersRepository.findOne(userId);
+      const user = await this.usersRepository.findOne({where: {id: userId}});
 
       if (email) {
         user.email = email;
@@ -116,7 +119,10 @@ export class UsersService {
 
   async verifyEmail(code: string): Promise<VerifyEmailOutput> {
     try {
-      const verification = await this.emailVerification.findOne({code}, {relations: ['user']});
+      const verification = await this.emailVerification.findOne({
+        where: {code},
+        relations: ['user'],
+      });
 
       if (verification) {
         verification.user.emailVerified = true;
