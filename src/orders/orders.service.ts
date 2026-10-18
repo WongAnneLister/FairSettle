@@ -73,11 +73,11 @@ export class OrderService {
           );
         }
 
-        let orderFinalPrice = 0;
+        let orderFinalPriceCents = 0;
         const orderItems: OrderItem[] = [];
         for (const item of items) {
           const dish = dishById.get(item.dishId);
-          let dishFinalPrice = dish.price;
+          let dishFinalPriceCents = dish.priceCents;
           // `options` is declared nullable on CreateOrderItemInput, so a dish
           // ordered without any options arrives with the field absent.
           for (const itemOption of item.options ?? []) {
@@ -85,21 +85,21 @@ export class OrderService {
               dishOption => dishOption.name === itemOption.name,
             );
             if (dishOption) {
-              if (dishOption.extra) {
-                dishFinalPrice += dishOption.extra;
+              if (dishOption.extraCents) {
+                dishFinalPriceCents += dishOption.extraCents;
               } else {
                 const dishOptionChoice = dishOption.choices?.find(
                   optionChoice => optionChoice.name === itemOption.choice,
                 );
                 if (dishOptionChoice) {
-                  if (dishOptionChoice.extra) {
-                    dishFinalPrice += dishOptionChoice.extra;
+                  if (dishOptionChoice.extraCents) {
+                    dishFinalPriceCents += dishOptionChoice.extraCents;
                   }
                 }
               }
             }
           }
-          orderFinalPrice += dishFinalPrice;
+          orderFinalPriceCents += dishFinalPriceCents;
           // Built, not saved. With cascade on Order.items the insert happens as
           // part of saving the order, so there is no window in which an item
           // exists without its order — the condition B4 had to clean up after.
@@ -110,7 +110,7 @@ export class OrderService {
           manager.create(Order, {
             customer,
             restaurant,
-            total: orderFinalPrice,
+            totalCents: orderFinalPriceCents,
             items: orderItems,
           }),
         );

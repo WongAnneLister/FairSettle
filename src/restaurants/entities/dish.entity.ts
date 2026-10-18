@@ -15,10 +15,19 @@ export class Dish extends CoreEntity {
   @Length(5)
   name: string;
 
+  /**
+   * Integer cents. The column was a bare `@Column()` over a TS `number`, which
+   * TypeORM infers as `integer`, while Order.total was exposed as a Float over
+   * the same representation — so the API promised decimals the storage could
+   * not hold and $12.50 was stored as 12.
+   *
+   * The unit is in the name deliberately: a money field called `price` tells a
+   * caller nothing about whether 1250 means twelve dollars or twelve hundred.
+   */
   @Field(type => Int)
   @Column()
   @IsNumber()
-  price: number;
+  priceCents: number;
 
   @Field(type => String, {nullable: true})
   @Column({nullable: true})
@@ -53,7 +62,7 @@ export class DishOption {
   choices?: DishChoice[];
 
   @Field(type => Int, {nullable: true})
-  extra?: number;
+  extraCents?: number;
 }
 
 @InputType('DishChoiceInputType', {isAbstract: true})
@@ -63,5 +72,5 @@ export class DishChoice {
   name: string;
 
   @Field(type => Int, {nullable: true})
-  extra?: number;
+  extraCents?: number;
 }

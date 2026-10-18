@@ -6,7 +6,7 @@ import {Dish} from '../entities/dish.entity';
 @InputType()
 export class EditDishInput extends PickType(PartialType(Dish), [
   'name',
-  'price',
+  'priceCents',
   'description',
   'options',
 ]) {

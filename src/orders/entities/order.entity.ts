@@ -1,5 +1,5 @@
 import {Column, Entity, Index, ManyToOne, OneToMany, RelationId} from 'typeorm';
-import {Field, Float, InputType, ObjectType, registerEnumType} from '@nestjs/graphql';
+import {Field, Int, InputType, ObjectType, registerEnumType} from '@nestjs/graphql';
 import {IsEnum, IsNumber} from 'class-validator';
 
 import {CoreEntity} from 'src/common/entities/core.entity';
@@ -59,10 +59,11 @@ export class Order extends CoreEntity {
   @OneToMany(type => OrderItem, item => item.order, {eager: true, cascade: true})
   items: OrderItem[];
 
+  /** Integer cents — see Dish.priceCents. Was a Float over an integer column. */
   @Column({nullable: true})
-  @Field(type => Float, {nullable: true})
+  @Field(type => Int, {nullable: true})
   @IsNumber()
-  total?: number;
+  totalCents?: number;
 
   @Column({type: 'enum', enum: OrderStatus, default: OrderStatus.Pending})
   @Field(type => OrderStatus)

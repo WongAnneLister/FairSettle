@@ -62,7 +62,7 @@ describe('subscriptions across replicas (e2e)', () => {
       replicaA.app,
       `mutation {
         createDish(input: {
-          restaurantId: ${restaurantId}, name: "Margherita", price: 12, description: "Classic"
+          restaurantId: ${restaurantId}, name: "Margherita", priceCents: 1200, description: "Classic"
         }) { ok }
       }`,
       ownerToken,
