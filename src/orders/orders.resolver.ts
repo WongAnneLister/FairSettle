@@ -36,6 +36,7 @@ export class OrderResolver {
   }
 
   @Query(returns => GetOrdersOutput)
+  @Role(['Any'])
   getOrders(
     @AuthUser() user: User,
     @Args('input') getOrdersInput: GetOrdersInput,
