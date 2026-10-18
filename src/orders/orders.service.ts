@@ -18,6 +18,7 @@ import {EditOrderInput, EditOrderOutput} from './dto/edit-order.dto';
 import {GetOrderInput, GetOrderOutput} from './dto/get-order.dto';
 import {GetOrdersInput, GetOrdersOutput} from './dto/get-orders.dto';
 import {TakeOrderInput, TakeOrderOutput} from './dto/take-order.dto';
+import {TransitionActor, evaluateTransition} from './order-state-machine';
 import {OrderItem} from './entities/order-item.entity';
 import {Order, OrderStatus} from './entities/order.entity';
 
@@ -167,30 +168,38 @@ export class OrderService {
       if (!this.canSeeOrder(user, order)) {
         throw new ForbiddenError("You can't edit that.");
       }
-      let canEdit = true;
-      if (user.role === UserRole.Client) {
-        canEdit = false;
+      const verdict = evaluateTransition(
+        order.status,
+        editOrderInput.status,
+        this.actorFor(user, order),
+      );
+
+      switch (verdict.kind) {
+        case 'noop':
+          // Already there. Succeeding without a write is what makes a
+          // redelivered status update safe — see order-state-machine.ts.
+          return {ok: true};
+        case 'illegal':
+          throw new ConflictError(verdict.reason);
+        case 'forbidden':
+          throw new ForbiddenError(verdict.reason);
       }
-      if (user.role === UserRole.Owner) {
-        if (
-          editOrderInput.status !== OrderStatus.Cooking &&
-          editOrderInput.status !== OrderStatus.Cooked
-        ) {
-          canEdit = false;
-        }
+
+      // The verdict was computed from a status read a moment ago. Making the
+      // write conditional on that same status means a concurrent transition
+      // cannot slip in between — the same reasoning as the claim in takeOrder.
+      const applied = await this.orders
+        .createQueryBuilder()
+        .update(Order)
+        .set({status: editOrderInput.status})
+        .where('id = :id', {id: editOrderInput.id})
+        .andWhere('status = :expected', {expected: order.status})
+        .execute();
+
+      if (applied.affected === 0) {
+        throw new ConflictError('The order changed while this update was in flight');
       }
-      if (user.role === UserRole.Delivery) {
-        if (
-          editOrderInput.status !== OrderStatus.PickedUp &&
-          editOrderInput.status !== OrderStatus.Delivered
-        ) {
-          canEdit = false;
-        }
-      }
-      if (!canEdit) {
-        throw new ForbiddenError('You are not allowed to set that status.');
-      }
-      await this.orders.save([{id: editOrderInput.id, status: editOrderInput.status}]);
+
       const newOrder = {...order, status: editOrderInput.status};
       if (user.role === UserRole.Owner) {
         if (editOrderInput.status === OrderStatus.Cooked) {
@@ -260,6 +269,25 @@ export class OrderService {
       throw new ConflictError('This order already has a driver');
     }
     throw new ConflictError(`Order is ${order.status}, not ${OrderStatus.Cooked}`);
+  }
+
+  /**
+   * Maps a user onto the actor vocabulary the state machine speaks.
+   *
+   * Returns null for a driver who is not the one assigned to this order — the
+   * distinction the baseline never made, because it checked the role only.
+   */
+  private actorFor(user: User, order: Order): TransitionActor | null {
+    if (user.role === UserRole.Owner) {
+      return UserRole.Owner;
+    }
+    if (user.role === UserRole.Client) {
+      return UserRole.Client;
+    }
+    if (user.role === UserRole.Delivery) {
+      return order.driverId === user.id ? 'AssignedDriver' : null;
+    }
+    return null;
   }
 
   canSeeOrder(user: User, order: Order): boolean {
