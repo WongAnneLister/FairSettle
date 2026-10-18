@@ -12,7 +12,7 @@ import {failure} from 'src/common/errors/failure';
 import {Dish} from 'src/restaurants/entities/dish.entity';
 import {Restaurant} from 'src/restaurants/entities/restaurant.entity';
 import {User, UserRole} from 'src/users/entities/user.entity';
-import {DataSource, Repository} from 'typeorm';
+import {DataSource, In, Repository} from 'typeorm';
 import {CreateOrderInput, CreateOrderOutput} from './dto/create-order.dto';
 import {EditOrderInput, EditOrderOutput} from './dto/edit-order.dto';
 import {GetOrderInput, GetOrderOutput} from './dto/get-order.dto';
@@ -50,15 +50,30 @@ export class OrderService {
           throw new NotFoundError('Restaurant not found');
         }
 
+        // One query for every dish on the order, not one per line item. The
+        // loop below then only does arithmetic.
+        const dishIds = [...new Set(items.map(item => item.dishId))];
+        const dishes = await manager.find(Dish, {where: {id: In(dishIds)}});
+        const dishById = new Map(dishes.map(dish => [dish.id, dish]));
+
+        // Validated up front, so a bad id is rejected before anything is
+        // written at all. Reports every missing dish rather than only the first
+        // one the loop happened to reach.
+        const missing = dishIds.filter(id => !dishById.has(id));
+        if (missing.length > 0) {
+          // Throwing rather than returning is what rolls the transaction back.
+          // An early `return` here would commit a partial write.
+          throw new NotFoundError(
+            missing.length === 1
+              ? `Dish ${missing[0]} not found`
+              : `Dishes ${missing.join(', ')} not found`,
+          );
+        }
+
         let orderFinalPrice = 0;
         const orderItems: OrderItem[] = [];
         for (const item of items) {
-          const dish = await manager.findOne(Dish, {where: {id: item.dishId}});
-          if (!dish) {
-            // Throwing rather than returning is what rolls the transaction
-            // back. An early `return` here would commit the partial write.
-            throw new NotFoundError(`Dish ${item.dishId} not found`);
-          }
+          const dish = dishById.get(item.dishId);
           let dishFinalPrice = dish.price;
           // `options` is declared nullable on CreateOrderItemInput, so a dish
           // ordered without any options arrives with the field absent.

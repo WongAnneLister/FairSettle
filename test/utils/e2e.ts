@@ -53,6 +53,38 @@ export async function destroyTestApp({app, dataSource}: TestContext): Promise<vo
   await app.close();
 }
 
+/**
+ * Records the SQL issued while `fn` runs.
+ *
+ * Swaps the DataSource's logger for the duration, so an N+1 can be asserted as a
+ * number rather than described in a comment. Restores the original afterwards,
+ * including if `fn` throws.
+ */
+export async function captureQueries(
+  dataSource: DataSource,
+  fn: () => Promise<void>,
+): Promise<string[]> {
+  const queries: string[] = [];
+  const original = dataSource.logger;
+
+  dataSource.logger = {
+    logQuery: (query: string) => queries.push(query),
+    logQueryError: () => undefined,
+    logQuerySlow: () => undefined,
+    logSchemaBuild: () => undefined,
+    logMigration: () => undefined,
+    log: () => undefined,
+  };
+
+  try {
+    await fn();
+  } finally {
+    dataSource.logger = original;
+  }
+
+  return queries;
+}
+
 /** POST a GraphQL document, optionally authenticated. */
 export function gql(app: INestApplication, query: string, token?: string) {
   const req = request(app.getHttpServer()).post(GRAPHQL_ENDPOINT);
