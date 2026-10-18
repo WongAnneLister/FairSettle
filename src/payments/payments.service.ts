@@ -50,10 +50,7 @@ export class PaymentService {
       const payments = await this.payments.find({where: {user: {id: user.id}}});
       return {ok: true, payments};
     } catch (error) {
-      this.logger.error(
-        `getPayments failed`,
-        error instanceof Error ? error.stack : String(error),
-      );
+      this.logger.error(`getPayments failed`, error instanceof Error ? error.stack : String(error));
       return {ok: false, error: 'Could not load payments.', code: 'INTERNAL'};
     }
   }

@@ -265,10 +265,7 @@ export class RestaurantService {
       await this.dishes.save(this.dishes.create({...createDishInput, restaurant}));
       return {ok: true};
     } catch (error) {
-      this.logger.error(
-        `createDish failed`,
-        error instanceof Error ? error.stack : String(error),
-      );
+      this.logger.error(`createDish failed`, error instanceof Error ? error.stack : String(error));
       return {ok: false, error: "Couldn't create dish", code: 'INTERNAL'};
     }
   }
@@ -293,10 +290,7 @@ export class RestaurantService {
       ]);
       return {ok: true};
     } catch (error) {
-      this.logger.error(
-        `editDish failed`,
-        error instanceof Error ? error.stack : String(error),
-      );
+      this.logger.error(`editDish failed`, error instanceof Error ? error.stack : String(error));
       return {ok: false, error: 'Could not update dish', code: 'INTERNAL'};
     }
   }
@@ -313,10 +307,7 @@ export class RestaurantService {
       await this.dishes.delete(dishId);
       return {ok: true};
     } catch (error) {
-      this.logger.error(
-        `deleteDish failed`,
-        error instanceof Error ? error.stack : String(error),
-      );
+      this.logger.error(`deleteDish failed`, error instanceof Error ? error.stack : String(error));
       return {ok: false, error: 'Could not delete dish', code: 'INTERNAL'};
     }
   }

@@ -37,9 +37,6 @@ export function failure(
     return {ok: false, error: error.message, code: error.code};
   }
 
-  logger.error(
-    `Unhandled failure ${where}`,
-    error instanceof Error ? error.stack : String(error),
-  );
+  logger.error(`Unhandled failure ${where}`, error instanceof Error ? error.stack : String(error));
   return {ok: false, error: 'Something went wrong.', code: 'INTERNAL'};
 }

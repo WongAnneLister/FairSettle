@@ -89,7 +89,11 @@ export class OrderService {
       });
       return {ok: true, orderId: order.id};
     } catch (error) {
-      return failure(error, this.logger, {op: 'createOrder', customerId: customer.id, restaurantId});
+      return failure(error, this.logger, {
+        op: 'createOrder',
+        customerId: customer.id,
+        restaurantId,
+      });
     }
   }
 
