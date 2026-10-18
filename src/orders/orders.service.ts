@@ -180,7 +180,7 @@ export class OrderService {
       }
       if (user.role === UserRole.Owner) {
         if (
-          editOrderInput.status !== OrderStatus.Coocking &&
+          editOrderInput.status !== OrderStatus.Cooking &&
           editOrderInput.status !== OrderStatus.Cooked
         ) {
           canEdit = false;

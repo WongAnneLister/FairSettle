@@ -9,7 +9,7 @@ import {User} from 'src/users/entities/user.entity';
 
 export enum OrderStatus {
   Pending = 'Pending',
-  Coocking = 'Coocking',
+  Cooking = 'Cooking',
   Cooked = 'Cooked',
   PickedUp = 'PickedUp',
   Delivered = 'Delivered',
