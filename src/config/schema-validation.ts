@@ -11,6 +11,8 @@ export const schema = Joi.object({
   DB_PASSWORD: Joi.string().required(),
   DB_NAME: Joi.string().required(),
   SECRET_KEY: Joi.string().required(),
+  REDIS_HOST: Joi.string().required(),
+  REDIS_PORT: Joi.number().required(),
   MAIL_HOST: Joi.string(),
   MAIL_PORT: Joi.number(),
   MAIL_USER: Joi.string(),
