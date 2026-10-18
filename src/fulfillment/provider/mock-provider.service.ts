@@ -81,9 +81,7 @@ export class MockFulfillmentProvider implements FulfillmentProvider {
   /** POSTs a signed callback, exactly as a third party would. */
   async send(url: string, event: Record<string, unknown>): Promise<Response> {
     const body = JSON.stringify(event);
-    const signature = createHmac('sha256', this.behaviour.signingSecret)
-      .update(body)
-      .digest('hex');
+    const signature = createHmac('sha256', this.behaviour.signingSecret).update(body).digest('hex');
 
     return fetch(url, {
       method: 'POST',

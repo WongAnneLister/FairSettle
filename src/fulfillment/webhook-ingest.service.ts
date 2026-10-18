@@ -81,7 +81,10 @@ export class WebhookIngestService {
         return {applied: true, reason: `moved to ${target}`};
       });
     } catch (error) {
-      if (error instanceof QueryFailedError && (error as {code?: string}).code === UNIQUE_VIOLATION) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as {code?: string}).code === UNIQUE_VIOLATION
+      ) {
         // The provider redelivered. Nothing to do, and a 200 stops it retrying.
         this.logger.debug(`duplicate event ${event.eventId} ignored`);
         return {applied: false, reason: 'duplicate'};

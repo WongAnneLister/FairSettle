@@ -1,11 +1,7 @@
 import {Inject, Injectable, Logger} from '@nestjs/common';
 import {DataSource, EntityManager} from 'typeorm';
 
-import {
-  OutboxEvent,
-  OutboxEventType,
-  OutboxStatus,
-} from './entities/outbox-event.entity';
+import {OutboxEvent, OutboxEventType, OutboxStatus} from './entities/outbox-event.entity';
 import {FULFILLMENT_PROVIDER, FulfillmentProvider} from './provider/fulfillment-provider';
 
 /** Stop retrying after this many attempts and quarantine the row. */
