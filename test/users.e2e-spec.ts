@@ -1,15 +1,13 @@
 import * as request from 'supertest';
 
-import {Repository, getConnection} from 'typeorm';
-import {Test, TestingModule} from '@nestjs/testing';
+import {Repository} from 'typeorm';
 
-import {AppModule} from '../src/app.module';
 import {INestApplication} from '@nestjs/common';
 import {User} from 'src/users/entities/user.entity';
 import {getRepositoryToken} from '@nestjs/typeorm';
 import {EmailVerification} from 'src/users/entities/email-verification.entity';
 
-const GRAPHQL_ENDPOINT = '/graphql';
+import {GRAPHQL_ENDPOINT, TestContext, createTestApp, destroyTestApp} from './utils/e2e';
 
 const testUser = {
   email: 'user@mail.com',
@@ -17,6 +15,7 @@ const testUser = {
 };
 
 describe('UserModule (e2e)', () => {
+  let ctx: TestContext;
   let app: INestApplication;
   let usersRepository: Repository<User>;
   let emailVerificationRepository: Repository<EmailVerification>;
@@ -24,24 +23,26 @@ describe('UserModule (e2e)', () => {
 
   const baseTest = () => request(app.getHttpServer()).post(GRAPHQL_ENDPOINT);
   const publicTest = (query: string) => baseTest().send({query: query});
-  const privateTest = (query: string) => baseTest().set('X-JWT', token).send({query: query});
+  // The header was `X-JWT`, which the server never reads: JwtMiddleware looked
+  // for it but was never mounted (B5), while the GraphQL context reads
+  // `Authorization`. Every authenticated case in this file was therefore
+  // running anonymously.
+  const privateTest = (query: string) =>
+    baseTest().set('Authorization', token).send({query: query});
 
   beforeAll(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = module.createNestApplication();
-    usersRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    emailVerificationRepository = module.get<Repository<EmailVerification>>(
+    ctx = await createTestApp();
+    app = ctx.app;
+    usersRepository = ctx.moduleRef.get<Repository<User>>(getRepositoryToken(User));
+    emailVerificationRepository = ctx.moduleRef.get<Repository<EmailVerification>>(
       getRepositoryToken(EmailVerification),
     );
-    await app.init();
   });
 
   afterAll(async () => {
-    await getConnection().dropDatabase();
-    app.close();
+    // getConnection() was removed in TypeORM 0.3; the DataSource now comes from
+    // the application container.
+    await destroyTestApp(ctx);
   });
 
   describe('createAccount', () => {
