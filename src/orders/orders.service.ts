@@ -1,4 +1,4 @@
-import {Inject, Injectable} from '@nestjs/common';
+import {Inject, Injectable, Logger} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {PubSub} from 'graphql-subscriptions';
 import {
@@ -7,6 +7,8 @@ import {
   NEW_PENDING_ORDER,
   PUB_SUB,
 } from 'src/common/common.constants';
+import {ConflictError, ForbiddenError, NotFoundError} from 'src/common/errors/app-error';
+import {failure} from 'src/common/errors/failure';
 import {Dish} from 'src/restaurants/entities/dish.entity';
 import {Restaurant} from 'src/restaurants/entities/restaurant.entity';
 import {User, UserRole} from 'src/users/entities/user.entity';
@@ -21,6 +23,8 @@ import {Order, OrderStatus} from './entities/order.entity';
 
 @Injectable()
 export class OrderService {
+  private readonly logger = new Logger(OrderService.name);
+
   constructor(
     @InjectRepository(Order) private readonly orders: Repository<Order>,
     @InjectRepository(OrderItem) private readonly orderItems: Repository<OrderItem>,
@@ -36,20 +40,14 @@ export class OrderService {
     try {
       const restaurant = await this.restaurants.findOne({where: {id: restaurantId}});
       if (!restaurant) {
-        return {
-          ok: false,
-          error: 'Restaurant not found',
-        };
+        throw new NotFoundError('Restaurant not found');
       }
       let orderFinalPrice = 0;
       const orderItems: OrderItem[] = [];
       for (const item of items) {
         const dish = await this.dishes.findOne({where: {id: item.dishId}});
         if (!dish) {
-          return {
-            ok: false,
-            error: 'Dish not found',
-          };
+          throw new NotFoundError(`Dish ${item.dishId} not found`);
         }
         let dishFinalPrice = dish.price;
         // `options` is declared nullable on CreateOrderItemInput, so a dish
@@ -91,8 +89,7 @@ export class OrderService {
       });
       return {ok: true, orderId: order.id};
     } catch (error) {
-      console.log(error);
-      return {ok: false, error: 'Could not create order'};
+      return failure(error, this.logger, {op: 'createOrder', customerId: customer.id, restaurantId});
     }
   }
 
@@ -125,8 +122,8 @@ export class OrderService {
       }
 
       return {ok: true, orders};
-    } catch {
-      return {ok: false, error: 'Could not get orders'};
+    } catch (error) {
+      return failure(error, this.logger, {op: 'getOrders', userId: user.id, role: user.role});
     }
   }
 
@@ -137,25 +134,23 @@ export class OrderService {
         relations: ['restaurant'],
       });
       if (!order) {
-        return {
-          ok: false,
-          error: 'Order not found',
-        };
+        throw new NotFoundError('Order not found');
       }
 
       if (!this.canSeeOrder(user, order)) {
-        return {
-          ok: false,
-          error: "You can't see that.",
-        };
+        throw new ForbiddenError("You can't see that.");
       }
 
       return {
         ok: true,
         order,
       };
-    } catch {
-      return {ok: false, error: 'Could not load order.'};
+    } catch (error) {
+      return failure(error, this.logger, {
+        op: 'getOrder',
+        userId: user.id,
+        orderId: getOrderInput.id,
+      });
     }
   }
 
@@ -163,16 +158,10 @@ export class OrderService {
     try {
       const order = await this.orders.findOne({where: {id: editOrderInput.id}});
       if (!order) {
-        return {
-          ok: false,
-          error: 'Order not found.',
-        };
+        throw new NotFoundError('Order not found.');
       }
       if (!this.canSeeOrder(user, order)) {
-        return {
-          ok: false,
-          error: "You can't edit that.",
-        };
+        throw new ForbiddenError("You can't edit that.");
       }
       let canEdit = true;
       if (user.role === UserRole.Client) {
@@ -195,7 +184,7 @@ export class OrderService {
         }
       }
       if (!canEdit) {
-        return {ok: false, error: "You can't do that'"};
+        throw new ForbiddenError('You are not allowed to set that status.');
       }
       await this.orders.save([{id: editOrderInput.id, status: editOrderInput.status}]);
       const newOrder = {...order, status: editOrderInput.status};
@@ -208,8 +197,13 @@ export class OrderService {
       }
       await this.pubsub.publish(NEW_ORDER_UPDATES, {orderUpdates: newOrder});
       return {ok: true};
-    } catch {
-      return {ok: false, error: 'Could not edit order.'};
+    } catch (error) {
+      return failure(error, this.logger, {
+        op: 'editOrder',
+        userId: user.id,
+        orderId: editOrderInput.id,
+        status: editOrderInput.status,
+      });
     }
   }
 
@@ -217,16 +211,18 @@ export class OrderService {
     try {
       const order = await this.orders.findOne({where: {id}});
       if (!order) {
-        return {ok: false, error: 'Could not find order'};
+        throw new NotFoundError('Could not find order');
       }
       if (order.driver) {
-        return {ok: false, error: 'This order already has a driver'};
+        // CONFLICT, not FORBIDDEN: the caller was eligible and lost a race, so
+        // the useful client response is "refresh the list", not "you may not".
+        throw new ConflictError('This order already has a driver');
       }
       await this.orders.save([{id, driver}]);
       await this.pubsub.publish(NEW_ORDER_UPDATES, {orderUpdates: {...order, driver}});
       return {ok: true};
-    } catch {
-      return {ok: false, error: 'Could not take order'};
+    } catch (error) {
+      return failure(error, this.logger, {op: 'takeOrder', driverId: driver.id, orderId: id});
     }
   }
 

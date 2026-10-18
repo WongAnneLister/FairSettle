@@ -126,7 +126,7 @@ describe('UserService', () => {
     it('should fail on exception', async () => {
       usersRepository.findOne.mockRejectedValue(new Error('Has ocurred an error'));
       const result = await service.createAccount(createAccountArgs);
-      expect(result).toEqual({ok: false, error: "Couldn't create account"});
+      expect(result).toEqual({ok: false, error: "Couldn't create account", code: 'INTERNAL'});
     });
   });
 
@@ -179,6 +179,7 @@ describe('UserService', () => {
       expect(result).toEqual({
         ok: false,
         error: 'Sorry. An error has occurred.',
+        code: 'INTERNAL',
       });
     });
   });
@@ -194,7 +195,7 @@ describe('UserService', () => {
     it('should fail if not user is found', async () => {
       usersRepository.findOneOrFail.mockRejectedValue(new Error());
       const result = await service.findByEmail('test@mail.com');
-      expect(result).toEqual({ok: false, error: 'User Not Found'});
+      expect(result).toEqual({ok: false, error: 'User Not Found', code: 'INTERNAL'});
     });
   });
 
@@ -253,7 +254,7 @@ describe('UserService', () => {
     it('should fail on exception', async () => {
       usersRepository.findOne.mockRejectedValue(new Error());
       const result = await service.editProfile(1, {email: '12'});
-      expect(result).toEqual({ok: false, error: 'Could not update profile.'});
+      expect(result).toEqual({ok: false, error: 'Could not update profile.', code: 'INTERNAL'});
     });
   });
 
@@ -295,7 +296,7 @@ describe('UserService', () => {
     it('should fail on exception', async () => {
       emailVerificationRepository.findOne.mockRejectedValue(new Error());
       const result = await service.verifyEmail('');
-      expect(result).toEqual({ok: false, error: 'Could not verify email.'});
+      expect(result).toEqual({ok: false, error: 'Could not verify email.', code: 'INTERNAL'});
     });
   });
 });

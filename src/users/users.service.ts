@@ -1,4 +1,4 @@
-import {Injectable} from '@nestjs/common';
+import {Injectable, Logger} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {Repository} from 'typeorm';
 
@@ -14,6 +14,8 @@ import {JwtService} from 'src/jwt/jwt.service';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
     @InjectRepository(EmailVerification)
@@ -41,10 +43,11 @@ export class UsersService {
       await this.mailService.sendUserConfirmation(verification.code, user.email);
       return {ok: true};
     } catch (error) {
-      return {
-        ok: false,
-        error: "Couldn't create account",
-      };
+      this.logger.error(
+        `createAccount failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: "Couldn't create account", code: 'INTERNAL'};
     }
   }
 
@@ -69,10 +72,11 @@ export class UsersService {
       const token = this.jwtService.create({email: user.email});
       return {ok: true, token};
     } catch (error) {
-      return {
-        ok: false,
-        error: 'Sorry. An error has occurred.',
-      };
+      this.logger.error(
+        `login failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Sorry. An error has occurred.', code: 'INTERNAL'};
     }
   }
 
@@ -84,7 +88,11 @@ export class UsersService {
         return {ok: true, user};
       }
     } catch (error) {
-      return {ok: false, error: 'User Not Found'};
+      this.logger.error(
+        `findByEmail failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'User Not Found', code: 'INTERNAL'};
     }
   }
 
@@ -113,7 +121,11 @@ export class UsersService {
       await this.usersRepository.save(user);
       return {ok: true};
     } catch (error) {
-      return {ok: false, error: 'Could not update profile.'};
+      this.logger.error(
+        `editProfile failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Could not update profile.', code: 'INTERNAL'};
     }
   }
 
@@ -132,7 +144,11 @@ export class UsersService {
       }
       return {ok: false, error: 'Verification not found.'};
     } catch (error) {
-      return {ok: false, error: 'Could not verify email.'};
+      this.logger.error(
+        `verifyEmail failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Could not verify email.', code: 'INTERNAL'};
     }
   }
 }

@@ -1,4 +1,4 @@
-import {Injectable} from '@nestjs/common';
+import {Injectable, Logger} from '@nestjs/common';
 import {Cron, CronExpression} from '@nestjs/schedule';
 import {InjectRepository} from '@nestjs/typeorm';
 import {Restaurant} from 'src/restaurants/entities/restaurant.entity';
@@ -10,6 +10,8 @@ import {Payment} from './entities/payment.entity';
 
 @Injectable()
 export class PaymentService {
+  private readonly logger = new Logger(PaymentService.name);
+
   constructor(
     @InjectRepository(Payment) private readonly payments: Repository<Payment>,
     @InjectRepository(Restaurant) private readonly restaurants: Repository<Restaurant>,
@@ -34,8 +36,12 @@ export class PaymentService {
       restaurant.promotedUntil = date;
       await this.restaurants.save(restaurant);
       return {ok: true};
-    } catch {
-      return {ok: false, error: 'Could not create payment'};
+    } catch (error) {
+      this.logger.error(
+        `createPayment failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Could not create payment', code: 'INTERNAL'};
     }
   }
 
@@ -44,7 +50,11 @@ export class PaymentService {
       const payments = await this.payments.find({where: {user: {id: user.id}}});
       return {ok: true, payments};
     } catch (error) {
-      return {ok: false, error: 'Could not load payments.'};
+      this.logger.error(
+        `getPayments failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Could not load payments.', code: 'INTERNAL'};
     }
   }
 

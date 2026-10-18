@@ -1,4 +1,4 @@
-import {Injectable} from '@nestjs/common';
+import {Injectable, Logger} from '@nestjs/common';
 import {InjectRepository} from '@nestjs/typeorm';
 import {User} from 'src/users/entities/user.entity';
 import {ILike, Repository} from 'typeorm';
@@ -21,6 +21,8 @@ import {CategoryRepository} from './repositories/category.repository';
 
 @Injectable()
 export class RestaurantService {
+  private readonly logger = new Logger(RestaurantService.name);
+
   constructor(
     @InjectRepository(Restaurant) private readonly restaurants: Repository<Restaurant>,
     private readonly categories: CategoryRepository,
@@ -39,7 +41,11 @@ export class RestaurantService {
       await this.restaurants.save(newRestaurant);
       return {ok: true, restaurantId: newRestaurant.id};
     } catch (error) {
-      return {ok: false, error: 'Could not create restaurant'};
+      this.logger.error(
+        `createRestaurant failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Could not create restaurant', code: 'INTERNAL'};
     }
   }
 
@@ -70,7 +76,11 @@ export class RestaurantService {
       ]);
       return {ok: true};
     } catch (error) {
-      return {ok: true, error: 'Could not edit restaurant'};
+      this.logger.error(
+        `editRestaurant failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Could not edit restaurant', code: 'INTERNAL'};
     }
   }
 
@@ -91,7 +101,11 @@ export class RestaurantService {
       await this.restaurants.delete(deleteRestaurantInput.restaurantId);
       return {ok: true};
     } catch (error) {
-      return {ok: true, error: 'Could not delete restaurant'};
+      this.logger.error(
+        `deleteRestaurant failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Could not delete restaurant', code: 'INTERNAL'};
     }
   }
 
@@ -110,7 +124,11 @@ export class RestaurantService {
         totalResults,
       };
     } catch (error) {
-      return {ok: false, error: 'Not found restaurants'};
+      this.logger.error(
+        `allRestaurants failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Not found restaurants', code: 'INTERNAL'};
     }
   }
 
@@ -125,7 +143,11 @@ export class RestaurantService {
       }
       return {ok: true, restaurant};
     } catch (error) {
-      return {ok: false, error: 'Restaurant not load'};
+      this.logger.error(
+        `findRestaurantById failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Restaurant not load', code: 'INTERNAL'};
     }
   }
 
@@ -144,7 +166,11 @@ export class RestaurantService {
         totalPages: Math.ceil(totalResults / 25),
       };
     } catch (error) {
-      return {ok: false, error: 'Restaurants not search for restaurants'};
+      this.logger.error(
+        `searchRestaurant failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Restaurants not search for restaurants', code: 'INTERNAL'};
     }
   }
 
@@ -155,8 +181,12 @@ export class RestaurantService {
         relations: ['category'],
       });
       return {ok: true, restaurants};
-    } catch {
-      return {ok: false, error: 'Could not find restaurants'};
+    } catch (error) {
+      this.logger.error(
+        `myRestaurants failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Could not find restaurants', code: 'INTERNAL'};
     }
   }
 
@@ -170,11 +200,12 @@ export class RestaurantService {
         relations: ['category', 'menu', 'orders'],
       });
       return {restaurant, ok: true};
-    } catch {
-      return {
-        ok: false,
-        error: 'Could not find restaurant',
-      };
+    } catch (error) {
+      this.logger.error(
+        `myRestaurant failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Could not find restaurant', code: 'INTERNAL'};
     }
   }
 
@@ -183,7 +214,11 @@ export class RestaurantService {
       const categories = await this.categories.find();
       return {ok: true, categories};
     } catch (error) {
-      return {ok: false, error: 'Not found categories'};
+      this.logger.error(
+        `allCategories failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Not found categories', code: 'INTERNAL'};
     }
   }
 
@@ -204,7 +239,11 @@ export class RestaurantService {
       const totalResults = await this.countRestaurants(category);
       return {ok: true, category, totalPages: Math.ceil(totalResults / 25), totalResults};
     } catch (error) {
-      return {ok: false, error: 'Category not load'};
+      this.logger.error(
+        `findCategoryBySlug failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Category not load', code: 'INTERNAL'};
     }
   }
 
@@ -226,8 +265,11 @@ export class RestaurantService {
       await this.dishes.save(this.dishes.create({...createDishInput, restaurant}));
       return {ok: true};
     } catch (error) {
-      console.log(error);
-      return {ok: false, error: "Couldn't create dish"};
+      this.logger.error(
+        `createDish failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: "Couldn't create dish", code: 'INTERNAL'};
     }
   }
 
@@ -251,7 +293,11 @@ export class RestaurantService {
       ]);
       return {ok: true};
     } catch (error) {
-      return {ok: false, error: 'Could not update dish'};
+      this.logger.error(
+        `editDish failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Could not update dish', code: 'INTERNAL'};
     }
   }
 
@@ -267,7 +313,11 @@ export class RestaurantService {
       await this.dishes.delete(dishId);
       return {ok: true};
     } catch (error) {
-      return {ok: false, error: 'Could not delete dish'};
+      this.logger.error(
+        `deleteDish failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return {ok: false, error: 'Could not delete dish', code: 'INTERNAL'};
     }
   }
 }
