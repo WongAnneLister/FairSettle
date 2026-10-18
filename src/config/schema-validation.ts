@@ -13,6 +13,8 @@ export const schema = Joi.object({
   SECRET_KEY: Joi.string().required(),
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().required(),
+  FULFILLMENT_SIGNING_SECRET: Joi.string().required(),
+  OUTBOX_POLLING: Joi.string().valid('enabled', 'disabled').default('enabled'),
   MAIL_HOST: Joi.string(),
   MAIL_PORT: Joi.number(),
   MAIL_USER: Joi.string(),

@@ -10,7 +10,20 @@ import {OrderStatus} from './entities/order.entity';
  * on canSeeOrder elsewhere to catch the rest — so the answer to "who may do
  * this?" lived in two places and had to be kept in step by hand.
  */
-export type TransitionActor = UserRole.Owner | UserRole.Client | 'AssignedDriver';
+export type TransitionActor =
+  | UserRole.Owner
+  | UserRole.Client
+  | 'AssignedDriver'
+  /**
+   * A third-party fulfillment provider reporting progress over a webhook.
+   *
+   * Deliberately allowed on exactly the edges it actually performs. The
+   * provider is doing the delivery, so it may report PickedUp and Delivered —
+   * but whether the kitchen has started cooking is the restaurant's business,
+   * and a callback claiming otherwise is rejected rather than trusted because
+   * it arrived signed.
+   */
+  | 'FulfillmentProvider';
 
 /**
  * The order lifecycle, in one place.
@@ -29,8 +42,8 @@ export const ORDER_TRANSITIONS: Readonly<
 > = {
   [OrderStatus.Pending]: {[OrderStatus.Cooking]: [UserRole.Owner]},
   [OrderStatus.Cooking]: {[OrderStatus.Cooked]: [UserRole.Owner]},
-  [OrderStatus.Cooked]: {[OrderStatus.PickedUp]: ['AssignedDriver']},
-  [OrderStatus.PickedUp]: {[OrderStatus.Delivered]: ['AssignedDriver']},
+  [OrderStatus.Cooked]: {[OrderStatus.PickedUp]: ['AssignedDriver', 'FulfillmentProvider']},
+  [OrderStatus.PickedUp]: {[OrderStatus.Delivered]: ['AssignedDriver', 'FulfillmentProvider']},
   [OrderStatus.Delivered]: {},
 };
 

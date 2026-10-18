@@ -2,6 +2,8 @@ import {Category} from 'src/restaurants/entities/category.entity';
 import {Dish} from 'src/restaurants/entities/dish.entity';
 import {EmailVerification} from 'src/users/entities/email-verification.entity';
 import {Order} from 'src/orders/entities/order.entity';
+import {OutboxEvent} from 'src/fulfillment/entities/outbox-event.entity';
+import {ProcessedEvent} from 'src/fulfillment/entities/processed-event.entity';
 import {OrderItem} from 'src/orders/entities/order-item.entity';
 import {Payment} from 'src/payments/entities/payment.entity';
 import {Restaurant} from 'src/restaurants/entities/restaurant.entity';
@@ -21,6 +23,8 @@ export const entities = [
   EmailVerification,
   Order,
   OrderItem,
+  OutboxEvent,
+  ProcessedEvent,
   Payment,
   Restaurant,
   User,

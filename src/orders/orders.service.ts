@@ -9,6 +9,7 @@ import {
 } from 'src/common/common.constants';
 import {ConflictError, ForbiddenError, NotFoundError} from 'src/common/errors/app-error';
 import {failure} from 'src/common/errors/failure';
+import {OutboxService} from 'src/fulfillment/outbox.service';
 import {Dish} from 'src/restaurants/entities/dish.entity';
 import {Restaurant} from 'src/restaurants/entities/restaurant.entity';
 import {User, UserRole} from 'src/users/entities/user.entity';
@@ -36,6 +37,7 @@ export class OrderService {
     @InjectRepository(Restaurant) private readonly restaurants: Repository<Restaurant>,
     @Inject(PUB_SUB) private readonly pubsub: PubSub,
     private readonly dataSource: DataSource,
+    private readonly outbox: OutboxService,
   ) {}
 
   async createOrder(
@@ -114,6 +116,16 @@ export class OrderService {
             items: orderItems,
           }),
         );
+
+        // Same transaction as the order itself. The dispatch is owed the
+        // moment the order exists and not a moment before — see
+        // fulfillment/entities/outbox-event.entity.ts for why calling the
+        // provider inline has no correct ordering.
+        await this.outbox.enqueueOrderDispatch(manager, saved.id, {
+          restaurantName: restaurant.name,
+          address: restaurant.address,
+          totalCents: orderFinalPriceCents,
+        });
 
         return {order: saved, ownerId: restaurant.ownerId};
       });

@@ -6,6 +6,7 @@ import {GraphQLModule} from '@nestjs/graphql';
 import {JwtModule} from './jwt/jwt.module';
 import {MailModule} from './mail/mail.module';
 import {Module} from '@nestjs/common';
+import {FulfillmentModule} from './fulfillment/fulfillment.module';
 import {OrdersModule} from './orders/orders.module';
 import {PaymentsModule} from './payments/payments.module';
 import {RestaurantsModule} from './restaurants/restaurants.module';
@@ -62,6 +63,7 @@ type GqlWsExtra = {token?: string};
     UsersModule,
     RestaurantsModule,
     OrdersModule,
+    FulfillmentModule,
     PaymentsModule,
     UploadsModule,
   ],

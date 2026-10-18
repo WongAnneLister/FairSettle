@@ -4,7 +4,12 @@ import {OrderStatus} from './entities/order.entity';
 import {TransitionActor, evaluateTransition} from './order-state-machine';
 
 const ALL_STATUSES = Object.values(OrderStatus);
-const ALL_ACTORS: TransitionActor[] = [UserRole.Owner, UserRole.Client, 'AssignedDriver'];
+const ALL_ACTORS: TransitionActor[] = [
+  UserRole.Owner,
+  UserRole.Client,
+  'AssignedDriver',
+  'FulfillmentProvider',
+];
 
 /** The lifecycle, written out independently of the table under test. */
 const LEGAL: ReadonlyArray<[OrderStatus, OrderStatus, TransitionActor]> = [
@@ -12,6 +17,9 @@ const LEGAL: ReadonlyArray<[OrderStatus, OrderStatus, TransitionActor]> = [
   [OrderStatus.Cooking, OrderStatus.Cooked, UserRole.Owner],
   [OrderStatus.Cooked, OrderStatus.PickedUp, 'AssignedDriver'],
   [OrderStatus.PickedUp, OrderStatus.Delivered, 'AssignedDriver'],
+  // A third-party provider drives only the part of the lifecycle it performs.
+  [OrderStatus.Cooked, OrderStatus.PickedUp, 'FulfillmentProvider'],
+  [OrderStatus.PickedUp, OrderStatus.Delivered, 'FulfillmentProvider'],
 ];
 
 describe('order state machine', () => {
@@ -77,6 +85,17 @@ describe('order state machine', () => {
       });
     });
 
+    it('does not let the provider claim the kitchen started cooking', () => {
+      // Signed and well-formed is not the same as authorised. Whether the food
+      // is being cooked is the restaurant's to report, not the courier's.
+      expect(
+        evaluateTransition(OrderStatus.Pending, OrderStatus.Cooking, 'FulfillmentProvider').kind,
+      ).toBe('forbidden');
+      expect(
+        evaluateTransition(OrderStatus.Cooking, OrderStatus.Cooked, 'FulfillmentProvider').kind,
+      ).toBe('forbidden');
+    });
+
     it('does not let an unassigned driver pick up or deliver', () => {
       // actor === null is how the service reports "a driver, but not this
       // order's driver".
@@ -91,7 +110,8 @@ describe('order state machine', () => {
     it('does not let the owner pick up or deliver', () => {
       expect(evaluateTransition(OrderStatus.Cooked, OrderStatus.PickedUp, UserRole.Owner)).toEqual({
         kind: 'forbidden',
-        reason: 'Only AssignedDriver can move an order from Cooked to PickedUp',
+        reason:
+          'Only AssignedDriver or FulfillmentProvider can move an order from Cooked to PickedUp',
       });
     });
 
@@ -104,8 +124,8 @@ describe('order state machine', () => {
 
   describe('exhaustively', () => {
     // Every from/to/actor combination resolves to exactly one verdict, and the
-    // only ones that come back `allowed` are the four listed in LEGAL.
-    it('allows exactly the four documented transitions and nothing else', () => {
+    // only ones that come back `allowed` are the edges listed in LEGAL.
+    it('allows exactly the documented transitions and nothing else', () => {
       const allowed: string[] = [];
 
       ALL_STATUSES.forEach(from =>
