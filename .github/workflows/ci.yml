@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    # The e2e suite talks to a real database and a real Redis. Substituting
+    # either with a fake would leave untested exactly the code that has broken
+    # in this project: the TypeORM where-clause changes that fail by matching
+    # zero rows (A4), the SKIP LOCKED claim (D2), and the cross-replica
+    # subscription delivery (C6), none of which a stub can demonstrate.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: adminer
+          POSTGRES_PASSWORD: secret123
+          POSTGRES_DB: food_delivery_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U adminer -d food_delivery_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          # Matches env.test.example, which maps 6380 on the host because 6379
+          # is so often already taken on a developer machine.
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # husky installs git hooks on `npm ci`, which a runner has no use for.
+      HUSKY: 0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # ci, not install: the lockfile is the record of a tree that resolves.
+      # Letting CI re-resolve would mean it tests a different set of versions
+      # than anyone ran locally — which is how the baseline ended up with no
+      # installable tree at all (A1).
+      - name: Install
+        run: npm ci
+
+      # Also checks the example file is complete: if a required variable is
+      # missing from it, the app fails Joi validation at boot and the e2e step
+      # fails. A .env.example that has drifted is worse than none.
+      - name: Configure test environment
+        run: cp env.test.example .env.test
+
+      # lint:ci, not lint: the everyday script carries --fix, which in CI would
+      # quietly rewrite files and report success instead of failing.
+      - name: Lint
+        run: npm run lint:ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm test
+
+      # The step that matters most, and the one the pre-commit hook does not
+      # run. A red e2e can be committed locally; it must not be mergeable.
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      # Schema and entities must agree. If someone changes an entity without
+      # writing a migration, this prints a diff and fails — rather than the
+      # divergence being discovered on a deploy.
+      - name: Check for un-migrated schema changes
+        run: |
+          set -o pipefail
+          # migration:generate exits 1 both when there is nothing to generate
+          # and when it fails outright, so the exit code alone cannot be
+          # trusted — a connection error would read as "no drift". Match the
+          # message instead, and treat anything else as a failure.
+          output=$(npm run migration:generate -- src/database/migrations/CiDriftCheck 2>&1) || true
+          if grep -q "No changes in database schema were found" <<<"$output"; then
+            echo "No schema drift."
+          else
+            echo "::error::Entities changed without a migration, or the check itself failed."
+            echo "$output"
+            exit 1
+          fi
