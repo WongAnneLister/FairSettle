@@ -32,7 +32,7 @@ export class PaymentService {
       const date = new Date();
       date.setDate(date.getDate() + 7);
       restaurant.promotedUntil = date;
-      this.restaurants.save(restaurant);
+      await this.restaurants.save(restaurant);
       return {ok: true};
     } catch {
       return {ok: false, error: 'Could not create payment'};
@@ -56,10 +56,13 @@ export class PaymentService {
         promotedUntil: LessThan(new Date()),
       },
     });
-    restaurants.forEach(async restaurant => {
+    // Array.prototype.forEach ignores the promise its callback returns, so an
+    // async callback makes the job resolve before any write has landed and turns
+    // every failure into an unhandled rejection.
+    for (const restaurant of restaurants) {
       restaurant.isPromoted = false;
       restaurant.promotedUntil = null;
       await this.restaurants.save(restaurant);
-    });
+    }
   }
 }
