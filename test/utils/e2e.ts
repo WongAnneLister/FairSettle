@@ -31,6 +31,11 @@ export async function createTestApp(): Promise<TestContext> {
 
   const app = moduleRef.createNestApplication();
   await app.init();
+  // Bind once on an ephemeral port. Without this, supertest calls listen(0) per
+  // request; firing twenty in parallel then spins up twenty servers, which both
+  // serialises the requests and produces ECONNRESET. The concurrency spec needs
+  // the requests to genuinely overlap.
+  await app.listen(0);
 
   return {app, moduleRef, dataSource: app.get(DataSource)};
 }
