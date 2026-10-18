@@ -12,7 +12,7 @@ import {failure} from 'src/common/errors/failure';
 import {Dish} from 'src/restaurants/entities/dish.entity';
 import {Restaurant} from 'src/restaurants/entities/restaurant.entity';
 import {User, UserRole} from 'src/users/entities/user.entity';
-import {Repository} from 'typeorm';
+import {DataSource, Repository} from 'typeorm';
 import {CreateOrderInput, CreateOrderOutput} from './dto/create-order.dto';
 import {EditOrderInput, EditOrderOutput} from './dto/edit-order.dto';
 import {GetOrderInput, GetOrderOutput} from './dto/get-order.dto';
@@ -32,6 +32,7 @@ export class OrderService {
     @InjectRepository(Dish) private readonly dishes: Repository<Dish>,
     @InjectRepository(Restaurant) private readonly restaurants: Repository<Restaurant>,
     @Inject(PUB_SUB) private readonly pubsub: PubSub,
+    private readonly dataSource: DataSource,
   ) {}
 
   async createOrder(
@@ -39,55 +40,68 @@ export class OrderService {
     {restaurantId, items}: CreateOrderInput,
   ): Promise<CreateOrderOutput> {
     try {
-      const restaurant = await this.restaurants.findOne({where: {id: restaurantId}});
-      if (!restaurant) {
-        throw new NotFoundError('Restaurant not found');
-      }
-      let orderFinalPrice = 0;
-      const orderItems: OrderItem[] = [];
-      for (const item of items) {
-        const dish = await this.dishes.findOne({where: {id: item.dishId}});
-        if (!dish) {
-          throw new NotFoundError(`Dish ${item.dishId} not found`);
+      // Everything that writes runs inside one transaction. Without it, order
+      // items were committed one at a time and the order row only afterwards,
+      // so a dish missing partway through left items behind that no order
+      // referenced — unreachable rows that nothing would ever clean up.
+      const {order, ownerId} = await this.dataSource.transaction(async manager => {
+        const restaurant = await manager.findOne(Restaurant, {where: {id: restaurantId}});
+        if (!restaurant) {
+          throw new NotFoundError('Restaurant not found');
         }
-        let dishFinalPrice = dish.price;
-        // `options` is declared nullable on CreateOrderItemInput, so a dish
-        // ordered without any options arrives with the field absent.
-        for (const itemOption of item.options ?? []) {
-          const dishOption = dish.options?.find(dishOption => dishOption.name === itemOption.name);
-          if (dishOption) {
-            if (dishOption.extra) {
-              dishFinalPrice += dishOption.extra;
-            } else {
-              const dishOptionChoice = dishOption.choices?.find(
-                optionChoice => optionChoice.name === itemOption.choice,
-              );
-              if (dishOptionChoice) {
-                if (dishOptionChoice.extra) {
-                  dishFinalPrice += dishOptionChoice.extra;
+
+        let orderFinalPrice = 0;
+        const orderItems: OrderItem[] = [];
+        for (const item of items) {
+          const dish = await manager.findOne(Dish, {where: {id: item.dishId}});
+          if (!dish) {
+            // Throwing rather than returning is what rolls the transaction
+            // back. An early `return` here would commit the partial write.
+            throw new NotFoundError(`Dish ${item.dishId} not found`);
+          }
+          let dishFinalPrice = dish.price;
+          // `options` is declared nullable on CreateOrderItemInput, so a dish
+          // ordered without any options arrives with the field absent.
+          for (const itemOption of item.options ?? []) {
+            const dishOption = dish.options?.find(
+              dishOption => dishOption.name === itemOption.name,
+            );
+            if (dishOption) {
+              if (dishOption.extra) {
+                dishFinalPrice += dishOption.extra;
+              } else {
+                const dishOptionChoice = dishOption.choices?.find(
+                  optionChoice => optionChoice.name === itemOption.choice,
+                );
+                if (dishOptionChoice) {
+                  if (dishOptionChoice.extra) {
+                    dishFinalPrice += dishOptionChoice.extra;
+                  }
                 }
               }
             }
           }
+          orderFinalPrice += dishFinalPrice;
+          orderItems.push(
+            await manager.save(manager.create(OrderItem, {dish, options: item.options})),
+          );
         }
-        orderFinalPrice += dishFinalPrice;
-        const orderItem = await this.orderItems.save(
-          this.orderItems.create({dish, options: item.options}),
-        );
-        orderItems.push(orderItem);
-      }
 
-      const order = await this.orders.save(
-        this.orders.create({
-          customer,
-          restaurant,
-          total: orderFinalPrice,
-          items: orderItems,
-        }),
-      );
-      await this.pubsub.publish(NEW_PENDING_ORDER, {
-        pendingOrders: {order, ownerId: restaurant.ownerId},
+        const saved = await manager.save(
+          manager.create(Order, {
+            customer,
+            restaurant,
+            total: orderFinalPrice,
+            items: orderItems,
+          }),
+        );
+
+        return {order: saved, ownerId: restaurant.ownerId};
       });
+
+      // Published only after the commit. Announcing from inside the transaction
+      // would tell the restaurant about an order that may still roll back.
+      await this.pubsub.publish(NEW_PENDING_ORDER, {pendingOrders: {order, ownerId}});
       return {ok: true, orderId: order.id};
     } catch (error) {
       return failure(error, this.logger, {
