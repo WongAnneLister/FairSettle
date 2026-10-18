@@ -52,7 +52,9 @@ export class OrderService {
           };
         }
         let dishFinalPrice = dish.price;
-        for (const itemOption of item.options) {
+        // `options` is declared nullable on CreateOrderItemInput, so a dish
+        // ordered without any options arrives with the field absent.
+        for (const itemOption of item.options ?? []) {
           const dishOption = dish.options?.find(dishOption => dishOption.name === itemOption.name);
           if (dishOption) {
             if (dishOption.extra) {
