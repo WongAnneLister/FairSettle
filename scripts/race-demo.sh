@@ -22,8 +22,14 @@ reset=$(tput sgr0 2>/dev/null || true)
 
 cd "$(dirname "$0")/.."
 
-if [[ -n "$(git status --porcelain)" ]]; then
-  echo "${red}Working tree is dirty. Commit or stash first — this script moves HEAD.${reset}"
+# --untracked-files=no on purpose. `git checkout` leaves untracked files alone —
+# it preserves them across the move and refuses loudly if a checked-out commit
+# would overwrite one. What actually needs guarding is uncommitted changes to
+# TRACKED files, which a checkout would either carry along or block on.
+if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+  echo "${red}You have uncommitted changes to tracked files.${reset}"
+  echo "${dim}Commit or stash them first — this script moves HEAD.${reset}"
+  git status --short --untracked-files=no
   exit 1
 fi
 

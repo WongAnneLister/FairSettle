@@ -38,3 +38,8 @@ lerna-debug.log*
 
 #postgres
 /pg_data
+# node_modules at any depth, not just the root. The rule above is /node_modules,
+# which is anchored — frontend/node_modules was not being ignored at all.
+node_modules/
+.next/
+*.local
