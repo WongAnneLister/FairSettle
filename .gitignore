@@ -43,3 +43,9 @@ lerna-debug.log*
 node_modules/
 .next/
 *.local
+
+# Local npm cache used when installing without touching the global one
+.tmp-npm-cache/
+
+# TypeScript incremental build info
+*.tsbuildinfo

@@ -15,7 +15,11 @@ module.exports = {
     node: true,
     jest: true,
   },
-  ignorePatterns: ['.eslintrc.js', 'pg_data'],
+  // 'frontend' carries its own ESLint config extending next/core-web-vitals,
+  // whose plugins live in frontend/node_modules. ESLint walks the tree while
+  // expanding the lint glob and reads that config, then fails the whole run
+  // because it cannot resolve a plugin it was never meant to load.
+  ignorePatterns: ['.eslintrc.js', 'pg_data', 'frontend'],
   rules: {
     '@typescript-eslint/interface-name-prefix': 'off',
     '@typescript-eslint/explicit-function-return-type': 'off',
