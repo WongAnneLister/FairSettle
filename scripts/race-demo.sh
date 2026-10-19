@@ -53,9 +53,11 @@ run_at() {
 
   git checkout --quiet "$commit"
   reset_test_schema
+  # grep -E, not sed: BSD sed on macOS does not treat \| as alternation, so the
+  # obvious sed filter silently matches nothing.
   npm run test:e2e -- take-order-concurrency 2>&1 \
-    | grep -vE "^\s+at |jest-circus|jest-runner|node_modules|^\s*$" \
-    | sed -n '/take-order-concurrency\|✓\|✕\|winners\|Tests:\|Expected\|Received/p'
+    | grep -E '(✓|✕) |"winners":|^Tests:|Expected length|Received length' \
+    | sed 's/^ *//'
 }
 
 cat <<BANNER
