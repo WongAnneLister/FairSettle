@@ -1,0 +1,11 @@
+#!/bin/sh
+# Install once: git config core.hooksPath scripts/hooks
+# Rejects commits whose feature list breaks the gate's rules.
+# On Windows, python3 may be the Microsoft Store stub; fall back to python.
+for py in python3 python; do
+  if "$py" -c "import sys; sys.exit(sys.version_info < (3,))" >/dev/null 2>&1; then
+    exec "$py" scripts/features.py check
+  fi
+done
+echo "pre-commit: no working Python 3 found" >&2
+exit 1

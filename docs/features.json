@@ -1,0 +1,680 @@
+{
+  "project": "FairSettle",
+  "rules": "State changes only through scripts/features.py. One feature active at a time. passing is irreversible.",
+  "features": [
+    {
+      "id": "F01",
+      "title": "Monorepo with ledger and dispatch services",
+      "service": "repo",
+      "milestone": "M0",
+      "priority": "P0",
+      "behavior": "fairsettle/ contains ledger/ and dispatch/ services, plus empty agent/; both services' existing unit tests pass from their new location.",
+      "verification": {
+        "kind": "command",
+        "command": "test -d ledger/.mvn && test -f dispatch/package.json && test -d agent && (cd ledger && ./mvnw -q test) && (cd dispatch && npm test --silent)"
+      },
+      "depends_on": [],
+      "state": "passing",
+      "evidence": {
+        "commit": "ed7967da37228b58fbb940c6c9dce0079fc27a84",
+        "verified_at": "2026-10-22T16:40:44+08:00",
+        "log": "docs\\evidence\\F01.log",
+        "log_sha256": "ec7af7461bb8951c55a671d036c461bbc032cfbf6c9bf84d0f2980e648f395f5"
+      },
+      "started_at": "2026-10-22T16:34:57+08:00"
+    },
+    {
+      "id": "F02",
+      "title": "Rules checked, sandbox reachable",
+      "service": "repo",
+      "milestone": "M0",
+      "priority": "P0",
+      "behavior": "Official rules read (mainland eligibility, prizes, pre-existing code policy, video length); PayPal Sandbox app created; access token fetched, order created, approved in browser and captured by hand with curl.",
+      "verification": {
+        "kind": "manual",
+        "steps": [
+          "Eligibility, prize, pre-existing-code and video-length rules noted in docs/progress.md",
+          "Sandbox client id/secret stored in .env (not committed)",
+          "curl: token -> create order -> browser approval with sandbox buyer -> capture returns COMPLETED"
+        ]
+      },
+      "depends_on": [],
+      "state": "passing",
+      "evidence": {
+        "commit": "3fe3b233295238a35f09f03a345b85c14ea7b9e6",
+        "verified_at": "2026-10-22T17:10:13+08:00",
+        "log": "docs/evidence/F02.log",
+        "log_sha256": "8a761a20a1e2e96ddbb0d4e042b8ad8fcc06d9b733e8f36c108ac0c13309782e"
+      },
+      "started_at": "2026-10-22T17:03:09+08:00"
+    },
+    {
+      "id": "F03",
+      "title": "ADR: PayPal state mapping",
+      "service": "ledger",
+      "milestone": "M1",
+      "priority": "P0",
+      "behavior": "docs/adr/paypal-state-mapping.md maps PayPal order/capture/refund states onto the ledger payment and refund state machines, including approved-not-captured, capture timeout (UNKNOWN path, query before resend) and webhook ordering.",
+      "verification": {
+        "kind": "manual",
+        "steps": [
+          "Every PayPal status the adapter can receive has a row in the mapping",
+          "Capture timeout path says: query, never resend blindly",
+          "Reviewed against ledger docs/state-machines"
+        ]
+      },
+      "depends_on": [
+        "F01",
+        "F02"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "0df666999cb87bc4e67f587e2a902113c0a1fd43",
+        "verified_at": "2026-10-22T17:31:24+08:00",
+        "log": "docs/evidence/F03.log",
+        "log_sha256": "4b29a2e6f6d391a33ee6def418ada6f8eb60bc4b5bb14ca4581936a7e1444060"
+      },
+      "started_at": "2026-10-22T17:28:31+08:00"
+    },
+    {
+      "id": "F04",
+      "title": "PayPal auth client",
+      "service": "ledger",
+      "milestone": "M1",
+      "priority": "P0",
+      "behavior": "Client-credentials token is fetched, cached until shortly before expiry and refreshed on 401; startup fails when the configured base URL is not the sandbox.",
+      "verification": {
+        "kind": "command",
+        "command": "cd ledger && ./mvnw -q -Dtest='PayPalAuthClientTest' test"
+      },
+      "depends_on": [
+        "F03"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "2e251cbb4977ff8b6d90ca9728cf21eff8ae8836",
+        "verified_at": "2026-10-22T18:00:37+08:00",
+        "log": "docs/evidence/F04.log",
+        "log_sha256": "322effd297170addf7b4b5767264759c1339ba771c32437d6d8772810ad635fe"
+      },
+      "started_at": "2026-10-22T17:44:25+08:00"
+    },
+    {
+      "id": "F05",
+      "title": "Create PayPal order",
+      "service": "ledger",
+      "milestone": "M1",
+      "priority": "P0",
+      "behavior": "POST /v1/payments with provider=paypal creates an Orders v2 order with a PayPal-Request-Id derived from the ledger operation; a retry with the same Idempotency-Key returns the same order and never creates a second one.",
+      "verification": {
+        "kind": "command",
+        "command": "cd ledger && ./mvnw -q -Dtest='PayPalCreateOrderTest' test"
+      },
+      "depends_on": [
+        "F04"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "d01d97f3a33ad7800a041174401d3631d55fbc35",
+        "verified_at": "2026-10-22T19:35:56+08:00",
+        "log": "docs/evidence/F05.log",
+        "log_sha256": "8e0d7893bece4d6f4ec0844bc188545925a47dba41f89dc2a9e597daa4613660"
+      },
+      "started_at": "2026-10-22T18:25:08+08:00"
+    },
+    {
+      "id": "F06",
+      "title": "Approval return and capture",
+      "service": "ledger",
+      "milestone": "M1",
+      "priority": "P0",
+      "behavior": "After buyer approval the payment moves to approved-not-captured, then capture moves it to succeeded and posts balanced ledger entries; capture is idempotent.",
+      "verification": {
+        "kind": "command",
+        "command": "cd ledger && ./mvnw -q -Dtest='PayPalCaptureTest,PaymentStateMachinePayPalTest' test"
+      },
+      "depends_on": [
+        "F05"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "5799bafa32ffbb9cca2395a5ec9bcc5346007d5a",
+        "verified_at": "2026-10-23T11:10:02+08:00",
+        "log": "docs/evidence/F06.log",
+        "log_sha256": "b6b00d0d3924462735cb709db5e36c03ca9353be6a449c9b7568f453dc7ec5b4"
+      },
+      "started_at": "2026-10-23T09:38:03+08:00"
+    },
+    {
+      "id": "F07",
+      "title": "Capture timeout goes to UNKNOWN",
+      "service": "ledger",
+      "milestone": "M1",
+      "priority": "P0",
+      "behavior": "A capture call that times out leaves the payment UNKNOWN; recovery queries PayPal and settles the state without issuing a second capture.",
+      "verification": {
+        "kind": "command",
+        "command": "cd ledger && ./mvnw -q -Dtest='PayPalCaptureUnknownTest' test"
+      },
+      "depends_on": [
+        "F06"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "7c745f0fb09895bc4654dc7d0c976d297c5b95a6",
+        "verified_at": "2026-10-23T14:03:33+08:00",
+        "log": "docs/evidence/F07.log",
+        "log_sha256": "4da38ff9f080cd7774047474ec6e20a01d90ce6519d403bdcb1a0c0498f3c8e3"
+      },
+      "started_at": "2026-10-23T11:50:21+08:00"
+    },
+    {
+      "id": "F08",
+      "title": "Refund by capture id",
+      "service": "ledger",
+      "milestone": "M1",
+      "priority": "P0",
+      "behavior": "Full and partial refunds are issued against the stored capture id, respect the ledger's refund reservation limit, and are idempotent on retry.",
+      "verification": {
+        "kind": "command",
+        "command": "cd ledger && ./mvnw -q -Dtest='PayPalRefundTest' test"
+      },
+      "depends_on": [
+        "F06"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "2a85752644df3b8d113bfb9d1810d7af3e5b8c80",
+        "verified_at": "2026-10-23T15:44:25+08:00",
+        "log": "docs/evidence/F08.log",
+        "log_sha256": "f2296562d778ed20cdafbff34cdf7a3e770d6998ae11fe1d7829281730aa66a1"
+      },
+      "started_at": "2026-10-23T14:14:54+08:00"
+    },
+    {
+      "id": "F09",
+      "title": "Webhook verification and inbox",
+      "service": "ledger",
+      "milestone": "M1",
+      "priority": "P0",
+      "behavior": "PayPal webhooks are verified through the verification API (webhook id from config), deduplicated by event id in the existing inbox; a failed or timed-out verification never posts to the ledger.",
+      "verification": {
+        "kind": "command",
+        "command": "cd ledger && ./mvnw -q -Dtest='PayPalWebhookVerificationTest' test"
+      },
+      "depends_on": [
+        "F04"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "f3ba84d8cabf9136a92d86646386ae184fe8475d",
+        "verified_at": "2026-10-23T16:51:09+08:00",
+        "log": "docs/evidence/F09.log",
+        "log_sha256": "466da60f4e6e8593d679bf79d2a7770f1066c619fb6c270c34e8f3451913c7a2"
+      },
+      "started_at": "2026-10-23T16:00:28+08:00"
+    },
+    {
+      "id": "F10",
+      "title": "Webhook events posted",
+      "service": "ledger",
+      "milestone": "M1",
+      "priority": "P0",
+      "behavior": "Capture-completed and refund-completed events update payment/refund state and ledger entries; out-of-order or duplicate events are rejected by the state machine without side effects.",
+      "verification": {
+        "kind": "command",
+        "command": "cd ledger && ./mvnw -q -Dtest='PayPalWebhookPostingTest' test"
+      },
+      "depends_on": [
+        "F08",
+        "F09"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "94d97fcefc9c26418226766a77b9b9c2916e71a0",
+        "verified_at": "2026-10-23T18:33:16+08:00",
+        "log": "docs/evidence/F10.log",
+        "log_sha256": "f1e782016de05da0044f10b06dbfe4c21414028f72c4197f3c22b58f0a52e8d9"
+      },
+      "started_at": "2026-10-23T17:40:58+08:00"
+    },
+    {
+      "id": "F11",
+      "title": "Full ledger regression green",
+      "service": "ledger",
+      "milestone": "M1",
+      "priority": "P0",
+      "behavior": "The whole ledger suite, including Stripe and integration tests, passes with the PayPal adapter in place.",
+      "verification": {
+        "kind": "command",
+        "command": "cd ledger && ./mvnw -q verify"
+      },
+      "depends_on": [
+        "F07",
+        "F10"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "ab74bebdf04f271bcf1d90ce3a37c0a768e78303",
+        "verified_at": "2026-10-24T12:06:57+08:00",
+        "log": "docs/evidence/F11.log",
+        "log_sha256": "a9b3aa9e196477091cb4069d880f011f8a5f8dc5ea67cda5702b25f52d032bc1"
+      },
+      "started_at": "2026-10-24T00:09:45+08:00"
+    },
+    {
+      "id": "F12",
+      "title": "M1: real sandbox payment and partial refund",
+      "service": "ledger",
+      "milestone": "M1",
+      "priority": "P0",
+      "behavior": "Against the real PayPal Sandbox: create, approve in browser, capture, partial refund, both webhooks received; ledger entries balance.",
+      "verification": {
+        "kind": "manual",
+        "steps": [
+          "Payment and refund visible in the sandbox merchant account",
+          "Both webhooks arrived through ngrok or the deployed URL and were posted once",
+          "Ledger balance check passes; order id, capture id and refund id recorded in docs/progress.md"
+        ]
+      },
+      "depends_on": [
+        "F11"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "50d763661e156f288352c7ea9e563ace56a3b99c",
+        "verified_at": "2026-10-24T14:19:23+08:00",
+        "log": "docs/evidence/F12.log",
+        "log_sha256": "92795afde7f1aeacd6147af8003eff352c716dccc3f02af6d281615077a16940"
+      },
+      "started_at": "2026-10-24T12:50:50+08:00"
+    },
+    {
+      "id": "F13",
+      "title": "One compose for all services",
+      "service": "repo",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "Root docker-compose.yml starts separate Postgres and Redis for ledger and dispatch (no port clash), Kafka, ledger api and worker, dispatch; every service reports healthy.",
+      "verification": {
+        "kind": "command",
+        "command": "docker compose up -d --wait && curl -fsS localhost:8080/actuator/health && curl -fsS localhost:8081/actuator/health && curl -fsS -o /dev/null localhost:4000/graphql?query=%7B__typename%7D"
+      },
+      "depends_on": [
+        "F01"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "de35431090c9e750e81853708b6ee2e736a1e6fc",
+        "verified_at": "2026-10-24T18:05:21+08:00",
+        "log": "docs/evidence/F13.log",
+        "log_sha256": "83252488174cad7e710cecc43089b83de0ae8c672e98ba5702ff970015bdfbeb"
+      },
+      "started_at": "2026-10-24T14:43:25+08:00"
+    },
+    {
+      "id": "F14",
+      "title": "Ledger contract for new endpoints",
+      "service": "repo",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "contracts/ledger-openapi.yaml describes the refund-proposal and liability endpoints (amounts in integer cents, basis points summing to 10000) and lints clean.",
+      "verification": {
+        "kind": "command",
+        "command": "npx --yes @redocly/cli lint contracts/ledger-openapi.yaml"
+      },
+      "depends_on": [
+        "F12"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "4d0ad46d0a556e1ba4fb0ed77fa74ef17a1ae29e",
+        "verified_at": "2026-10-24T20:18:38+08:00",
+        "log": "docs/evidence/F14.log",
+        "log_sha256": "b73380fc94234021735d4946a0ace83c44a5a36277c877607413172029be3d31"
+      },
+      "started_at": "2026-10-24T18:25:28+08:00"
+    },
+    {
+      "id": "F15",
+      "title": "Dispatch checkout through the ledger",
+      "service": "dispatch",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "Creating an order calls ledger POST /v1/payments with an Idempotency-Key derived from the order id; a retried order creation never creates a second payment.",
+      "verification": {
+        "kind": "command",
+        "command": "cd dispatch && npm run test:e2e -- --testPathPattern=checkout"
+      },
+      "depends_on": [
+        "F13"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "4ad66e07ef466b581be3dc9776d12756b7b6fb53",
+        "verified_at": "2026-10-24T21:14:31+08:00",
+        "log": "docs/evidence/F15.log",
+        "log_sha256": "2acf00a9692d5f0f9ee4138015e62890343fa185d9a16d3957e52c0d5b52452b"
+      },
+      "started_at": "2026-10-24T20:40:14+08:00"
+    },
+    {
+      "id": "F16",
+      "title": "Payment result drives order state",
+      "service": "dispatch",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "Ledger merchant notifications mark the order paid or failed through the existing order state machine; duplicates and out-of-order notifications are ignored.",
+      "verification": {
+        "kind": "command",
+        "command": "cd dispatch && npm run test:e2e -- --testPathPattern=payment-notification"
+      },
+      "depends_on": [
+        "F15"
+      ],
+      "state": "passing",
+      "evidence": {
+        "commit": "ffcc084fbb678503348832e39ec01ab172e7a246",
+        "verified_at": "2026-10-24T22:17:05+08:00",
+        "log": "docs/evidence/F16.log",
+        "log_sha256": "ccd722d0513d0c05691f006160e551e56921befb76983ef48693d3eb74897971"
+      },
+      "started_at": "2026-10-24T21:34:16+08:00"
+    },
+    {
+      "id": "F17",
+      "title": "Liability accounts and allocation",
+      "service": "ledger",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "A refund with a liability split posts the cost to restaurant, courier and platform accounts in basis points; the parts always sum to the refund, the sub-cent remainder goes to the platform.",
+      "verification": {
+        "kind": "command",
+        "command": "cd ledger && ./mvnw -q -Dtest='LiabilityAllocationTest' test"
+      },
+      "depends_on": [
+        "F14"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F18",
+      "title": "Refund proposal API and review",
+      "service": "ledger",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "POST refund proposal (idempotent on complaint id) enters the existing review queue; approval executes the refund with its liability split in one transaction; rejection changes nothing.",
+      "verification": {
+        "kind": "command",
+        "command": "cd ledger && ./mvnw -q -Dtest='RefundProposalApiTest' test"
+      },
+      "depends_on": [
+        "F17"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F19",
+      "title": "Agent clients against fixtures",
+      "service": "agent",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "Typed clients read order, transitions, courier timeline (dispatch GraphQL) and payment, refundable amount (ledger REST); recorded fixtures replay without live services.",
+      "verification": {
+        "kind": "command",
+        "command": "cd agent && python -m pytest -q tests/test_clients.py"
+      },
+      "depends_on": [
+        "F14"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F20",
+      "title": "Policy checks",
+      "service": "agent",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "All 7 hard rules from the PRD are pure functions with a test each; any failure escalates and never trims an amount into compliance.",
+      "verification": {
+        "kind": "command",
+        "command": "cd agent && python -m pytest -q tests/test_policy.py"
+      },
+      "depends_on": [
+        "F19"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F21",
+      "title": "Gather and decide",
+      "service": "agent",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "Evidence is gathered in parallel without the model; the model returns a schema-valid RefundDecision (one retry on invalid output, then escalate); evidence refs are checked against collected events.",
+      "verification": {
+        "kind": "command",
+        "command": "cd agent && python -m pytest -q tests/test_decide.py"
+      },
+      "depends_on": [
+        "F20"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F22",
+      "title": "Propose, pause, resume",
+      "service": "agent",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "A passing decision is submitted as a proposal; the graph pauses with state in Postgres; after a process restart, approval resumes the same thread without resubmitting.",
+      "verification": {
+        "kind": "command",
+        "command": "cd agent && python -m pytest -q tests/test_resume.py"
+      },
+      "depends_on": [
+        "F18",
+        "F21"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F23",
+      "title": "Execute and trace",
+      "service": "agent",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "After approval the agent triggers execution through the ledger only; every run is traceable in Langfuse by complaint id.",
+      "verification": {
+        "kind": "command",
+        "command": "cd agent && python -m pytest -q tests/test_execute.py"
+      },
+      "depends_on": [
+        "F22"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F24",
+      "title": "M2: full chain with PayPal",
+      "service": "repo",
+      "milestone": "M2",
+      "priority": "P0",
+      "behavior": "Live run: order paid with PayPal, complaint submitted, proposal approved in the console, refund visible in the sandbox, ledger shows the cost on the liable party.",
+      "verification": {
+        "kind": "manual",
+        "steps": [
+          "Complaint id, proposal id, PayPal refund id recorded in docs/progress.md",
+          "Ledger shows the allocation entries for the liable party",
+          "Langfuse trace for the run opens and shows cited evidence"
+        ]
+      },
+      "depends_on": [
+        "F16",
+        "F23"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F25",
+      "title": "Proactive trigger",
+      "service": "agent",
+      "milestone": "M2",
+      "priority": "P1",
+      "behavior": "A dispatch delivery-failure event starts the same flow as a complaint, deduplicated per order.",
+      "verification": {
+        "kind": "command",
+        "command": "cd agent && python -m pytest -q tests/test_proactive.py"
+      },
+      "depends_on": [
+        "F24"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F26",
+      "title": "Investigate node",
+      "service": "agent",
+      "milestone": "M2",
+      "priority": "P1",
+      "behavior": "When evidence is insufficient the model may call read-only tools, at most 3 steps, then must decide.",
+      "verification": {
+        "kind": "command",
+        "command": "cd agent && python -m pytest -q tests/test_investigate.py"
+      },
+      "depends_on": [
+        "F24"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F27",
+      "title": "Evaluation suite",
+      "service": "agent",
+      "milestone": "M3",
+      "priority": "P0",
+      "behavior": "10 PRD scenarios run 3 times each from fixtures; zero policy violations and decision accuracy of at least 0.9; results written to docs/eval-results.md.",
+      "verification": {
+        "kind": "command",
+        "command": "cd agent && python -m evals.run --runs 3 --assert-zero-violations --min-accuracy 0.9 --out ../docs/eval-results.md"
+      },
+      "depends_on": [
+        "F24"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F28",
+      "title": "Complaint UI",
+      "service": "agent",
+      "milestone": "M3",
+      "priority": "P0",
+      "behavior": "A Gradio page submits a complaint for an order and shows the proposal status and a link to its trace.",
+      "verification": {
+        "kind": "manual",
+        "steps": [
+          "Submit a complaint from the page and see the proposal appear in the ledger console",
+          "Status updates after approval without a page reload error"
+        ]
+      },
+      "depends_on": [
+        "F24"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F29",
+      "title": "Deployed",
+      "service": "repo",
+      "milestone": "M3",
+      "priority": "P1",
+      "behavior": "All services run on a public host with sandbox credentials only; PayPal webhooks reach it.",
+      "verification": {
+        "kind": "manual",
+        "steps": [
+          "Health endpoints respond on the public URL",
+          "A sandbox payment's webhook arrives at the deployed ledger"
+        ]
+      },
+      "depends_on": [
+        "F24"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F30",
+      "title": "README and architecture",
+      "service": "repo",
+      "milestone": "M3",
+      "priority": "P0",
+      "behavior": "English README: one-line pitch, demo GIF, architecture diagram, quick start, eval results, what was pre-existing vs built during the hackathon.",
+      "verification": {
+        "kind": "manual",
+        "steps": [
+          "Fresh clone on another machine starts with the quick start alone",
+          "No secrets in the repository (git log -p | grep checks)"
+        ]
+      },
+      "depends_on": [
+        "F27"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F31",
+      "title": "Demo video",
+      "service": "repo",
+      "milestone": "M3",
+      "priority": "P0",
+      "behavior": "Video within the rules' length limit following the agreed shot list; uploaded and viewable without login.",
+      "verification": {
+        "kind": "manual",
+        "steps": [
+          "Opens in a private browser window",
+          "First 20 seconds state the problem and the who-pays twist"
+        ]
+      },
+      "depends_on": [
+        "F27",
+        "F28"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F32",
+      "title": "Submitted on Devpost",
+      "service": "repo",
+      "milestone": "M3",
+      "priority": "P0",
+      "behavior": "Devpost entry submitted with repo, video and project text; checked in a private window.",
+      "verification": {
+        "kind": "manual",
+        "steps": [
+          "Submission confirmation received",
+          "Video, repo and demo links all open from a private window"
+        ]
+      },
+      "depends_on": [
+        "F30",
+        "F31"
+      ],
+      "state": "not_started",
+      "evidence": null
+    }
+  ]
+}
