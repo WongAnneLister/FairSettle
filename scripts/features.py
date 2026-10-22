@@ -16,6 +16,7 @@ The only sanctioned way to change a feature's state. Standard library only.
 import datetime as dt
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -166,7 +167,12 @@ def cmd_verify(data: dict, fid: str) -> None:
     else:
         print(f"running: {v['command']}")
         try:
-            proc = subprocess.run(v["command"], shell=True, cwd=ROOT, capture_output=True, text=True, timeout=VERIFY_TIMEOUT_S)
+            # Commands are POSIX shell; shell=True would mean cmd.exe on Windows.
+            bash = shutil.which("bash") or die("verify needs bash on PATH (on Windows, Git Bash)")
+            proc = subprocess.run(
+                [bash, "-c", v["command"]], cwd=ROOT, capture_output=True, text=True,
+                encoding="utf-8", errors="replace", timeout=VERIFY_TIMEOUT_S,
+            )
             exit_code, output = proc.returncode, proc.stdout + proc.stderr
         except subprocess.TimeoutExpired as e:
             exit_code, output = 124, f"timed out after {VERIFY_TIMEOUT_S}s\n{e.stdout or ''}{e.stderr or ''}"
