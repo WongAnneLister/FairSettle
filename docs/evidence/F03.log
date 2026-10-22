@@ -1,0 +1,9 @@
+feature: F03
+kind: manual
+commit: 0df666999cb87bc4e67f587e2a902113c0a1fd43
+confirmed_at: 2026-10-22T17:31:17+08:00
+----
+[x] Every PayPal status the adapter can receive has a row in the mapping
+[x] Capture timeout path says: query, never resend blindly
+[x] Reviewed against ledger docs/state-machines
+note: 
