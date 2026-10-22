@@ -32,6 +32,12 @@ Each service has its own `AGENTS.md` (imported by its `CLAUDE.md`). Before plann
 - Only `python3 scripts/features.py` changes a feature's state (`start`, `verify`, `block`). Never edit `docs/features.json` or `docs/evidence/` any other way, and never delete a feature.
 - Exactly one feature is active at a time.
 - Only `verify` sets a feature to passing, and it refuses to run with uncommitted changes. Commit first, then verify, then commit `docs/features.json` and `docs/evidence/`.
+- Three commits per feature:
+  1. the plan: `docs/plans/<ID>.md`;
+  2. the work: `start` (`docs/features.json`), the tests and the implementation together;
+  3. the record: after `verify`, `docs/features.json`, `docs/evidence/` and the `docs/progress.md` entry together, as `repo: <ID> passing`.
+
+  Review fixes are extra commits (below). Do not split the work commit into steps; tests are still written first and seen failing before any implementation.
 - Never change a feature's verification command, and never weaken a test's assertions to make it pass. If either looks wrong, stop and say why.
 - Features with `"kind": "manual"` need a human; do not try to confirm them.
 - Commit messages: `<service>: <what> (<ID>)`, e.g. `ledger: capture PayPal order (F06)`. Review fixes add `, review fix`.
@@ -42,7 +48,7 @@ Each service has its own `AGENTS.md` (imported by its `CLAUDE.md`). Before plann
 Work on a feature goes through four steps. Each step is a separate session.
 
 1. **Plan** (Claude Code): writes `docs/plans/<ID>.md` from `docs/plans/TEMPLATE.md`. No production code.
-2. **Implement** (Codex): follows the plan exactly. Tests first, watch them fail, then implementation. Small commits.
+2. **Implement** (Codex): follows the plan exactly. Tests first, watch them fail, then implementation, all in one work commit.
 3. **Review** (Claude Code, fresh session): compares `git diff` with the plan. Fixes small issues that need no design decision, each as its own commit marked `review fix`, and records it under "Deviations" in the plan. Lists design issues without fixing them.
 4. **Verify**: `python3 scripts/features.py verify <ID>`.
 

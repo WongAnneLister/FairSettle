@@ -44,10 +44,12 @@ Cover the failure paths, not only the happy path: retries, timeouts, duplicates,
 
 ## Steps
 
-Ordered, each step ends with a commit.
+Ordered. Three commits per feature (AGENTS.md): this plan, one work commit, one passing record.
 
-1.
-2.
+1. `python scripts/features.py start <ID>`. Do not commit yet.
+2. Write the tests; confirm they fail. Do not commit yet.
+3. Implement until the verification command and the service's test suite are green. Commit everything from steps 1–3: `<service>: <what> (<ID>)`.
+4. `python scripts/features.py verify <ID>`, then the progress log entry. Commit `docs/features.json`, `docs/evidence/` and `docs/progress.md`: `repo: <ID> passing`.
 
 ## Deviations
 
