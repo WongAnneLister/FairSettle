@@ -4,7 +4,7 @@ import java.time.*;
 import java.util.*;
 import org.springframework.core.env.Environment;
 
-/** Explicit verified window; Stripe unknown-create retries remain disabled pending real contract verification. */
+/** Stripe unknown-create retries remain disabled; PayPal uses its documented window (ADR D7). */
 public record RecoveryPolicy(
         Duration lease,
         Duration fakeVerifiedRetention,
@@ -13,6 +13,9 @@ public record RecoveryPolicy(
         Duration unresolvedAge,
         Duration accountBatchInterval,
         List<Duration> l1Delays) {
+    /** PayPal documents 6 h for create/capture PayPal-Request-Id; 1 h margin (ADR D7). Documented, not measured. */
+    static final Duration PAYPAL_VERIFIED_RETENTION = Duration.ofHours(5);
+
     public RecoveryPolicy(
             Duration lease, Duration verified, Duration retention, double jitter, Duration age, Duration interval) {
         this(
@@ -72,6 +75,7 @@ public record RecoveryPolicy(
     }
 
     Duration verifiedWindow(String provider) {
+        if ("PAYPAL".equals(provider)) return PAYPAL_VERIFIED_RETENTION;
         return "FAKE".equals(provider) ? fakeVerifiedRetention : Duration.ZERO;
     }
 

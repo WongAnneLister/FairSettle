@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.*;
 import com.paymentsledger.common.error.*;
 import com.paymentsledger.identity.*;
 import com.paymentsledger.payment.domain.PaymentFacts;
+import com.paymentsledger.payment.domain.ProviderDeployment;
 import com.paymentsledger.payment.domain.ProviderResultRules;
-import com.paymentsledger.payment.domain.StripeDeployment;
 import com.paymentsledger.payment.repository.PaymentRepositories;
 import com.paymentsledger.provider.*;
 import com.paymentsledger.provider.ProviderModels.*;
@@ -47,17 +47,23 @@ public class PaymentRepository {
         this.json = json;
         this.clock = clock;
         var records = store.records();
-        this.intents = new PaymentIntentService(store.intents(), records, tx, json, clock, this::stripeDeployment);
+        this.intents = new PaymentIntentService(store.intents(), records, tx, json, clock, this::deployment);
         this.reader = new PaymentReader(intents, records, tx, clock);
         this.leases = new OperationLeases(
-                store.leases(), intents, tx, clock, this::recoveryPolicy, this::stripeDeployment, this::markUnknown);
+                store.leases(), intents, tx, clock, this::recoveryPolicy, this::deployment, this::markUnknown);
         this.results = new ProviderResults(
                 store.results(), store.states(), leases, intents, tx, json, clock, this::recoveryPolicy, () -> shares);
     }
 
-    /** The Stripe account this deployment is configured for; all null when Stripe is not configured. */
-    private StripeDeployment stripeDeployment() {
-        return new StripeDeployment(
+    /** The account this deployment is configured for; all null when no provider binding is configured. */
+    private ProviderDeployment deployment() {
+        if (configuration != null && configuration.getProperty("platform.paypal.enabled", Boolean.class, false))
+            return new ProviderDeployment(
+                    paypal("client-id", "PAYPAL_CLIENT_ID"),
+                    paypal("organization-id", "PAYPAL_ORGANIZATION_ID"),
+                    paypal("environment-id", "PAYPAL_ENVIRONMENT_ID"),
+                    paypal("provider-account-id", "PAYPAL_PROVIDER_ACCOUNT_ID"));
+        return new ProviderDeployment(
                 configured("account-id", "STRIPE_ACCOUNT_ID"),
                 configured("organization-id", "STRIPE_ORGANIZATION_ID"),
                 configured("environment-id", "STRIPE_ENVIRONMENT_ID"),
@@ -168,6 +174,12 @@ public class PaymentRepository {
         return configuration == null
                 ? null
                 : configuration.getProperty("platform.stripe." + name, configuration.getProperty(fallback));
+    }
+
+    private String paypal(String name, String fallback) {
+        return configuration == null
+                ? null
+                : configuration.getProperty("platform.paypal." + name, configuration.getProperty(fallback));
     }
 
     public Intent prepare(TenantContext c, String key, PaymentRequests.Create request, String provider) {

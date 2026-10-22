@@ -25,7 +25,7 @@ class ReconciliationRecoverySchemaIT {
                 .dataSource(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword())
                 .schemas("platform")
                 .load();
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(3);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(4);
         assertThat(flyway.migrate().migrationsExecuted).isZero();
     }
 }

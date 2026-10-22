@@ -10,8 +10,8 @@ import com.paymentsledger.common.error.ErrorCode;
 import com.paymentsledger.identity.TenantContext;
 import com.paymentsledger.payment.PaymentRepository.Claim;
 import com.paymentsledger.payment.domain.OperationLeaseRules;
+import com.paymentsledger.payment.domain.ProviderDeployment;
 import com.paymentsledger.payment.domain.RefundLifecycle;
-import com.paymentsledger.payment.domain.StripeDeployment;
 import com.paymentsledger.payment.repository.OperationLeaseRepository;
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -45,7 +45,7 @@ final class OperationLeases {
     private final TransactionTemplate tx;
     private final Clock clock;
     private final Supplier<RecoveryPolicy> policy;
-    private final Supplier<StripeDeployment> stripe;
+    private final Supplier<ProviderDeployment> deployment;
     private final PaymentUncertainty payments;
 
     OperationLeases(
@@ -54,27 +54,27 @@ final class OperationLeases {
             TransactionTemplate tx,
             Clock clock,
             Supplier<RecoveryPolicy> policy,
-            Supplier<StripeDeployment> stripe,
+            Supplier<ProviderDeployment> deployment,
             PaymentUncertainty payments) {
         this.leases = leases;
         this.intents = intents;
         this.tx = tx;
         this.clock = clock;
         this.policy = policy;
-        this.stripe = stripe;
+        this.deployment = deployment;
         this.payments = payments;
     }
 
     /** Operations waiting for their first send. */
     List<UUID> prepared(int limit, String provider) {
         if (provider == null) return List.of();
-        return tx.execute(s -> leases.sendable(provider, stripe.get(), clamp(limit)));
+        return tx.execute(s -> leases.sendable(provider, deployment.get(), clamp(limit)));
     }
 
     /** Operations whose recovery task is due. */
     List<UUID> due(int limit, String provider) {
         if (provider == null) return List.of();
-        return tx.execute(s -> leases.due(provider, stripe.get(), clock.instant(), clamp(limit)));
+        return tx.execute(s -> leases.due(provider, deployment.get(), clock.instant(), clamp(limit)));
     }
 
     /**
@@ -217,7 +217,7 @@ final class OperationLeases {
     /** L2: wakes the tasks of operations whose outcome is still uncertain or unposted; returns how many were found. */
     int wakeL2(int limit, String provider) {
         if (provider == null) return 0;
-        var ids = tx.execute(s -> leases.stranded(provider, stripe.get(), clock.instant(), clamp(limit)));
+        var ids = tx.execute(s -> leases.stranded(provider, deployment.get(), clock.instant(), clamp(limit)));
         for (UUID id : ids)
             tx.execute(s -> {
                 var target = leases.findTarget(id).orElseThrow();

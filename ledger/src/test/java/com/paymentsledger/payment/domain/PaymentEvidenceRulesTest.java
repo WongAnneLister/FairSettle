@@ -11,6 +11,17 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class PaymentEvidenceRulesTest {
+    @Test
+    void sessionStatusUsesPayPalOrderStatus() {
+        String[] statuses = {"APPROVED", "PAYER_ACTION_REQUIRED", "unpaid", "paid", null};
+        String[] expected = {"APPROVED", "PAYER_ACTION_REQUIRED", "open", "complete", "open"};
+        for (int i = 0; i < statuses.length; i++) {
+            var state = i == 0 || i == 3 ? CheckoutSessionStatus.COMPLETE : CheckoutSessionStatus.OPEN;
+            var fact = new CheckoutSessionFact("fixture", state, null, null, statuses[i], null, Map.of());
+            assertThat(PaymentEvidenceRules.sessionStatus(fact)).isEqualTo(expected[i]);
+        }
+    }
+
     static final Instant T0 = Instant.parse("2026-10-15T00:00:00Z");
     static final UUID PAYMENT = new UUID(0, 7);
 

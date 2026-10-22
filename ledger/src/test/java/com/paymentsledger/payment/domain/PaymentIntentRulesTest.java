@@ -14,9 +14,48 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 class PaymentIntentRulesTest {
+    @Test
+    void paypalBindingMatchesDeployment() {
+        var deployment = new ProviderDeployment(
+                "client-fixture",
+                TENANT.organizationId().toString(),
+                TENANT.environmentId().toString(),
+                TENANT.allowedProviderAccountId().toString());
+        assertThatCode(() -> PaymentIntentRules.requireBinding(
+                        Optional.of(new ProviderBinding("PAYPAL", "client-fixture")),
+                        "PAYPAL",
+                        TENANT,
+                        () -> deployment))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void paypalBindingRejectsOtherClient() {
+        var deployment = new ProviderDeployment(
+                "client-fixture",
+                TENANT.organizationId().toString(),
+                TENANT.environmentId().toString(),
+                TENANT.allowedProviderAccountId().toString());
+        rejects(
+                () -> PaymentIntentRules.requireBinding(
+                        Optional.of(new ProviderBinding("PAYPAL", "other-client")), "PAYPAL", TENANT, () -> deployment),
+                ErrorCode.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void paypalBindingRejectsUnconfiguredDeployment() {
+        rejects(
+                () -> PaymentIntentRules.requireBinding(
+                        Optional.of(new ProviderBinding("PAYPAL", "client-fixture")),
+                        "PAYPAL",
+                        TENANT,
+                        () -> new ProviderDeployment(null, null, null, null)),
+                ErrorCode.SERVICE_UNAVAILABLE);
+    }
+
     static final TenantContext TENANT = new TenantContext(
             new UUID(0, 1), new UUID(0, 2), new UUID(0, 3), new UUID(0, 4), Set.of("USD"), false, Set.of());
-    static final StripeDeployment DEPLOYED = new StripeDeployment(
+    static final ProviderDeployment DEPLOYED = new ProviderDeployment(
             "acct_1",
             TENANT.organizationId().toString(),
             TENANT.environmentId().toString(),
@@ -61,11 +100,11 @@ class PaymentIntentRulesTest {
                 () -> PaymentIntentRules.requireBinding(
                         Optional.of(new ProviderBinding("STRIPE", "acct_other")), "STRIPE", TENANT, () -> DEPLOYED),
                 ErrorCode.SERVICE_UNAVAILABLE);
-        for (var deployment : new StripeDeployment[] {
-            new StripeDeployment("acct_1", "other", DEPLOYED.environmentId(), DEPLOYED.providerAccountId()),
-            new StripeDeployment("acct_1", DEPLOYED.organizationId(), "other", DEPLOYED.providerAccountId()),
-            new StripeDeployment("acct_1", DEPLOYED.organizationId(), DEPLOYED.environmentId(), "other"),
-            new StripeDeployment(null, null, null, null)
+        for (var deployment : new ProviderDeployment[] {
+            new ProviderDeployment("acct_1", "other", DEPLOYED.environmentId(), DEPLOYED.providerAccountId()),
+            new ProviderDeployment("acct_1", DEPLOYED.organizationId(), "other", DEPLOYED.providerAccountId()),
+            new ProviderDeployment("acct_1", DEPLOYED.organizationId(), DEPLOYED.environmentId(), "other"),
+            new ProviderDeployment(null, null, null, null)
         })
             rejects(
                     () -> PaymentIntentRules.requireBinding(stripe, "STRIPE", TENANT, () -> deployment),

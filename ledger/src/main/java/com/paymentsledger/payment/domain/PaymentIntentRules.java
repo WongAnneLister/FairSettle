@@ -18,8 +18,8 @@ import java.util.function.Supplier;
  * <ul>
  *   <li>An idempotency key replays its original intent only for the same request; a changed request is a conflict.
  *   <li>The server prices the order from its active price list; a client amount that disagrees is rejected.
- *   <li>A request is charged only through the application's active test provider account, and a Stripe request only
- *       through the single Stripe account this deployment is configured for.
+ *   <li>A request is charged only through the application's active test provider account, and a Stripe or PayPal
+ *       request only through the single account this deployment is configured for.
  *   <li>A payment can be canceled until money is captured or its evidence conflicts.
  * </ul>
  */
@@ -37,21 +37,21 @@ public final class PaymentIntentRules {
         if (!requestFingerprint.equals(stored.requestFingerprint())) throw rejected(ErrorCode.IDEMPOTENCY_CONFLICT);
     }
 
-    /** Charges only through the bound, active provider account; see the class comment for Stripe. */
+    /** Charges only through the bound, active provider account; see the class comment for Stripe and PayPal. */
     public static void requireBinding(
             Optional<ProviderBinding> binding,
             String provider,
             TenantContext tenant,
-            Supplier<StripeDeployment> stripeDeployment) {
+            Supplier<ProviderDeployment> deployment) {
         if (binding.isEmpty()) throw rejected(ErrorCode.FORBIDDEN);
         if (provider == null || !provider.equals(binding.get().provider()))
             throw rejected(ErrorCode.SERVICE_UNAVAILABLE);
-        if (provider.equals("STRIPE")) {
-            StripeDeployment deployment = stripeDeployment.get();
-            if (!Objects.equals(binding.get().providerAccountRef(), deployment.accountId())
-                    || !tenant.organizationId().toString().equals(deployment.organizationId())
-                    || !tenant.environmentId().toString().equals(deployment.environmentId())
-                    || !tenant.allowedProviderAccountId().toString().equals(deployment.providerAccountId()))
+        if (provider.equals("STRIPE") || provider.equals("PAYPAL")) {
+            ProviderDeployment configured = deployment.get();
+            if (!Objects.equals(binding.get().providerAccountRef(), configured.accountId())
+                    || !tenant.organizationId().toString().equals(configured.organizationId())
+                    || !tenant.environmentId().toString().equals(configured.environmentId())
+                    || !tenant.allowedProviderAccountId().toString().equals(configured.providerAccountId()))
                 throw rejected(ErrorCode.SERVICE_UNAVAILABLE);
         }
     }

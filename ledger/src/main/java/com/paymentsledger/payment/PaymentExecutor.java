@@ -37,9 +37,11 @@ public class PaymentExecutor {
                 charges.getIfAvailable(),
                 environment.getProperty("platform.stripe.enabled", Boolean.class, false)
                         ? "STRIPE"
-                        : environment.getProperty("platform.provider.fake.enabled", Boolean.class, false)
-                                ? "FAKE"
-                                : null);
+                        : environment.getProperty("platform.paypal.enabled", Boolean.class, false)
+                                ? "PAYPAL"
+                                : environment.getProperty("platform.provider.fake.enabled", Boolean.class, false)
+                                        ? "FAKE"
+                                        : null);
     }
 
     public PaymentExecutor(

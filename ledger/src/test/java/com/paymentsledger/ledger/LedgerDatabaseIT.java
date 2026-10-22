@@ -451,7 +451,7 @@ class LedgerDatabaseIT {
                         .load()
                         .migrate()
                         .migrationsExecuted)
-                .isEqualTo(14); // V3 ledger through V16 ops approval/audit
+                .isEqualTo(15); // V3 ledger through V17 PayPal provider account
         try (var c = DriverManager.getConnection(url, PG.getUsername(), PG.getPassword());
                 var s = c.createStatement();
                 var r = s.executeQuery("SELECT code FROM platform.organization")) {

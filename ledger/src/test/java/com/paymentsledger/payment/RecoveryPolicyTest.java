@@ -8,6 +8,12 @@ import org.junit.jupiter.api.Test;
 
 class RecoveryPolicyTest {
     @Test
+    void paypalUsesDocumentedWindow() {
+        assertThat(RecoveryPolicy.defaults().verifiedWindow("PAYPAL")).isEqualTo(Duration.ofHours(5));
+        assertThat(RecoveryPolicy.defaults().verifiedWindow("STRIPE")).isEqualTo(Duration.ZERO);
+    }
+
+    @Test
     void backoffAndJitterAreBoundedDeterministicAndCapAtTwoMinutes() {
         var p = new RecoveryPolicy(
                 Duration.ofSeconds(30), Duration.ZERO, Duration.ZERO, 0, Duration.ofHours(1), Duration.ofSeconds(1));

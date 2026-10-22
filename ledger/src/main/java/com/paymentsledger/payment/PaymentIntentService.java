@@ -10,7 +10,7 @@ import com.paymentsledger.payment.domain.IdempotencyRecord;
 import com.paymentsledger.payment.domain.PaymentIntentRules;
 import com.paymentsledger.payment.domain.PaymentRecord;
 import com.paymentsledger.payment.domain.PriceQuote;
-import com.paymentsledger.payment.domain.StripeDeployment;
+import com.paymentsledger.payment.domain.ProviderDeployment;
 import com.paymentsledger.payment.repository.PaymentIntentRepository;
 import com.paymentsledger.payment.repository.PaymentIntentRepository.NewOperation;
 import com.paymentsledger.payment.repository.PaymentIntentRepository.NewOrder;
@@ -34,7 +34,7 @@ final class PaymentIntentService {
     private final TransactionTemplate tx;
     private final ObjectMapper json;
     private final Clock clock;
-    private final Supplier<StripeDeployment> stripeDeployment;
+    private final Supplier<ProviderDeployment> deployment;
 
     PaymentIntentService(
             PaymentIntentRepository intents,
@@ -42,13 +42,13 @@ final class PaymentIntentService {
             TransactionTemplate tx,
             ObjectMapper json,
             Clock clock,
-            Supplier<StripeDeployment> stripeDeployment) {
+            Supplier<ProviderDeployment> deployment) {
         this.intents = intents;
         this.records = records;
         this.tx = tx;
         this.json = json;
         this.clock = clock;
-        this.stripeDeployment = stripeDeployment;
+        this.deployment = deployment;
     }
 
     Intent prepare(TenantContext tenant, String key, PaymentRequests.Create request, String provider) {
@@ -155,7 +155,7 @@ final class PaymentIntentService {
 
     /** Runs inside the caller's transaction. */
     void requireBinding(TenantContext tenant, String provider) {
-        PaymentIntentRules.requireBinding(intents.findProviderBinding(tenant), provider, tenant, stripeDeployment);
+        PaymentIntentRules.requireBinding(intents.findProviderBinding(tenant), provider, tenant, deployment);
     }
 
     /** The payment if it is in the tenant's scope and currencies; otherwise NOT_FOUND, never FORBIDDEN. */

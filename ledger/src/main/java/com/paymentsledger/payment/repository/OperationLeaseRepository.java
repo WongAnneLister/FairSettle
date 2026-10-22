@@ -1,7 +1,7 @@
 package com.paymentsledger.payment.repository;
 
 import com.paymentsledger.payment.domain.OperationLeaseRules.LeaseGrant;
-import com.paymentsledger.payment.domain.StripeDeployment;
+import com.paymentsledger.payment.domain.ProviderDeployment;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -37,7 +37,7 @@ public class OperationLeaseRepository {
     }
 
     /** PREPARED operations with READY tasks, oldest first, on active test accounts of {@code provider}. */
-    public List<UUID> sendable(String provider, StripeDeployment stripe, int limit) {
+    public List<UUID> sendable(String provider, ProviderDeployment deployment, int limit) {
         return jdbc.queryForList("""
             SELECT o.id FROM platform.provider_operation o
             JOIN platform.recovery_task t ON t.operation_id=o.id
@@ -50,13 +50,13 @@ public class OperationLeaseRepository {
             WHERE o.status='PREPARED' AND t.status='READY' AND pay.resolution_status<>'CONFLICT'
               AND org.status='ACTIVE' AND e.status='ACTIVE' AND a.status='ACTIVE' AND p.status='ACTIVE' AND c.status='ACTIVE'
               AND NOT e.livemode AND NOT p.livemode AND p.provider=:provider
-              AND (:provider<>'STRIPE' OR (p.provider_account_ref=:stripeAccount AND o.organization_id::text=:stripeOrganization AND o.environment_id::text=:stripeEnvironment AND o.provider_account_id::text=:stripeProviderAccount))
+              AND (:provider NOT IN ('STRIPE','PAYPAL') OR (p.provider_account_ref=:deploymentAccount AND o.organization_id::text=:deploymentOrganization AND o.environment_id::text=:deploymentEnvironment AND o.provider_account_id::text=:deploymentProviderAccount))
             ORDER BY o.created_at,o.id LIMIT :limit
-            """, deployment(provider, stripe).addValue("limit", limit), UUID.class);
+            """, deployment(provider, deployment).addValue("limit", limit), UUID.class);
     }
 
     /** Recoverable operations whose task is due, whose lease has expired and whose account batch is open. */
-    public List<UUID> due(String provider, StripeDeployment stripe, Instant now, int limit) {
+    public List<UUID> due(String provider, ProviderDeployment deployment, Instant now, int limit) {
         return jdbc.queryForList(
                 """
             SELECT o.id FROM platform.provider_operation o JOIN platform.recovery_task t ON t.operation_id=o.id
@@ -69,10 +69,10 @@ public class OperationLeaseRepository {
             WHERE t.status IN ('READY','WAITING','RUNNING') AND t.available_at<=:now AND (o.lease_until IS NULL OR o.lease_until<=:now)
               AND o.status<>'ESCALATED' AND org.status='ACTIVE' AND e.status='ACTIVE' AND a.status='ACTIVE' AND p.status='ACTIVE' AND c.status='ACTIVE'
               AND NOT e.livemode AND NOT p.livemode AND p.provider=:provider AND (lim.next_batch_at IS NULL OR lim.next_batch_at<=:now)
-              AND (:provider<>'STRIPE' OR (p.provider_account_ref=:stripeAccount AND o.organization_id::text=:stripeOrganization AND o.environment_id::text=:stripeEnvironment AND o.provider_account_id::text=:stripeProviderAccount))
+              AND (:provider NOT IN ('STRIPE','PAYPAL') OR (p.provider_account_ref=:deploymentAccount AND o.organization_id::text=:deploymentOrganization AND o.environment_id::text=:deploymentEnvironment AND o.provider_account_id::text=:deploymentProviderAccount))
             ORDER BY t.available_at,o.id LIMIT :limit
             """,
-                deployment(provider, stripe)
+                deployment(provider, deployment)
                         .addValue("now", Timestamp.from(now))
                         .addValue("limit", limit),
                 UUID.class);
@@ -82,7 +82,7 @@ public class OperationLeaseRepository {
      * L2 candidates: unleased operations whose payment or refund is not yet settled with certainty or posted evidence,
      * and whose task is finished or due.
      */
-    public List<UUID> stranded(String provider, StripeDeployment stripe, Instant now, int limit) {
+    public List<UUID> stranded(String provider, ProviderDeployment deployment, Instant now, int limit) {
         return jdbc.queryForList(
                 """
             SELECT o.id FROM platform.provider_operation o LEFT JOIN platform.payment p ON p.id=o.payment_id LEFT JOIN platform.refund r ON r.id=o.refund_id JOIN platform.recovery_task t ON t.operation_id=o.id
@@ -92,7 +92,7 @@ public class OperationLeaseRepository {
             JOIN platform.environment_config env ON env.id=o.environment_id
             JOIN platform.org_currency_enabled cur ON cur.organization_id=o.organization_id AND cur.environment_id=o.environment_id AND cur.currency=o.currency
             WHERE a.status='ACTIVE' AND app.status='ACTIVE' AND org.status='ACTIVE' AND env.status='ACTIVE' AND cur.status='ACTIVE' AND NOT a.livemode AND NOT env.livemode AND a.provider=:provider
-             AND (:provider<>'STRIPE' OR (a.provider_account_ref=:stripeAccount AND o.organization_id::text=:stripeOrganization AND o.environment_id::text=:stripeEnvironment AND o.provider_account_id::text=:stripeProviderAccount))
+             AND (:provider NOT IN ('STRIPE','PAYPAL') OR (a.provider_account_ref=:deploymentAccount AND o.organization_id::text=:deploymentOrganization AND o.environment_id::text=:deploymentEnvironment AND o.provider_account_id::text=:deploymentProviderAccount))
              AND o.status<>'ESCALATED' AND (o.lease_until IS NULL OR o.lease_until<=:now)
              AND (p.resolution_status<>'KNOWN' OR p.payment_status NOT IN ('SUCCEEDED','CANCELED') OR p.financial_status='PENDING_EVIDENCE' OR r.resolution_status<>'KNOWN' OR r.refund_status NOT IN ('SUCCEEDED','FAILED','CANCELED')
                OR (r.refund_status='SUCCEEDED' AND r.balance_transaction_id IS NULL)
@@ -100,7 +100,7 @@ public class OperationLeaseRepository {
                OR (r.failure_balance_transaction_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM platform.balance_transaction b WHERE b.organization_id=r.organization_id AND b.environment_id=r.environment_id AND b.provider_account_id=r.provider_account_id AND b.bt_id=r.failure_balance_transaction_id AND b.state='POSTED')))
              AND (t.status='DONE' OR t.available_at<=:now) ORDER BY t.available_at,o.id LIMIT :limit
             """,
-                deployment(provider, stripe)
+                deployment(provider, deployment)
                         .addValue("now", Timestamp.from(now))
                         .addValue("limit", limit),
                 UUID.class);
@@ -387,13 +387,13 @@ public class OperationLeaseRepository {
                 WHERE operation_id=:id AND status<>'ESCALATED'""", Map.of("now", Timestamp.from(now), "id", operationId));
     }
 
-    private static MapSqlParameterSource deployment(String provider, StripeDeployment stripe) {
+    private static MapSqlParameterSource deployment(String provider, ProviderDeployment deployment) {
         return new MapSqlParameterSource()
                 .addValue("provider", provider)
-                .addValue("stripeAccount", stripe.accountId())
-                .addValue("stripeOrganization", stripe.organizationId())
-                .addValue("stripeEnvironment", stripe.environmentId())
-                .addValue("stripeProviderAccount", stripe.providerAccountId());
+                .addValue("deploymentAccount", deployment.accountId())
+                .addValue("deploymentOrganization", deployment.organizationId())
+                .addValue("deploymentEnvironment", deployment.environmentId())
+                .addValue("deploymentProviderAccount", deployment.providerAccountId());
     }
 
     private static MapSqlParameterSource account(UUID organizationId, UUID environmentId, UUID providerAccountId) {

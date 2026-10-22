@@ -24,6 +24,9 @@ import java.util.UUID;
  * </ul>
  */
 public final class PaymentEvidenceRules {
+    private static final Set<String> PAYPAL_ORDER_STATUSES =
+            Set.of("CREATED", "SAVED", "APPROVED", "VOIDED", "COMPLETED", "PAYER_ACTION_REQUIRED");
+
     private PaymentEvidenceRules() {}
 
     /**
@@ -206,8 +209,13 @@ public final class PaymentEvidenceRules {
         return session != null && (query || session.hostedUrl() != null);
     }
 
+    /** The provider status of a session: PayPal's raw order status (ADR D3), else the lowercase session status. */
     public static String sessionStatus(CheckoutSessionFact session) {
-        return session.status().name().toLowerCase(Locale.ROOT);
+        String status = session.paymentStatus();
+        // Set.of(...).contains(null) throws NullPointerException; Stripe sessions may have no payment status.
+        return status != null && PAYPAL_ORDER_STATUSES.contains(status)
+                ? status
+                : session.status().name().toLowerCase(Locale.ROOT);
     }
 
     /**
