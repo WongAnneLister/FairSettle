@@ -1,0 +1,9 @@
+feature: F04
+kind: command
+command: cd ledger && ./mvnw -q -Dtest='PayPalAuthClientTest' test
+commit: 2e251cbb4977ff8b6d90ca9728cf21eff8ae8836
+started_at: 2026-10-22T18:00:06+08:00
+exit_code: 0
+----
+18:00:36.243 [main] WARN org.springframework.context.annotation.AnnotationConfigApplicationContext -- Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'payPalAuthClient' defined in com.paymentsledger.provider.adapter.paypal.PayPalAdapterConfiguration: Failed to instantiate [com.paymentsledger.provider.adapter.paypal.PayPalAuthClient]: Factory method 'payPalAuthClient' threw exception with message: PayPal base URL must be the sandbox https://api-m.sandbox.paypal.com
+18:00:36.647 [main] WARN org.springframework.context.annotation.AnnotationConfigApplicationContext -- Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'payPalAuthClient' defined in com.paymentsledger.provider.adapter.paypal.PayPalAdapterConfiguration: Failed to instantiate [com.paymentsledger.provider.adapter.paypal.PayPalAuthClient]: Factory method 'payPalAuthClient' threw exception with message: PayPal sandbox client id and secret are required
