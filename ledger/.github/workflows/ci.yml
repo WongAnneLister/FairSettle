@@ -1,0 +1,203 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr18_nightly:
+        description: 'Run PR18 with 1000 seeds and at most 300 steps per sequence'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 运行角色、版本与环境条件在日志中固定记录，便于把测试结论追溯到具体环境
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: 'corretto'
+
+jobs:
+  build:
+    name: Build and test (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ['21']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Browser logic regressions
+        run: node --test scripts/tests/pr17-*.test.mjs
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Record environment
+        run: |
+          echo "commit=${GITHUB_SHA}"
+          java -version
+          ./mvnw -v
+          docker version --format '{{.Server.Version}}'
+
+      - name: Verify Maven Wrapper is usable
+        run: ./mvnw -B -N help:evaluate -Dexpression=maven.version -DforceStdout -q
+
+      # verify 会依次执行单元/上下文测试（surefire）与集成测试（failsafe）。
+      # 集成测试由 Testcontainers 启动一次性 PostgreSQL 容器，
+      # 使用唯一命名的新库，从不触碰已有数据库。
+      - name: PR18 runner regressions
+        run: python3 -m unittest discover -s scripts/tests -p 'test_pr18_runner.py'
+
+      - name: PR20 budget and evidence gate regressions
+        run: python3 -m unittest discover -s scripts/tests -p 'test_pr20_runner.py'
+
+      - name: Build, property and integration tests (100 seeds, max 100 steps)
+        run: python3 scripts/ci/run_pr18.py --profile pr
+
+      - name: Whitespace and diff check
+        run: git diff --check
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-jdk${{ matrix.java }}
+          path: |
+            target/surefire-reports/**
+            target/failsafe-reports/**
+            target/pr18/**
+            target/pr20/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  format:
+    name: Code format (Spotless)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+      # 未格式化的代码在这里失败；本地用 ./mvnw spotless:apply 修复
+      - name: Check formatting
+        run: ./mvnw -B spotless:check
+
+  docs:
+    name: Contract and docs checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyYAML
+        run: pip install --quiet pyyaml
+
+      # PR00 冻结的契约必须始终可解析；首批 schema 不得退化为占位
+      - name: Validate OpenAPI parses and refs resolve
+        run: python scripts/ci/check_openapi.py
+
+      - name: Validate relative documentation links
+        run: python scripts/ci/check_doc_links.py
+
+      - name: Test refactoring tools
+        run: python -m unittest discover -s scripts/tests -p 'test_refactor_tools.py'
+
+  pr18-nightly:
+    name: PR18 extended budget (1000 seeds, max 300 steps)
+    if: github.event_name == 'workflow_dispatch' && inputs.pr18_nightly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'corretto'
+          cache: maven
+      - name: Extended property, concurrency and regression verification
+        run: python3 scripts/ci/run_pr18.py --profile nightly
+      - name: Upload PR18 extended evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr18-nightly-evidence
+          path: |
+            target/pr18/**
+            target/surefire-reports/**
+            target/failsafe-reports/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  pr19-faults:
+    name: PR19 ${{ matrix.fault }} isolated replay
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        fault: ['F-01', 'F-02', 'F-03', 'F-04', 'F-05', 'F-06', 'F-07', 'F-08']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'corretto'
+          cache: maven
+      - name: Strict PR19 runner regressions
+        run: python3 -m unittest discover -s scripts/tests -p 'test_pr19_runner.py'
+      - name: Replay selected fault and validate every required variant
+        run: python3 scripts/ci/run_pr19.py --fault '${{ matrix.fault }}'
+      - name: Upload actual failure or success evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr19-fault-${{ matrix.fault }}
+          path: |
+            target/pr19/**
+            target/failsafe-reports/**
+            target/surefire-reports/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  pr19-matrix-report:
+    name: Validate complete PR19 fault matrix
+    needs: pr19-faults
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pr19-fault-*
+          path: target/pr19-ci
+      - name: Reject missing variants, failed runs or mixed source snapshots
+        run: python3 scripts/ci/run_pr19.py --aggregate target/pr19-ci
+      - name: Upload matrix report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr19-matrix-report
+          path: target/pr19/ci-matrix-summary.json
+          if-no-files-found: warn
+          retention-days: 14
