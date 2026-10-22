@@ -1,0 +1,10 @@
+feature: F05
+kind: command
+command: cd ledger && ./mvnw -q -Dtest='PayPalCreateOrderTest' test
+commit: d01d97f3a33ad7800a041174401d3631d55fbc35
+started_at: 2026-10-22T19:35:26+08:00
+exit_code: 0
+----
+19:35:55.538 [main] WARN org.springframework.context.annotation.AnnotationConfigApplicationContext -- Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'payPalCheckoutAdapter' defined in com.paymentsledger.provider.adapter.paypal.PayPalCheckoutConfiguration: Failed to instantiate [com.paymentsledger.provider.adapter.paypal.PayPalCheckoutAdapter]: Factory method 'payPalCheckoutAdapter' threw exception with message: Valid trusted PayPal scope IDs are required
+19:35:55.555 [main] WARN org.springframework.context.annotation.AnnotationConfigApplicationContext -- Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'payPalCheckoutAdapter' defined in com.paymentsledger.provider.adapter.paypal.PayPalCheckoutConfiguration: Failed to instantiate [com.paymentsledger.provider.adapter.paypal.PayPalCheckoutAdapter]: Factory method 'payPalCheckoutAdapter' threw exception with message: Select exactly one provider implementation
+19:35:55.571 [main] WARN org.springframework.context.annotation.AnnotationConfigApplicationContext -- Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'payPalCheckoutAdapter' defined in com.paymentsledger.provider.adapter.paypal.PayPalCheckoutConfiguration: Failed to instantiate [com.paymentsledger.provider.adapter.paypal.PayPalCheckoutAdapter]: Factory method 'payPalCheckoutAdapter' threw exception with message: Select exactly one provider implementation
