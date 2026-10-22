@@ -137,8 +137,8 @@ def write_evidence(fid: str, header: list[str], body: str) -> tuple[str, str]:
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     path = EVIDENCE_DIR / f"{fid}.log"
     text = "\n".join(header) + "\n----\n" + body
-    path.write_text(text, encoding="utf-8")
-    return str(path.relative_to(ROOT)), hashlib.sha256(text.encode("utf-8")).hexdigest()
+    path.write_text(text, encoding="utf-8", newline="\n")
+    return path.relative_to(ROOT).as_posix(), hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def cmd_verify(data: dict, fid: str) -> None:
@@ -227,7 +227,8 @@ def cmd_check(data: dict) -> None:
         if f["state"] != "passing":
             continue
         ev = f.get("evidence") or {}
-        log = ROOT / ev.get("log", "missing")
+        # Logs verified on Windows before paths were stored POSIX-style use backslashes.
+        log = ROOT / ev.get("log", "missing").replace("\\", "/")
         if not log.is_file():
             problems.append(f"{f['id']}: passing without an evidence log")
             continue
