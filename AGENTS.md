@@ -15,6 +15,8 @@ This file is read by every coding agent (Codex reads it directly; Claude Code im
 | `contracts/` | Cross-service API contracts and shared fixtures | OpenAPI, JSON | |
 | `docs/` | PRD, ADRs, plans, feature list, progress log | | |
 
+Each service has its own `AGENTS.md` (imported by its `CLAUDE.md`). Before planning, implementing or reviewing work in a service, read that file.
+
 ## Hard rules
 
 - Money is integer cents everywhere. Liability splits are basis points summing to 10000.

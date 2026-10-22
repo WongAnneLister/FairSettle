@@ -1,0 +1,4 @@
+# Local secrets (PayPal sandbox credentials); never commit.
+.env
+.env.*
+!.env.example
