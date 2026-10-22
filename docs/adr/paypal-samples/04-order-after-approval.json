@@ -1,0 +1,62 @@
+{
+  "id": "7CV2269518094610C",
+  "intent": "CAPTURE",
+  "status": "APPROVED",
+  "payment_source": {
+    "paypal": {
+      "email_address": "sb-jdtol53501109@personal.example.com",
+      "account_id": "86M56RSVZPJ5S",
+      "account_status": "VERIFIED",
+      "name": {
+        "given_name": "John",
+        "surname": "Doe"
+      },
+      "address": {
+        "country_code": "C2"
+      }
+    }
+  },
+  "purchase_units": [
+    {
+      "reference_id": "smoke-20261022170335",
+      "amount": {
+        "currency_code": "USD",
+        "value": "12.50",
+        "breakdown": {}
+      },
+      "payee": {
+        "email_address": "sb-recuo53501101@business.example.com",
+        "merchant_id": "8B7TFUJBXXMVN"
+      }
+    }
+  ],
+  "payer": {
+    "name": {
+      "given_name": "John",
+      "surname": "Doe"
+    },
+    "email_address": "sb-jdtol53501109@personal.example.com",
+    "payer_id": "86M56RSVZPJ5S",
+    "address": {
+      "country_code": "C2"
+    }
+  },
+  "create_time": "2026-10-22T09:03:37Z",
+  "links": [
+    {
+      "href": "https://api.sandbox.paypal.com/v2/checkout/orders/7CV2269518094610C",
+      "rel": "self",
+      "method": "GET"
+    },
+    {
+      "href": "https://api.sandbox.paypal.com/v2/checkout/orders/7CV2269518094610C",
+      "rel": "update",
+      "method": "PATCH"
+    },
+    {
+      "href": "https://api.sandbox.paypal.com/v2/checkout/orders/7CV2269518094610C/capture",
+      "rel": "capture",
+      "method": "POST"
+    }
+  ]
+}

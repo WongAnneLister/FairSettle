@@ -1,0 +1,16 @@
+{
+  "id": "2EU12368F9867740A",
+  "status": "COMPLETED",
+  "links": [
+    {
+      "href": "https://api.sandbox.paypal.com/v2/payments/refunds/2EU12368F9867740A",
+      "rel": "self",
+      "method": "GET"
+    },
+    {
+      "href": "https://api.sandbox.paypal.com/v2/payments/captures/41995584GM234064G",
+      "rel": "up",
+      "method": "GET"
+    }
+  ]
+}
