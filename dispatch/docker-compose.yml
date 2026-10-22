@@ -1,0 +1,36 @@
+services:
+  database:
+    # Pinned rather than floating on `postgres:latest`: an untagged image means
+    # the database engine can change underneath the project between two runs of
+    # `docker compose up`.
+    image: 'postgres:16-alpine'
+    restart: always
+    environment:
+      - POSTGRES_USER=adminer
+      - POSTGRES_PASSWORD=secret123
+      - POSTGRES_DB=food_delivery
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U adminer -d food_delivery']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    # Backs GraphQL subscriptions. The in-memory PubSub is process-local, so
+    # with more than one replica a publish on one pod never reaches a subscriber
+    # held by another — see docs/AUDIT.md C6.
+    image: 'redis:7-alpine'
+    restart: always
+    ports:
+      # 6380 on the host: 6379 is a common default and is frequently already
+      # taken by another project's Redis. The container port is unchanged.
+      - '6380:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10

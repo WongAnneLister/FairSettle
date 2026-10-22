@@ -1,0 +1,51 @@
+# compiled output
+/dist
+/node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Environments
+*.env*
+
+#postgres
+/pg_data
+# node_modules at any depth, not just the root. The rule above is /node_modules,
+# which is anchored — frontend/node_modules was not being ignored at all.
+node_modules/
+.next/
+*.local
+
+# Local npm cache used when installing without touching the global one
+.tmp-npm-cache/
+
+# TypeScript incremental build info
+*.tsbuildinfo
