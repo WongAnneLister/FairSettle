@@ -84,6 +84,8 @@ platform:
       enabled: ${STRIPE_WEBHOOK_ENABLED:false}
   stripe:
     enabled: ${STRIPE_ENABLED:false}
+  paypal:
+    enabled: ${PAYPAL_ENABLED:false}
   fixtures:
     enabled: ${LOCAL_FIXTURES_ENABLED:false}
     app-secret: ${LOCAL_APP_SECRET:}
