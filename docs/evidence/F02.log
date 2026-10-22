@@ -1,0 +1,9 @@
+feature: F02
+kind: manual
+commit: 3fe3b233295238a35f09f03a345b85c14ea7b9e6
+confirmed_at: 2026-10-22T17:10:00+08:00
+----
+[x] Eligibility, prize, pre-existing-code and video-length rules noted in docs/progress.md
+[x] Sandbox client id/secret stored in .env (not committed)
+[x] curl: token -> create order -> browser approval with sandbox buyer -> capture returns COMPLETED
+note: 
