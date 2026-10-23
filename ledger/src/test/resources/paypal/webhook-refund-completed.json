@@ -1,0 +1,39 @@
+{
+  "id": "WH-1JE4291016473214C-7RW09474EC0000000",
+  "event_type": "PAYMENT.CAPTURE.REFUNDED",
+  "resource_type": "refund",
+  "create_time": "2026-10-22T10:00:02Z",
+  "resource": {
+    "id": "2EU12368F9867740A",
+    "status": "COMPLETED",
+    "amount": {
+      "currency_code": "USD",
+      "value": "40.00"
+    },
+    "custom_id": "00000000-0000-0000-0000-0000000000dd",
+    "seller_payable_breakdown": {
+      "gross_amount": {
+        "currency_code": "USD",
+        "value": "40.00"
+      },
+      "paypal_fee": {
+        "currency_code": "USD",
+        "value": "1.40"
+      },
+      "net_amount": {
+        "currency_code": "USD",
+        "value": "38.60"
+      }
+    },
+    "links": [
+      {
+        "rel": "self",
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/41995584GM234064G"
+      },
+      {
+        "rel": "up",
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/41995584GM234064G"
+      }
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "id": "WH-58D329510W468432D-8HN650336L201105X",
+  "event_type": "PAYMENT.CAPTURE.COMPLETED",
+  "resource_type": "capture",
+  "resource_version": "2.0",
+  "create_time": "2026-10-22T09:05:10.123Z",
+  "summary": "A capture completed",
+  "resource": {
+    "id": "41995584GM234064G",
+    "status": "COMPLETED",
+    "amount": {
+      "currency_code": "USD",
+      "value": "100.00"
+    },
+    "custom_id": "00000000-0000-0000-0000-0000000000bb",
+    "final_capture": true,
+    "seller_receivable_breakdown": {
+      "gross_amount": {
+        "currency_code": "USD",
+        "value": "100.00"
+      },
+      "paypal_fee": {
+        "currency_code": "USD",
+        "value": "3.49"
+      },
+      "net_amount": {
+        "currency_code": "USD",
+        "value": "96.51"
+      }
+    },
+    "supplementary_data": {
+      "related_ids": {
+        "order_id": "7CV2269518094610C"
+      }
+    },
+    "create_time": "2026-10-22T09:05:08Z",
+    "update_time": "2026-10-22T09:05:08Z",
+    "payee": {
+      "email_address": "sb-seller@business.example.com"
+    },
+    "links": [
+      {
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/41995584GM234064G",
+        "rel": "self",
+        "method": "GET"
+      },
+      {
+        "href": "https://api.sandbox.paypal.com/v2/payments/captures/41995584GM234064G/refund",
+        "rel": "refund",
+        "method": "POST"
+      },
+      {
+        "href": "https://api.sandbox.paypal.com/v2/checkout/orders/7CV2269518094610C",
+        "rel": "up",
+        "method": "GET"
+      }
+    ]
+  }
+}
