@@ -1,0 +1,7 @@
+feature: F07
+kind: command
+command: cd ledger && ./mvnw -q -Dtest='PayPalCaptureUnknownTest' test
+commit: 7c745f0fb09895bc4654dc7d0c976d297c5b95a6
+started_at: 2026-10-23T14:03:20+08:00
+exit_code: 0
+----
