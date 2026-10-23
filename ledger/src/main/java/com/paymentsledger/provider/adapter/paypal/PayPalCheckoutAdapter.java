@@ -7,8 +7,10 @@ import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
-public final class PayPalCheckoutAdapter implements CheckoutPort {
+public final class PayPalCheckoutAdapter implements CheckoutPort, OrderCapturePort {
     private static final ObjectMapper JSON = new ObjectMapper();
     private final PayPalAuthClient client;
     private final ProviderScope scope;
@@ -69,7 +71,58 @@ public final class PayPalCheckoutAdapter implements CheckoutPort {
             throw new IllegalArgumentException("Provider scope differs from credential binding");
     }
 
+    @Override
+    public ProviderCallResult<OrderFact> queryOrder(ProviderScope requested, String orderId) {
+        requireScope(requested);
+        requireOrderId(orderId);
+        return call(
+                PayPalHttpRequest.get("/v2/checkout/orders/" + orderId, Map.of()),
+                null,
+                PayPalOrderMapping::orderFact,
+                (status, code) -> PayPalOrderMapping.classify(status));
+    }
+
+    @Override
+    public ProviderCallResult<CaptureOrderFact> captureOrder(CaptureOrderCommand command) {
+        requireScope(command.scope());
+        requireOrderId(command.orderId());
+        return call(
+                PayPalHttpRequest.post(
+                        "/v2/checkout/orders/" + command.orderId() + "/capture",
+                        Map.of(
+                                "PayPal-Request-Id",
+                                command.operationIdempotencyKey(),
+                                "Prefer",
+                                "return=representation"),
+                        "{}"),
+                command.operationIdempotencyKey(),
+                body -> PayPalOrderMapping.captureFact(body, command.orderId()),
+                PayPalOrderMapping::classifyCapture);
+    }
+
+    private static void requireOrderId(String orderId) {
+        if (orderId == null || !orderId.matches("[A-Z0-9]{1,36}"))
+            throw new IllegalArgumentException("Invalid PayPal order id");
+    }
+
     private ProviderCallResult<CheckoutSessionFact> call(PayPalHttpRequest request, String key, Instant expiresAt) {
+        return call(
+                request,
+                key,
+                order -> {
+                    Instant expiry = expiresAt == null
+                            ? PayPalOrderMapping.queryExpiry(order).orElse(null)
+                            : expiresAt;
+                    return expiry == null ? Optional.empty() : PayPalOrderMapping.fact(order, expiry);
+                },
+                (status, code) -> PayPalOrderMapping.classify(status));
+    }
+
+    private <T> ProviderCallResult<T> call(
+            PayPalHttpRequest request,
+            String key,
+            Function<com.fasterxml.jackson.databind.JsonNode, Optional<T>> mapping,
+            BiFunction<Integer, String, ProviderCallClassification> classify) {
         Instant requestedAt = clock.instant();
         var exchange = client.exchange(request);
         if (exchange instanceof PayPalExchange.NotSent failure)
@@ -94,42 +147,42 @@ public final class PayPalCheckoutAdapter implements CheckoutPort {
                     failure.reason());
         var response = (PayPalExchange.Responded) exchange;
         Instant respondedAt = clock.instant();
-        var classification = PayPalOrderMapping.classify(response.status());
-        CheckoutSessionFact fact = null;
-        String errorCode = null;
+        String errorCode = PayPalOrderMapping.errorCode(response.body());
+        var classification = classify.apply(response.status(), errorCode);
+        T fact = null;
         if (classification == ProviderCallClassification.SUCCESS) {
             try {
-                var order = JSON.readTree(response.body());
-                Instant expiry = expiresAt == null
-                        ? PayPalOrderMapping.queryExpiry(order).orElse(null)
-                        : expiresAt;
-                if (expiry != null)
-                    fact = PayPalOrderMapping.fact(order, expiry).orElse(null);
-            } catch (IOException invalid) {
+                fact = mapping.apply(JSON.readTree(response.body())).orElse(null);
+            } catch (IOException | IllegalArgumentException invalid) {
                 // Return only the fixed contract code, never the raw response or parser message.
             }
             if (fact == null) {
                 classification = ProviderCallClassification.CONTRACT_MISMATCH;
                 errorCode = "paypal_contract_mismatch";
-            }
-        } else errorCode = PayPalOrderMapping.errorCode(response.body());
+            } else errorCode = null;
+        }
         return result(
                 classification, fact, response.debugId(), key, requestedAt, respondedAt, response.status(), errorCode);
     }
 
-    private static ProviderCallResult<CheckoutSessionFact> result(
+    private static <T> ProviderCallResult<T> result(
             ProviderCallClassification classification,
-            CheckoutSessionFact fact,
+            T fact,
             String debugId,
             String key,
             Instant requestedAt,
             Instant respondedAt,
             Integer status,
             String errorCode) {
-        String digest = PayPalOrderMapping.digest(
-                fact == null
-                        ? "paypal-error|" + status + "|" + errorCode
-                        : "paypal-order|" + fact.sessionId() + "|" + fact.paymentStatus());
+        String text = "paypal-error|" + status + "|" + errorCode;
+        if (fact instanceof CheckoutSessionFact session)
+            text = "paypal-order|" + session.sessionId() + "|" + session.paymentStatus();
+        else if (fact instanceof OrderFact order)
+            text = "paypal-order|" + order.session().sessionId() + "|"
+                    + order.session().paymentStatus();
+        else if (fact instanceof CaptureOrderFact capture)
+            text = "paypal-capture|" + capture.orderId() + "|" + capture.orderStatus();
+        String digest = PayPalOrderMapping.digest(text);
         return new ProviderCallResult<>(
                 classification,
                 fact,

@@ -27,7 +27,7 @@ class DisputeSchemaIT {
                 .dataSource(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword())
                 .schemas("platform")
                 .load();
-        assertThat(migration.migrate().migrationsExecuted).isEqualTo(7);
+        assertThat(migration.migrate().migrationsExecuted).isEqualTo(8);
         assertThat(migration.migrate().migrationsExecuted).isZero();
         var jdbc = new JdbcTemplate(new DriverManagerDataSource(DB.getJdbcUrl(), "payments_app", "pr02_test_only"));
         for (String table :

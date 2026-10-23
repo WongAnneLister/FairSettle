@@ -82,4 +82,44 @@ public final class PayPalTestTransport implements PayPalTransport {
                 .put("href", "https://www.sandbox.paypal.com/checkoutnow?token=" + id);
         return order.toString();
     }
+
+    public static String capturedOrder(
+            String id, String customId, String captureId, String captureStatus, boolean breakdown) {
+        try {
+            var order = (com.fasterxml.jackson.databind.node.ObjectNode)
+                    JSON.readTree(order(id, "COMPLETED", customId, false));
+            var unit = (com.fasterxml.jackson.databind.node.ObjectNode)
+                    order.path("purchase_units").path(0);
+            var capture = unit.putObject("payments").putArray("captures").addObject();
+            capture.put("id", captureId)
+                    .put("status", captureStatus)
+                    .put("final_capture", true)
+                    .put("create_time", "2026-10-22T09:05:08Z")
+                    .put("update_time", "2026-10-22T09:05:08Z");
+            capture.putObject("amount").put("currency_code", "USD").put("value", "100.00");
+            if (breakdown) {
+                var amounts = capture.putObject("seller_receivable_breakdown");
+                amounts.putObject("gross_amount").put("currency_code", "USD").put("value", "100.00");
+                amounts.putObject("paypal_fee").put("currency_code", "USD").put("value", "3.49");
+                amounts.putObject("net_amount").put("currency_code", "USD").put("value", "96.51");
+            }
+            if (captureStatus.equals("PENDING"))
+                capture.putObject("status_details").put("reason", "PENDING_REVIEW");
+            return order.toString();
+        } catch (IOException invalidFixture) {
+            throw new AssertionError(invalidFixture);
+        }
+    }
+
+    public static String captureResponse(String orderId, String captureId) {
+        var order = JSON.createObjectNode().put("id", orderId).put("status", "COMPLETED");
+        order.putArray("purchase_units")
+                .addObject()
+                .putObject("payments")
+                .putArray("captures")
+                .addObject()
+                .put("id", captureId)
+                .put("status", "COMPLETED");
+        return order.toString();
+    }
 }

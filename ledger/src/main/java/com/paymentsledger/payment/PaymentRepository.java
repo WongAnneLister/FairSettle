@@ -256,8 +256,8 @@ public class PaymentRepository {
         results.markUnknown(payment, conflict);
     }
 
-    void mergeQuery(UUID payment, UUID operation, List<Observation> observations, PaymentFacts facts) {
-        results.mergeQuery(payment, operation, observations, facts);
+    boolean mergeQuery(UUID payment, UUID operation, List<Observation> observations, PaymentFacts facts) {
+        return results.mergeQuery(payment, operation, observations, facts);
     }
 
     /** Called only by the inbox transaction after acquiring the payment lock before the inbox lock. */
@@ -298,8 +298,25 @@ public class PaymentRepository {
         return results.recoveryAnchor(claim);
     }
 
-    void finishRecoveryQuery(Claim claim, ProviderQueryService.Queried query) {
-        results.finishRecoveryQuery(claim, query);
+    boolean finishRecoveryQuery(Claim claim, ProviderQueryService.Queried query) {
+        return results.finishRecoveryQuery(claim, query);
+    }
+
+    Optional<UUID> preparedCapture(UUID payment) {
+        return transaction(() -> results.preparedCaptureOperation(payment));
+    }
+
+    boolean skipCapture(Claim claim) {
+        return results.skipCapture(claim);
+    }
+
+    boolean finishCapture(
+            Claim claim, ProviderCallResult<CaptureOrderFact> result, ProviderQueryService.Queried queried) {
+        return results.finishCapture(claim, result, queried);
+    }
+
+    boolean finishCaptureRecovery(Claim claim, ProviderQueryService.Queried queried) {
+        return results.finishCaptureRecovery(claim, queried);
     }
 
     void conflictingAnchor(Claim claim) {

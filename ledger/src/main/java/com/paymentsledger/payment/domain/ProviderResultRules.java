@@ -2,9 +2,11 @@ package com.paymentsledger.payment.domain;
 
 import com.paymentsledger.provider.ProviderCallClassification;
 import com.paymentsledger.provider.ProviderCallResult;
+import com.paymentsledger.provider.ProviderModels.CaptureOrderFact;
 import com.paymentsledger.provider.ProviderModels.ChargeFact;
 import com.paymentsledger.provider.ProviderModels.CheckoutSessionFact;
 import com.paymentsledger.provider.ProviderModels.CheckoutSessionStatus;
+import com.paymentsledger.provider.ProviderModels.OrderFact;
 import com.paymentsledger.provider.ProviderModels.PaymentIntentFact;
 import com.paymentsledger.provider.ProviderModels.RefundFact;
 import java.time.Duration;
@@ -173,6 +175,19 @@ public final class ProviderResultRules {
         }
         if (value instanceof ChargeFact f) return f;
         if (value instanceof RefundFact f) return f;
+        if (value instanceof OrderFact f)
+            return Map.of(
+                    "session",
+                    redacted(f.session()),
+                    "amountMinor",
+                    f.amountMinor(),
+                    "currency",
+                    f.currency(),
+                    "captures",
+                    f.captures(),
+                    "settlements",
+                    f.settlements());
+        if (value instanceof CaptureOrderFact f) return f;
         if (value instanceof List<?> list)
             return list.stream().map(ProviderResultRules::redacted).toList();
         throw new IllegalArgumentException("Unrecognized provider observation payload");

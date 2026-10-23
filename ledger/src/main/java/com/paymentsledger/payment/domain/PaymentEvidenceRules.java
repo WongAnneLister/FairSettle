@@ -169,6 +169,8 @@ public final class PaymentEvidenceRules {
                 && unpaid(facts)
                 && facts.session().status() == CheckoutSessionStatus.EXPIRED) status = PaymentStatus.CANCELED;
         if (!stale && facts.intent() != null) providerStatus = facts.intent().status();
+        else if (!stale && facts.session() != null && isPayPalOrder(facts.session()))
+            providerStatus = sessionStatus(facts.session());
         ResolutionStatus resolution = conflict
                 ? ResolutionStatus.CONFLICT
                 : stale ? payment.resolution() : facts.complete() ? ResolutionStatus.KNOWN : ResolutionStatus.UNKNOWN;
@@ -216,6 +218,31 @@ public final class PaymentEvidenceRules {
         return status != null && PAYPAL_ORDER_STATUSES.contains(status)
                 ? status
                 : session.status().name().toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean isPayPalOrder(CheckoutSessionFact session) {
+        return session.paymentStatus() != null && PAYPAL_ORDER_STATUSES.contains(session.paymentStatus());
+    }
+
+    /** ADR D5: an approved query with nothing captured prepares the payment's single capture. */
+    public static boolean preparesCapture(PaymentFacts facts, boolean query) {
+        return query
+                && facts.complete()
+                && !facts.conflict()
+                && facts.intent() == null
+                && facts.session() != null
+                && "APPROVED".equals(facts.session().paymentStatus())
+                && facts.charges().isEmpty();
+    }
+
+    /** ADR D2: approved-not-captured, known, and linked to an order only. */
+    public static boolean capturable(PaymentProgress payment) {
+        return payment.status() == PaymentStatus.PROCESSING
+                && "APPROVED".equals(payment.providerStatus())
+                && payment.resolution() == ResolutionStatus.KNOWN
+                && payment.capturedMinor() == 0
+                && payment.checkoutSessionId() != null
+                && payment.paymentIntentId() == null;
     }
 
     /**

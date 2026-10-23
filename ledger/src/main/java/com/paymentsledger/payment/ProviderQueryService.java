@@ -16,13 +16,20 @@ public final class ProviderQueryService {
     private final CheckoutPort checkout;
     private final PaymentIntentPort intents;
     private final ChargePort charges;
+    private final OrderCapturePort orders;
     private int remaining;
 
     ProviderQueryService(PaymentRepository r, CheckoutPort c, PaymentIntentPort i, ChargePort ch) {
+        this(r, c, i, ch, null);
+    }
+
+    ProviderQueryService(
+            PaymentRepository r, CheckoutPort c, PaymentIntentPort i, ChargePort ch, OrderCapturePort orders) {
         repository = r;
         checkout = c;
         intents = i;
         charges = ch;
+        this.orders = orders;
         remaining = 32;
     }
 
@@ -82,6 +89,8 @@ public final class ProviderQueryService {
         if ((checkout == null || expectedSession == null) && expectedIntent == null)
             return new Queried(
                     new PaymentFacts(null, null, List.of(), false, false, queryStarted, paymentVersion), observations);
+        if (orders != null && expectedSession != null)
+            return queryOrder(p, providerScope, payment, expectedSession, queryStarted, paymentVersion);
         if (expectedSession != null && checkout != null) {
             var sessionResult = call(() -> checkout.querySession(providerScope, expectedSession), null);
             observations.add(new Observation(
@@ -171,6 +180,52 @@ public final class ProviderQueryService {
                         conflict,
                         queryStarted,
                         paymentVersion),
+                observations);
+    }
+
+    private Queried queryOrder(
+            Map<String, Object> p,
+            ProviderScope scope,
+            UUID payment,
+            String orderId,
+            Instant queryStarted,
+            long paymentVersion) {
+        var result = call(() -> orders.queryOrder(scope, orderId), null);
+        var observations = List.of(new Observation("QUERY_ORDER", result, orderId));
+        if (!success(result))
+            return new Queried(
+                    new PaymentFacts(null, null, List.of(), false, false, queryStarted, paymentVersion), observations);
+        var order = result.payload();
+        var session = order.session();
+        boolean conflict = !orderId.equals(session.sessionId())
+                || !matchesMetadata(session.metadata(), payment)
+                || order.amountMinor() != number(p, "amount_minor")
+                || !str(p, "currency").equalsIgnoreCase(order.currency());
+        var verified = new ArrayList<ChargeFact>();
+        for (var capture : order.captures()) {
+            if (validCharge(p, orderId, capture)) verified.add(capture);
+            else conflict = true;
+        }
+        for (var settlement : order.settlements()) {
+            if (verified.stream()
+                    .noneMatch(c -> c.captured()
+                            && c.status().equals("succeeded")
+                            && c.chargeId().equals(settlement.btId())
+                            && settlement.btId().equals(c.balanceTransactionId()))) conflict = true;
+        }
+        boolean captured =
+                verified.stream().anyMatch(c -> c.captured() && c.status().equals("succeeded"));
+        boolean complete = !conflict && (!"COMPLETED".equals(session.paymentStatus()) || captured);
+        return new Queried(
+                new PaymentFacts(
+                        conflict ? null : session,
+                        null,
+                        verified,
+                        complete,
+                        conflict,
+                        queryStarted,
+                        paymentVersion,
+                        conflict ? List.of() : order.settlements()),
                 observations);
     }
 

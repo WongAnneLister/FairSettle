@@ -21,6 +21,131 @@ final class PayPalOrderMapping {
     static final Set<String> ORDER_STATUSES =
             Set.of("CREATED", "SAVED", "APPROVED", "VOIDED", "COMPLETED", "PAYER_ACTION_REQUIRED");
     private static final ObjectMapper JSON = new ObjectMapper();
+    static final Set<String> CAPTURE_STATUSES =
+            Set.of("COMPLETED", "DECLINED", "PARTIALLY_REFUNDED", "PENDING", "REFUNDED", "FAILED");
+
+    /** Exact non-negative minor units; never accepts exponent notation, excessive scale or overflow. */
+    static Optional<Long> minor(String value, String currency) {
+        if (value == null || currency == null || !value.matches("\\d+(\\.\\d+)?")) return Optional.empty();
+        try {
+            int digits = Currency.getInstance(currency).getDefaultFractionDigits();
+            var decimal = new BigDecimal(value);
+            if ((digits != 0 && digits != 2) || decimal.scale() > digits) return Optional.empty();
+            return Optional.of(decimal.movePointRight(digits).longValueExact());
+        } catch (IllegalArgumentException | ArithmeticException invalid) {
+            return Optional.empty();
+        }
+    }
+
+    static Optional<OrderFact> orderFact(JsonNode order) {
+        var expiry = queryExpiry(order);
+        if (expiry.isEmpty()) return Optional.empty();
+        var session = fact(order, expiry.get());
+        var units = order.path("purchase_units");
+        if (session.isEmpty() || !units.isArray() || units.size() != 1) return Optional.empty();
+        var unit = units.path(0);
+        String currency = unit.path("amount").path("currency_code").textValue();
+        var amount = minor(unit.path("amount").path("value").textValue(), currency);
+        if (amount.isEmpty()) return Optional.empty();
+        var rawCaptures = unit.path("payments").path("captures");
+        if (!rawCaptures.isMissingNode() && (!rawCaptures.isArray() || rawCaptures.size() > 1)) return Optional.empty();
+        var captures = new ArrayList<ChargeFact>();
+        var settlements = new ArrayList<BalanceTransactionFact>();
+        for (var raw : rawCaptures) {
+            String id = raw.path("id").textValue(), status = raw.path("status").textValue();
+            String captureCurrency = raw.path("amount").path("currency_code").textValue();
+            var captureAmount = minor(raw.path("amount").path("value").textValue(), captureCurrency);
+            if (id == null
+                    || !id.matches("[A-Z0-9]{1,36}")
+                    || status == null
+                    || !CAPTURE_STATUSES.contains(status)
+                    || captureAmount.isEmpty()
+                    || !currency.equals(captureCurrency)) return Optional.empty();
+            Instant created = null;
+            try {
+                String value = raw.path("create_time").textValue();
+                if (value != null) created = Instant.parse(value);
+            } catch (DateTimeException invalid) {
+                // Missing/unparseable capture time is allowed unless a settlement needs it.
+            }
+            boolean captured =
+                    status.equals("COMPLETED") || status.equals("PARTIALLY_REFUNDED") || status.equals("REFUNDED");
+            String normalized = captured ? "succeeded" : status.equals("PENDING") ? "pending" : "failed";
+            String reason = raw.path("status_details").path("reason").textValue();
+            if (reason != null && !reason.matches("[A-Z0-9_]{1,64}")) reason = null;
+            String btId = null;
+            if (status.equals("COMPLETED") && raw.has("seller_receivable_breakdown")) {
+                var breakdown = raw.path("seller_receivable_breakdown");
+                var gross = money(breakdown.path("gross_amount"), currency);
+                var fee = breakdown.has("paypal_fee") ? money(breakdown.path("paypal_fee"), currency) : Optional.of(0L);
+                var net = money(breakdown.path("net_amount"), currency);
+                if (created == null
+                        || gross.isEmpty()
+                        || fee.isEmpty()
+                        || net.isEmpty()
+                        || !gross.get().equals(captureAmount.get())
+                        || gross.get() - fee.get() != net.get()) return Optional.empty();
+                btId = id;
+                settlements.add(new BalanceTransactionFact(
+                        id,
+                        "charge",
+                        gross.get(),
+                        fee.get(),
+                        net.get(),
+                        currency,
+                        "PAYMENTS",
+                        id,
+                        "charge",
+                        "available",
+                        created,
+                        null,
+                        fee.get() > 0 ? List.of(new FeeDetail(fee.get(), currency, "paypal_fee", null)) : List.of(),
+                        digest("paypal-capture|" + id + "|" + gross.get() + "|" + fee.get() + "|" + net.get())));
+            }
+            captures.add(new ChargeFact(
+                    id,
+                    session.get().sessionId(),
+                    normalized,
+                    captured,
+                    captureAmount.get(),
+                    captured ? captureAmount.get() : null,
+                    currency,
+                    btId,
+                    reason,
+                    status,
+                    created));
+        }
+        return Optional.of(new OrderFact(session.get(), amount.get(), currency, captures, settlements));
+    }
+
+    private static Optional<Long> money(JsonNode amount, String currency) {
+        return currency.equals(amount.path("currency_code").textValue())
+                ? minor(amount.path("value").textValue(), currency)
+                : Optional.empty();
+    }
+
+    static Optional<CaptureOrderFact> captureFact(JsonNode body, String orderId) {
+        if (body == null || !orderId.equals(body.path("id").textValue())) return Optional.empty();
+        String status = body.path("status").textValue();
+        if (status == null || status.isBlank()) return Optional.empty();
+        var ids = new ArrayList<String>();
+        for (var capture : body.path("purchase_units").path(0).path("payments").path("captures")) {
+            String id = capture.path("id").textValue();
+            if (id == null || id.isBlank()) return Optional.empty();
+            ids.add(id);
+        }
+        return Optional.of(new CaptureOrderFact(orderId, status, ids));
+    }
+
+    static ProviderCallClassification classifyCapture(int status, String errorCode) {
+        if (status == 422) {
+            if ("ORDER_NOT_APPROVED".equals(errorCode) || "INSTRUMENT_DECLINED".equals(errorCode))
+                return ProviderCallClassification.DEFINITIVE_REJECT;
+            if ("ORDER_ALREADY_CAPTURED".equals(errorCode)) return ProviderCallClassification.TIMEOUT_UNKNOWN;
+            return ProviderCallClassification.CONTRACT_MISMATCH;
+        }
+        return classify(status);
+    }
 
     /** Exact decimal string for PayPal; 0 or 2 fraction digits, without floating point. */
     static String value(long amountMinor, String currency) {

@@ -9,6 +9,39 @@ import java.util.Objects;
 public final class ProviderModels {
     private ProviderModels() {}
 
+    public record CaptureOrderCommand(ProviderScope scope, String operationIdempotencyKey, String orderId) {
+        public CaptureOrderCommand {
+            Objects.requireNonNull(scope, "scope");
+            requireText(operationIdempotencyKey, "operationIdempotencyKey");
+            requireText(orderId, "orderId");
+        }
+    }
+
+    /** What a capture call returned; state is taken from the GET order that follows. */
+    public record CaptureOrderFact(String orderId, String orderStatus, List<String> captureIds) {
+        public CaptureOrderFact {
+            requireText(orderId, "orderId");
+            requireText(orderStatus, "orderStatus");
+            captureIds = List.copyOf(captureIds);
+        }
+    }
+
+    /** One order read: the order as a session, its single purchase unit amount, captures and settlements. */
+    public record OrderFact(
+            CheckoutSessionFact session,
+            long amountMinor,
+            String currency,
+            List<ChargeFact> captures,
+            List<BalanceTransactionFact> settlements) {
+        public OrderFact {
+            Objects.requireNonNull(session, "session");
+            requireNonnegative(amountMinor, "amountMinor");
+            requireCurrency(currency);
+            captures = List.copyOf(captures);
+            settlements = List.copyOf(settlements);
+        }
+    }
+
     public enum CheckoutSessionStatus {
         OPEN,
         COMPLETE,

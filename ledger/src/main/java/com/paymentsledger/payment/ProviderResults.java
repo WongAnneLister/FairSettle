@@ -8,8 +8,10 @@ import com.paymentsledger.common.error.ErrorCode;
 import com.paymentsledger.identity.TenantContext;
 import com.paymentsledger.payment.PaymentRepository.Claim;
 import com.paymentsledger.payment.PaymentRepository.Observation;
+import com.paymentsledger.payment.domain.CaptureOutcomeRules;
 import com.paymentsledger.payment.domain.PaymentEvidenceRules;
 import com.paymentsledger.payment.domain.PaymentFacts;
+import com.paymentsledger.payment.domain.PaymentStatus;
 import com.paymentsledger.payment.domain.ProviderResultRules;
 import com.paymentsledger.payment.domain.ResolutionStatus;
 import com.paymentsledger.payment.repository.PaymentStateRepository;
@@ -18,12 +20,15 @@ import com.paymentsledger.payment.repository.ProviderResultRepository.Observatio
 import com.paymentsledger.payment.repository.ProviderResultRepository.SessionUpdate;
 import com.paymentsledger.provider.ProviderCallClassification;
 import com.paymentsledger.provider.ProviderCallResult;
+import com.paymentsledger.provider.ProviderModels.CaptureOrderCommand;
+import com.paymentsledger.provider.ProviderModels.CaptureOrderFact;
 import com.paymentsledger.provider.ProviderModels.CheckoutSessionFact;
 import com.paymentsledger.provider.ProviderScope;
 import com.paymentsledger.revenueshare.RevenueShareService;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -201,16 +206,113 @@ final class ProviderResults {
     }
 
     /** Merges a query made without a lease; resolves the operation only if no sender owns it. */
-    void mergeQuery(UUID paymentId, UUID operationId, List<Observation> observations, PaymentFacts facts) {
-        tx.execute(s -> {
+    boolean mergeQuery(UUID paymentId, UUID operationId, List<Observation> observations, PaymentFacts facts) {
+        return tx.execute(s -> {
             leases.lockPayment(paymentId);
             observations(operationId, paymentId, null, observations);
             boolean applicable = merge(paymentId, facts, true);
+            if (applicable) prepareCapture(paymentId, facts);
             results.stampQuery(operationId, clock.instant());
             // Query evidence never changes ownership or version while a sender owns the operation.
             if (ProviderResultRules.queryResolves(applicable, facts))
                 results.resolveQueried(operationId, clock.instant());
-            return null;
+            return applicable;
+        });
+    }
+
+    /** Runs inside the caller's transaction. Prepares the single capture from applicable approval evidence. */
+    private void prepareCapture(UUID paymentId, PaymentFacts facts) {
+        if (!PaymentEvidenceRules.preparesCapture(facts, true)
+                || !PaymentEvidenceRules.capturable(results.progress(paymentId))) return;
+        var row = results.lockPaymentRow(paymentId);
+        UUID operation = UUID.randomUUID();
+        String key = "pay_capture_" + operation;
+        var scope = new ProviderScope(
+                (UUID) row.get("organization_id"),
+                (UUID) row.get("environment_id"),
+                (UUID) row.get("provider_account_id"),
+                false);
+        var command = new CaptureOrderCommand(scope, key, str(row, "checkout_session_id"));
+        results.insertCaptureOperation(row, operation, key, encode(command), clock.instant());
+    }
+
+    Optional<UUID> preparedCaptureOperation(UUID payment) {
+        return results.preparedCaptureOperation(payment);
+    }
+
+    /** Rechecks the committed payment before a capture call; true means do not send. */
+    boolean skipCapture(Claim claim) {
+        return tx.execute(s -> {
+            leases.lockPayment(claim.paymentId());
+            if (!leases.owns(claim)) return true;
+            var progress = results.progress(claim.paymentId());
+            if (PaymentEvidenceRules.capturable(progress)) return false;
+            completeOperation(
+                    claim,
+                    progress.capturedMinor() > 0 && progress.status() == PaymentStatus.SUCCEEDED
+                            ? "RESOLVED"
+                            : "UNKNOWN",
+                    progress.resolution().name(),
+                    progress.checkoutSessionId(),
+                    progress.providerStatus());
+            return true;
+        });
+    }
+
+    boolean finishCapture(
+            Claim claim, ProviderCallResult<CaptureOrderFact> result, ProviderQueryService.Queried queried) {
+        return tx.execute(s -> {
+            leases.lockPayment(claim.paymentId());
+            String orderId = str(claim.payment(), "checkout_session_id");
+            observations(
+                    claim.operationId(),
+                    claim.paymentId(),
+                    claim.token(),
+                    List.of(new Observation("CAPTURE_ORDER", result, orderId)));
+            if (queried != null)
+                observations(claim.operationId(), claim.paymentId(), claim.token(), queried.observations());
+            if (!leases.owns(claim)) return false;
+            boolean applicable = false;
+            if (queried != null) {
+                results.stampQuery(claim.operationId(), clock.instant());
+                applicable = merge(claim.paymentId(), queried.facts(), true);
+            }
+            var progress = results.progress(claim.paymentId());
+            boolean orderMatches =
+                    result.payload() != null && orderId.equals(result.payload().orderId());
+            var outcome = CaptureOutcomeRules.decide(
+                    result.classification(), result.evidence().providerErrorCode(), orderMatches, progress);
+            if (outcome.markUnknown()) markUnknown(claim.paymentId(), outcome.conflict());
+            completeOperation(
+                    claim,
+                    outcome.operationStatus(),
+                    outcome.operationResolution(),
+                    orderId,
+                    progress.providerStatus());
+            return applicable;
+        });
+    }
+
+    /** Merges recovery evidence without ever resending a capture. */
+    boolean finishCaptureRecovery(Claim claim, ProviderQueryService.Queried queried) {
+        return tx.execute(s -> {
+            leases.lockPayment(claim.paymentId());
+            observations(claim.operationId(), claim.paymentId(), claim.token(), queried.observations());
+            if (!leases.owns(claim)) return false;
+            boolean applicable = merge(claim.paymentId(), queried.facts(), true);
+            results.stampQuery(claim.operationId(), clock.instant());
+            var progress = results.progress(claim.paymentId());
+            boolean captured = progress.capturedMinor() > 0
+                    && progress.status() == PaymentStatus.SUCCEEDED
+                    && progress.resolution() == ResolutionStatus.KNOWN;
+            String status = captured || "RESOLVED".equals(claim.operation().get("status")) ? "RESOLVED" : "UNKNOWN";
+            completeOperation(
+                    claim,
+                    status,
+                    progress.resolution().name(),
+                    progress.checkoutSessionId(),
+                    progress.providerStatus());
+            return applicable;
         });
     }
 
@@ -307,12 +409,13 @@ final class ProviderResults {
     }
 
     /** Merges a recovery query under the lease, escalating a payment that stayed uncertain too long. */
-    void finishRecoveryQuery(Claim claim, ProviderQueryService.Queried query) {
-        tx.execute(s -> {
+    boolean finishRecoveryQuery(Claim claim, ProviderQueryService.Queried query) {
+        return tx.execute(s -> {
             leases.lockPayment(claim.paymentId());
             observations(claim.operationId(), claim.paymentId(), claim.token(), query.observations());
-            if (!leases.owns(claim)) return null;
+            if (!leases.owns(claim)) return false;
             boolean applicable = merge(claim.paymentId(), query.facts(), true);
+            if (applicable) prepareCapture(claim.paymentId(), query.facts());
             var payment = results.progress(claim.paymentId());
             results.stampQuery(claim.operationId(), clock.instant());
             if (ProviderResultRules.ageLimitReached(
@@ -322,7 +425,7 @@ final class ProviderResults {
                     clock.instant())) {
                 leases.alertAgeOwned(claim);
                 leases.escalateOwned(claim, "UNRESOLVED_AGE_LIMIT");
-                return null;
+                return false;
             }
             completeOperation(
                     claim,
@@ -330,7 +433,7 @@ final class ProviderResults {
                     payment.resolution().name(),
                     payment.checkoutSessionId(),
                     payment.providerStatus());
-            return null;
+            return applicable;
         });
     }
 

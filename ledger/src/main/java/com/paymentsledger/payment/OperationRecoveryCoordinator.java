@@ -70,6 +70,11 @@ public class OperationRecoveryCoordinator {
             if (refunds != null) refunds.recover(claim);
             return;
         }
+        if ("CAPTURE_ORDER".equals(claim.type())) {
+            if ("CONFLICT".equals(claim.payment().get("resolution_status"))) escalate(claim, "EVIDENCE_CONFLICT");
+            else executor.recoverCapture(claim);
+            return;
+        }
         String anchor = repository.recoveryAnchor(claim);
         if ("CONFLICTING_SESSION_ANCHORS".equals(anchor)) {
             repository.conflictingAnchor(claim);
@@ -108,11 +113,13 @@ public class OperationRecoveryCoordinator {
         if (anchor != null) {
             var p = new LinkedHashMap<>(claim.payment());
             p.put("checkout_session_id", anchor);
-            repository.finishRecoveryQuery(claim, executor.query(p));
+            var queried = executor.query(p);
+            if (repository.finishRecoveryQuery(claim, queried)) executor.postSettlements(p, queried);
             return;
         }
         if (claim.payment().get("payment_intent_id") != null || number(claim.payment(), "captured_amount_minor") > 0) {
-            repository.finishRecoveryQuery(claim, executor.query(claim.payment()));
+            var queried = executor.query(claim.payment());
+            if (repository.finishRecoveryQuery(claim, queried)) executor.postSettlements(claim.payment(), queried);
             return;
         }
         if ("PREPARED".equals(claim.operation().get("status"))) {

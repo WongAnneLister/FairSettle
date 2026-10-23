@@ -1,5 +1,6 @@
 package com.paymentsledger.payment.domain;
 
+import com.paymentsledger.provider.ProviderModels.BalanceTransactionFact;
 import com.paymentsledger.provider.ProviderModels.ChargeFact;
 import com.paymentsledger.provider.ProviderModels.CheckoutSessionFact;
 import com.paymentsledger.provider.ProviderModels.PaymentIntentFact;
@@ -13,6 +14,7 @@ import java.util.List;
  * @param conflict the provider objects contradict each other
  * @param confirmedAt when the provider confirmed this snapshot; older snapshots are stale
  * @param paymentVersion the payment row version the snapshot was taken for, or null if not version-bound
+ * @param settlements settlement facts from the same provider read; empty except for PayPal
  */
 public record PaymentFacts(
         CheckoutSessionFact session,
@@ -21,7 +23,23 @@ public record PaymentFacts(
         boolean complete,
         boolean conflict,
         Instant confirmedAt,
-        Long paymentVersion) {
+        Long paymentVersion,
+        List<BalanceTransactionFact> settlements) {
+    public PaymentFacts {
+        settlements = List.copyOf(settlements);
+    }
+
+    public PaymentFacts(
+            CheckoutSessionFact session,
+            PaymentIntentFact intent,
+            List<ChargeFact> charges,
+            boolean complete,
+            boolean conflict,
+            Instant confirmedAt,
+            Long paymentVersion) {
+        this(session, intent, charges, complete, conflict, confirmedAt, paymentVersion, List.of());
+    }
+
     public PaymentFacts(
             CheckoutSessionFact session,
             PaymentIntentFact intent,
@@ -29,6 +47,6 @@ public record PaymentFacts(
             boolean complete,
             boolean conflict,
             Instant confirmedAt) {
-        this(session, intent, charges, complete, conflict, confirmedAt, null);
+        this(session, intent, charges, complete, conflict, confirmedAt, null, List.of());
     }
 }

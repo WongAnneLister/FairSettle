@@ -42,7 +42,7 @@ class RecoverySchemaIT {
                 .dataSource(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword())
                 .schemas("platform")
                 .load();
-        assertThat(migration.migrate().migrationsExecuted).isEqualTo(13);
+        assertThat(migration.migrate().migrationsExecuted).isEqualTo(14);
         assertThat(migration.migrate().migrationsExecuted).isZero();
         var jdbc = new JdbcTemplate(new DriverManagerDataSource(DB.getJdbcUrl(), "payments_app", "pr02_test_only"));
         assertThat(jdbc.queryForObject("""

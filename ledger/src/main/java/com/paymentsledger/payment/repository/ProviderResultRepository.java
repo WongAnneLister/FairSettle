@@ -61,6 +61,48 @@ public class ProviderResultRepository {
         this.jdbc = new NamedParameterJdbcTemplate(jdbc);
     }
 
+    /** Inserts the payment's single CAPTURE_ORDER and its READY task; returns 0 if one already exists. */
+    public int insertCaptureOperation(
+            Map<String, Object> payment, UUID operationId, String key, String commandJson, Instant now) {
+        var params = new MapSqlParameterSource()
+                .addValue("id", operationId)
+                .addValue("organizationId", payment.get("organization_id"))
+                .addValue("environmentId", payment.get("environment_id"))
+                .addValue("applicationId", payment.get("application_id"))
+                .addValue("providerAccountId", payment.get("provider_account_id"))
+                .addValue("currency", payment.get("currency"))
+                .addValue("paymentId", payment.get("id"))
+                .addValue("key", key)
+                .addValue("fingerprint", "capture:" + payment.get("id"))
+                .addValue("command", commandJson)
+                .addValue("expiresAt", Timestamp.from(now.plusSeconds(5 * 3600)))
+                .addValue("availableAt", Timestamp.from(now));
+        int inserted = jdbc.update("""
+                INSERT INTO platform.provider_operation(id,organization_id,environment_id,application_id,
+                    provider_account_id,currency,operation_target,payment_id,operation_type,operation_key,
+                    request_fingerprint,command,expires_at)
+                VALUES (:id,:organizationId,:environmentId,:applicationId,:providerAccountId,:currency,'PAYMENT',
+                    :paymentId,'CAPTURE_ORDER',:key,:fingerprint,:command::jsonb,:expiresAt)
+                ON CONFLICT (organization_id,environment_id,application_id,provider_account_id,currency,payment_id,operation_type)
+                DO NOTHING
+                """, params);
+        if (inserted == 1) jdbc.update("""
+                INSERT INTO platform.recovery_task(organization_id,environment_id,application_id,provider_account_id,
+                    currency,operation_id,payment_id,available_at)
+                VALUES (:organizationId,:environmentId,:applicationId,:providerAccountId,:currency,:id,:paymentId,:availableAt)
+                """, params);
+        return inserted;
+    }
+
+    /** The payment's CAPTURE_ORDER operation if it is still PREPARED. */
+    public Optional<UUID> preparedCaptureOperation(UUID paymentId) {
+        var ids = jdbc.queryForList("""
+                SELECT id FROM platform.provider_operation
+                WHERE payment_id=:paymentId AND operation_type='CAPTURE_ORDER' AND status='PREPARED'
+                """, Map.of("paymentId", paymentId), UUID.class);
+        return ids.stream().findFirst();
+    }
+
     public ObservationScope observationScope(UUID operationId) {
         return jdbc.queryForObject(
                 "SELECT * FROM platform.provider_operation WHERE id=:id",
