@@ -21,6 +21,7 @@ public class WebhookProcessor {
     private final RefundWebhookHandler refunds;
     private DisputeWebhookHandler disputes;
     private PayoutWebhookHandler payouts;
+    private PayPalWebhookHandler paypal;
 
     public WebhookProcessor(WebhookInboxRepository inbox, PaymentRepository payments, ObjectMapper json, Clock clock) {
         this(inbox, payments, json, clock, null);
@@ -50,7 +51,6 @@ public class WebhookProcessor {
         this.disputes = disputes;
     }
 
-    @org.springframework.beans.factory.annotation.Autowired
     public WebhookProcessor(
             WebhookInboxRepository inbox,
             PaymentRepository payments,
@@ -61,6 +61,20 @@ public class WebhookProcessor {
             PayoutWebhookHandler payouts) {
         this(inbox, payments, json, clock, refunds, disputes);
         this.payouts = payouts;
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public WebhookProcessor(
+            WebhookInboxRepository inbox,
+            PaymentRepository payments,
+            ObjectMapper json,
+            Clock clock,
+            RefundWebhookHandler refunds,
+            DisputeWebhookHandler disputes,
+            PayoutWebhookHandler payouts,
+            PayPalWebhookHandler paypal) {
+        this(inbox, payments, json, clock, refunds, disputes, payouts);
+        this.paypal = paypal;
     }
 
     public int processDue(int limit) {
@@ -87,6 +101,10 @@ public class WebhookProcessor {
         String type = text(object, "object"),
                 objectId = text(object, "id"),
                 pi = type.equals("payment_intent") ? objectId : text(object, "payment_intent");
+        if (type.startsWith("paypal.") && paypal != null) {
+            paypal.process(claim, object);
+            return;
+        }
         if ("payout".equals(type) && payouts != null) {
             payouts.process(claim, object);
             return;

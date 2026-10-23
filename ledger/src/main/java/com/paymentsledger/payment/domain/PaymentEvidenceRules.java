@@ -26,6 +26,8 @@ import java.util.UUID;
 public final class PaymentEvidenceRules {
     private static final Set<String> PAYPAL_ORDER_STATUSES =
             Set.of("CREATED", "SAVED", "APPROVED", "VOIDED", "COMPLETED", "PAYER_ACTION_REQUIRED");
+    private static final Set<String> PAYPAL_CAPTURE_STATUSES =
+            Set.of("COMPLETED", "DECLINED", "PARTIALLY_REFUNDED", "PENDING", "REFUNDED", "FAILED");
 
     private PaymentEvidenceRules() {}
 
@@ -225,11 +227,17 @@ public final class PaymentEvidenceRules {
         return session.paymentStatus() != null && PAYPAL_ORDER_STATUSES.contains(session.paymentStatus());
     }
 
-    /** The charge a refund targets: the intent's latest charge, or the single captured PayPal capture (F08). */
+    /** The intent's latest charge, or the single captured PayPal capture from an order or a capture webhook (F08, F10). */
     public static String latestChargeId(PaymentFacts facts, boolean stale) {
         if (stale) return null;
         if (facts.intent() != null) return facts.intent().latestChargeId();
-        if (facts.session() == null || !isPayPalOrder(facts.session())) return null;
+        boolean paypal = facts.session() != null
+                ? isPayPalOrder(facts.session())
+                : !facts.charges().isEmpty()
+                        && facts.charges().stream()
+                                .allMatch(c ->
+                                        c.outcomeType() != null && PAYPAL_CAPTURE_STATUSES.contains(c.outcomeType()));
+        if (!paypal) return null;
         var captures = facts.charges().stream()
                 .filter(c -> c.captured() && c.status().equals("succeeded"))
                 .toList();
