@@ -167,7 +167,8 @@ public final class PaymentEvidenceRules {
                 && capturedMinor == 0
                 && status != PaymentStatus.SUCCEEDED
                 && unpaid(facts)
-                && facts.session().status() == CheckoutSessionStatus.EXPIRED) status = PaymentStatus.CANCELED;
+                && (facts.session().status() == CheckoutSessionStatus.EXPIRED || captureDeclined(facts)))
+            status = PaymentStatus.CANCELED;
         if (!stale && facts.intent() != null) providerStatus = facts.intent().status();
         else if (!stale && facts.session() != null && isPayPalOrder(facts.session()))
             providerStatus = sessionStatus(facts.session());
@@ -222,6 +223,15 @@ public final class PaymentEvidenceRules {
 
     private static boolean isPayPalOrder(CheckoutSessionFact session) {
         return session.paymentStatus() != null && PAYPAL_ORDER_STATUSES.contains(session.paymentStatus());
+    }
+
+    /** ADR P1: a PayPal order completed with only declined or failed captures can no longer be captured. */
+    public static boolean captureDeclined(PaymentFacts facts) {
+        return facts.session() != null
+                && "COMPLETED".equals(facts.session().paymentStatus())
+                && !facts.charges().isEmpty()
+                && facts.charges().stream()
+                        .allMatch(c -> !c.captured() && c.status().equals("failed"));
     }
 
     /** ADR D5: an approved query with nothing captured prepares the payment's single capture. */

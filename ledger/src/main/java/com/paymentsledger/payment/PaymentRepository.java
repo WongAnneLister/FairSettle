@@ -315,7 +315,7 @@ public class PaymentRepository {
         return results.finishCapture(claim, result, queried);
     }
 
-    boolean finishCaptureRecovery(Claim claim, ProviderQueryService.Queried queried) {
+    ProviderResults.RecoveredCapture finishCaptureRecovery(Claim claim, ProviderQueryService.Queried queried) {
         return results.finishCaptureRecovery(claim, queried);
     }
 

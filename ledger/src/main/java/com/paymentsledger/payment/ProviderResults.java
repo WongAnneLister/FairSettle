@@ -1,6 +1,7 @@
 package com.paymentsledger.payment;
 
 import static com.paymentsledger.payment.PaymentRepository.error;
+import static com.paymentsledger.payment.PaymentRepository.instant;
 import static com.paymentsledger.payment.PaymentRepository.str;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,6 +10,7 @@ import com.paymentsledger.identity.TenantContext;
 import com.paymentsledger.payment.PaymentRepository.Claim;
 import com.paymentsledger.payment.PaymentRepository.Observation;
 import com.paymentsledger.payment.domain.CaptureOutcomeRules;
+import com.paymentsledger.payment.domain.CaptureRecoveryRules;
 import com.paymentsledger.payment.domain.PaymentEvidenceRules;
 import com.paymentsledger.payment.domain.PaymentFacts;
 import com.paymentsledger.payment.domain.PaymentStatus;
@@ -293,26 +295,50 @@ final class ProviderResults {
         });
     }
 
-    /** Merges recovery evidence without ever resending a capture. */
-    boolean finishCaptureRecovery(Claim claim, ProviderQueryService.Queried queried) {
+    record RecoveredCapture(boolean applicable, CaptureRecoveryRules.Next next) {}
+
+    /** Merges recovery evidence under the lease and decides whether to resolve, resend, escalate or wait. */
+    RecoveredCapture finishCaptureRecovery(Claim claim, ProviderQueryService.Queried queried) {
         return tx.execute(s -> {
             leases.lockPayment(claim.paymentId());
             observations(claim.operationId(), claim.paymentId(), claim.token(), queried.observations());
-            if (!leases.owns(claim)) return false;
+            if (!leases.owns(claim)) return new RecoveredCapture(false, CaptureRecoveryRules.Next.WAIT);
             boolean applicable = merge(claim.paymentId(), queried.facts(), true);
             results.stampQuery(claim.operationId(), clock.instant());
             var progress = results.progress(claim.paymentId());
-            boolean captured = progress.capturedMinor() > 0
-                    && progress.status() == PaymentStatus.SUCCEEDED
-                    && progress.resolution() == ResolutionStatus.KNOWN;
-            String status = captured || "RESOLVED".equals(claim.operation().get("status")) ? "RESOLVED" : "UNKNOWN";
-            completeOperation(
-                    claim,
-                    status,
-                    progress.resolution().name(),
-                    progress.checkoutSessionId(),
-                    progress.providerStatus());
-            return applicable;
+            boolean approvedWithoutCapture = applicable && PaymentEvidenceRules.preparesCapture(queried.facts(), true);
+            boolean age = ProviderResultRules.ageLimitReached(
+                    progress.resolution(),
+                    progress.unresolvedSince(),
+                    policy.get().unresolvedAge(),
+                    clock.instant());
+            var next = CaptureRecoveryRules.next(
+                    progress, approvedWithoutCapture, instant(claim.operation(), "retry_until"), clock.instant(), age);
+            switch (next) {
+                case RESOLVE ->
+                    completeOperation(
+                            claim,
+                            "RESOLVED",
+                            progress.resolution().name(),
+                            progress.checkoutSessionId(),
+                            progress.providerStatus());
+                case RESEND -> {
+                    /* Keep the lease for the resend immediately after this transaction. */
+                }
+                case ESCALATE_WINDOW -> leases.escalateOwned(claim, "CAPTURE_WINDOW_EXPIRED");
+                case ESCALATE_AGE -> {
+                    leases.alertAgeOwned(claim);
+                    leases.escalateOwned(claim, "UNRESOLVED_AGE_LIMIT");
+                }
+                case WAIT ->
+                    completeOperation(
+                            claim,
+                            "RESOLVED".equals(claim.operation().get("status")) ? "RESOLVED" : "UNKNOWN",
+                            progress.resolution().name(),
+                            progress.checkoutSessionId(),
+                            progress.providerStatus());
+            }
+            return new RecoveredCapture(applicable, next);
         });
     }
 

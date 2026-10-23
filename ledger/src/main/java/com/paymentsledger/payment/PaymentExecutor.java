@@ -5,6 +5,7 @@ import static com.paymentsledger.payment.PaymentRepository.*;
 import com.paymentsledger.common.error.*;
 import com.paymentsledger.financialingestion.CaptureSettlementService;
 import com.paymentsledger.payment.domain.CaptureOutcomeRules;
+import com.paymentsledger.payment.domain.CaptureRecoveryRules;
 import com.paymentsledger.payment.domain.PaymentFacts;
 import com.paymentsledger.provider.*;
 import com.paymentsledger.provider.ProviderModels.*;
@@ -174,14 +175,24 @@ public class PaymentExecutor {
         if (repository.finishCapture(claim, result, queried)) postSettlements(claim.payment(), queried);
     }
 
-    /** F06 sends only PREPARED captures; every other capture is queried without a resend. */
+    /** ADR §5: a PREPARED capture is sent; any other is queried first and resent only per CaptureRecoveryRules. */
     void recoverCapture(Claim claim) {
         if ("PREPARED".equals(claim.operation().get("status"))) {
             executeClaim(claim);
             return;
         }
         var queried = query(claim.payment());
-        if (repository.finishCaptureRecovery(claim, queried)) postSettlements(claim.payment(), queried);
+        var recovered = repository.finishCaptureRecovery(claim, queried);
+        if (recovered.applicable()) postSettlements(claim.payment(), queried);
+        if (recovered.next() == CaptureRecoveryRules.Next.RESEND)
+            capture(new Claim(
+                    claim.operationId(),
+                    claim.paymentId(),
+                    claim.token(),
+                    claim.version(),
+                    claim.type(),
+                    claim.operation(),
+                    repository.payment(claim.paymentId())));
     }
 
     /** A failure leaves PENDING_EVIDENCE; a later authoritative query or L2 wake retries posting. */

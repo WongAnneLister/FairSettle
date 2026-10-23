@@ -2,15 +2,18 @@ package com.paymentsledger.payment.domain;
 
 import com.paymentsledger.provider.ProviderCallClassification;
 
-/** Pure rules for a PayPal capture call's write-back; recovery resends belong to F07. */
+/** Pure rules for a PayPal capture call's write-back and immediate follow-up query. */
 public final class CaptureOutcomeRules {
     private CaptureOutcomeRules() {}
 
     public record Outcome(String operationStatus, String operationResolution, boolean markUnknown, boolean conflict) {}
 
+    /** Query successes, buyer rejections and uncertain ORDER_ALREADY_CAPTURED results immediately. */
     public static boolean queriesAfter(ProviderCallClassification classification, String errorCode) {
         return classification == ProviderCallClassification.SUCCESS
-                || classification == ProviderCallClassification.DEFINITIVE_REJECT && buyerRejection(errorCode);
+                || classification == ProviderCallClassification.DEFINITIVE_REJECT && buyerRejection(errorCode)
+                || classification == ProviderCallClassification.TIMEOUT_UNKNOWN
+                        && "ORDER_ALREADY_CAPTURED".equals(errorCode);
     }
 
     public static Outcome decide(

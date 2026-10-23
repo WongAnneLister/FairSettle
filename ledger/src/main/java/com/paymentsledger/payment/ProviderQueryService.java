@@ -200,7 +200,8 @@ public final class ProviderQueryService {
         boolean conflict = !orderId.equals(session.sessionId())
                 || !matchesMetadata(session.metadata(), payment)
                 || order.amountMinor() != number(p, "amount_minor")
-                || !str(p, "currency").equalsIgnoreCase(order.currency());
+                || !str(p, "currency").equalsIgnoreCase(order.currency())
+                || "VOIDED".equals(session.paymentStatus()) && !order.captures().isEmpty();
         var verified = new ArrayList<ChargeFact>();
         for (var capture : order.captures()) {
             if (validCharge(p, orderId, capture)) verified.add(capture);
@@ -215,7 +216,9 @@ public final class ProviderQueryService {
         }
         boolean captured =
                 verified.stream().anyMatch(c -> c.captured() && c.status().equals("succeeded"));
-        boolean complete = !conflict && (!"COMPLETED".equals(session.paymentStatus()) || captured);
+        boolean declined = !verified.isEmpty()
+                && verified.stream().allMatch(c -> !c.captured() && c.status().equals("failed"));
+        boolean complete = !conflict && (!"COMPLETED".equals(session.paymentStatus()) || captured || declined);
         return new Queried(
                 new PaymentFacts(
                         conflict ? null : session,
