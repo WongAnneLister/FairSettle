@@ -77,9 +77,11 @@ final class RefundWriteback {
             var current = facts.refund(id);
             boolean carriesFact = ProviderResultRules.carriesFact(result);
             if (carriesFact) merger.acceptLocked(scope(current), result.payload(), result.evidence(), id);
-            else if (RefundFactRules.rejectionReleasesHold(query, result.classification(), current))
+            else if (RefundFactRules.rejectionReleasesHold(query, result.classification(), current)) {
                 facts.failRejected(current);
-            else if (!current.terminal()) facts.markUnknown(id, operations.now());
+                if (RefundFactRules.rejectionRevealsExternalRefund(
+                        result.evidence().providerErrorCode())) facts.freezeControlStamped(claim.paymentId());
+            } else if (!current.terminal()) facts.markUnknown(id, operations.now());
             if (!carriesFact) shares.get().reconcile(claim.paymentId(), "refund.operation:" + claim.operationId());
             current = facts.refund(id);
             if (ProviderResultRules.ageLimitReached(

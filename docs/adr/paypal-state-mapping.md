@@ -163,7 +163,7 @@ All four values of PayPal's `refund_status`.
 | 200, replay of the same request id | SUCCESS; no second effect | per the status table | sample 09 |
 | 422 `REFUND_AMOUNT_EXCEEDED` or `CAPTURE_FULLY_REFUNDED` | DEFINITIVE_REJECT | FAILED, H released (`RefundFactRules.rejectionReleasesHold`). The refund control also moves to `EXTERNAL_CONFLICT`: the ledger believed the amount fit within C − R − H, so PayPal knows a refund the ledger does not | refund F6, N1, refund.md §3; sample 10 |
 | 422, any other issue | CONTRACT_MISMATCH | H kept, resolution CONFLICT | refund N4 |
-| 400 / 403 | DEFINITIVE_REJECT / CAPABILITY_UNAVAILABLE | H kept until a person confirms; resolution CONFLICT | refund N4 |
+| 400 / 403 | DEFINITIVE_REJECT / CAPABILITY_UNAVAILABLE | H kept until a person confirms; resolution CONFLICT | refund N4; F08: 400 and other 422 are classified CONTRACT_MISMATCH; the hold is kept and the refund stays UNKNOWN until the custom_id search or the age limit brings it to a person |
 | No response, 5xx, 429, 401 after one refresh | TIMEOUT_UNKNOWN / RETRYABLE_TRANSIENT / RATE_LIMITED | SUBMITTED, resolution UNKNOWN, H kept | refund F8 |
 
 The `EXTERNAL_CONFLICT` move extends refund.md §3, whose trigger today is an ingested external refund; here the external refund is inferred from PayPal's rejection. New refunds stay blocked until the mapping is reconciled, as refund.md §3 requires.

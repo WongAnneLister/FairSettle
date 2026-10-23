@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /** Project-owned provider contracts. Provider status strings and currency case are preserved as evidence. */
 public final class ProviderModels {
@@ -135,7 +136,19 @@ public final class ProviderModels {
             String chargeId,
             String paymentIntentId,
             long amountMinor,
-            String reason) {
+            String reason,
+            String currency,
+            UUID localRefundId) {
+        public CreateRefundCommand(
+                ProviderScope scope,
+                String operationIdempotencyKey,
+                String chargeId,
+                String paymentIntentId,
+                long amountMinor,
+                String reason) {
+            this(scope, operationIdempotencyKey, chargeId, paymentIntentId, amountMinor, reason, null, null);
+        }
+
         public CreateRefundCommand {
             Objects.requireNonNull(scope, "scope");
             requireText(operationIdempotencyKey, "operationIdempotencyKey");
@@ -144,6 +157,7 @@ public final class ProviderModels {
             if (chargeId != null) requireText(chargeId, "chargeId");
             if (paymentIntentId != null) requireText(paymentIntentId, "paymentIntentId");
             requirePositive(amountMinor, "amountMinor");
+            if (currency != null) requireCurrency(currency);
         }
     }
 
@@ -156,11 +170,45 @@ public final class ProviderModels {
             String balanceTransactionId,
             String failureReason,
             String failureBalanceTransactionId,
-            Instant createdAt) {
+            Instant createdAt,
+            BalanceTransactionFact settlement) {
+        public RefundFact(
+                String refundId,
+                String chargeId,
+                String status,
+                long amountMinor,
+                String currency,
+                String balanceTransactionId,
+                String failureReason,
+                String failureBalanceTransactionId,
+                Instant createdAt) {
+            this(
+                    refundId,
+                    chargeId,
+                    status,
+                    amountMinor,
+                    currency,
+                    balanceTransactionId,
+                    failureReason,
+                    failureBalanceTransactionId,
+                    createdAt,
+                    null);
+        }
+
         public RefundFact {
             requireText(refundId, "refundId");
             requirePositive(amountMinor, "amountMinor");
             requireCurrency(currency);
+            if (settlement != null
+                    && (!Objects.equals(settlement.btId(), balanceTransactionId)
+                            || !Objects.equals(settlement.sourceObjectId(), refundId)))
+                throw new IllegalArgumentException("Refund settlement identity differs");
+        }
+    }
+
+    public record OrderRefundFact(String customId, RefundFact refund) {
+        public OrderRefundFact {
+            Objects.requireNonNull(refund, "refund");
         }
     }
 

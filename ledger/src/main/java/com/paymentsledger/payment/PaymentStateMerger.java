@@ -62,7 +62,7 @@ final class PaymentStateMerger {
                         captured,
                         identities.sessionId(),
                         identities.paymentIntentId(),
-                        decision.intent() == null ? null : decision.intent().latestChargeId(),
+                        PaymentEvidenceRules.latestChargeId(facts, stale),
                         PaymentEvidenceRules.updatesHostedUrl(session, query),
                         session == null ? null : session.hostedUrl(),
                         PaymentEvidenceRules.confirmsProviderState(facts, stale),

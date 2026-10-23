@@ -122,4 +122,46 @@ public final class PayPalTestTransport implements PayPalTransport {
                 .put("status", "COMPLETED");
         return order.toString();
     }
+
+    public static String refund(String id, String captureId, String status, String value, String fee, String customId) {
+        var refund = JSON.createObjectNode()
+                .put("id", id)
+                .put("status", status)
+                .put("custom_id", customId)
+                .put("create_time", "2026-10-22T10:00:00Z");
+        refund.putObject("amount").put("currency_code", "USD").put("value", value);
+        var links = refund.putArray("links");
+        links.addObject().put("rel", "self").put("href", "https://api.sandbox.paypal.com/v2/payments/refunds/" + id);
+        links.addObject()
+                .put("rel", "up")
+                .put("href", "https://api.sandbox.paypal.com/v2/payments/captures/" + captureId);
+        if (fee != null) {
+            var breakdown = refund.putObject("seller_payable_breakdown");
+            breakdown.putObject("gross_amount").put("currency_code", "USD").put("value", value);
+            breakdown.putObject("paypal_fee").put("currency_code", "USD").put("value", fee);
+            breakdown
+                    .putObject("net_amount")
+                    .put("currency_code", "USD")
+                    .put(
+                            "value",
+                            new java.math.BigDecimal(value)
+                                    .subtract(new java.math.BigDecimal(fee))
+                                    .toPlainString());
+        }
+        return refund.toString();
+    }
+
+    public static String orderWithRefunds(String orderId, String customId, String captureId, String... refundBodies) {
+        try {
+            var order = (com.fasterxml.jackson.databind.node.ObjectNode)
+                    JSON.readTree(capturedOrder(orderId, customId, captureId, "COMPLETED", true));
+            var payments = (com.fasterxml.jackson.databind.node.ObjectNode)
+                    order.path("purchase_units").path(0).path("payments");
+            var refunds = payments.putArray("refunds");
+            for (String body : refundBodies) refunds.add(JSON.readTree(body));
+            return order.toString();
+        } catch (IOException invalidFixture) {
+            throw new AssertionError(invalidFixture);
+        }
+    }
 }

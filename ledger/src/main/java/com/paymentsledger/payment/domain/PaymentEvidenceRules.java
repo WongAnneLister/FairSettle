@@ -225,6 +225,17 @@ public final class PaymentEvidenceRules {
         return session.paymentStatus() != null && PAYPAL_ORDER_STATUSES.contains(session.paymentStatus());
     }
 
+    /** The charge a refund targets: the intent's latest charge, or the single captured PayPal capture (F08). */
+    public static String latestChargeId(PaymentFacts facts, boolean stale) {
+        if (stale) return null;
+        if (facts.intent() != null) return facts.intent().latestChargeId();
+        if (facts.session() == null || !isPayPalOrder(facts.session())) return null;
+        var captures = facts.charges().stream()
+                .filter(c -> c.captured() && c.status().equals("succeeded"))
+                .toList();
+        return captures.size() == 1 ? captures.getFirst().chargeId() : null;
+    }
+
     /** ADR P1: a PayPal order completed with only declined or failed captures can no longer be captured. */
     public static boolean captureDeclined(PaymentFacts facts) {
         return facts.session() != null

@@ -2,6 +2,7 @@ package com.paymentsledger.payment;
 
 import static com.paymentsledger.payment.PaymentRepository.*;
 
+import com.paymentsledger.financialingestion.CaptureSettlementService;
 import com.paymentsledger.provider.*;
 import com.paymentsledger.provider.ProviderModels.*;
 import java.time.*;
@@ -18,24 +19,49 @@ public class RefundExecutor {
     private final PaymentRepository operations;
     private final RefundRepository refunds;
     private final RefundPort port;
+    private final RefundSearchPort search;
+    private final CaptureSettlementService settlements;
     private final String provider;
 
     @Autowired
     public RefundExecutor(
-            PaymentRepository operations, RefundRepository refunds, ObjectProvider<RefundPort> ports, Environment env) {
+            PaymentRepository operations,
+            RefundRepository refunds,
+            ObjectProvider<RefundPort> ports,
+            ObjectProvider<RefundSearchPort> searches,
+            ObjectProvider<CaptureSettlementService> settlements,
+            Environment env) {
         this(
                 operations,
                 refunds,
                 ports.getIfAvailable(),
+                searches.getIfAvailable(),
+                settlements.getIfAvailable(),
                 env.getProperty("platform.stripe.enabled", Boolean.class, false)
                         ? "STRIPE"
-                        : env.getProperty("platform.provider.fake.enabled", Boolean.class, false) ? "FAKE" : null);
+                        : env.getProperty("platform.paypal.enabled", Boolean.class, false)
+                                ? "PAYPAL"
+                                : env.getProperty("platform.provider.fake.enabled", Boolean.class, false)
+                                        ? "FAKE"
+                                        : null);
     }
 
     public RefundExecutor(PaymentRepository operations, RefundRepository refunds, RefundPort port, String provider) {
+        this(operations, refunds, port, null, null, provider);
+    }
+
+    public RefundExecutor(
+            PaymentRepository operations,
+            RefundRepository refunds,
+            RefundPort port,
+            RefundSearchPort search,
+            CaptureSettlementService settlements,
+            String provider) {
         this.operations = operations;
         this.refunds = refunds;
         this.port = port;
+        this.search = search;
+        this.settlements = settlements;
         this.provider = provider;
     }
 
@@ -58,7 +84,9 @@ public class RefundExecutor {
         }
         if (!refunds.submitted(claim)) return;
         var command = operations.decode(claim.operation().get("command"), CreateRefundCommand.class);
-        refunds.finish(claim, call(() -> port.createRefund(command), command.operationIdempotencyKey()), false);
+        var result = call(() -> port.createRefund(command), command.operationIdempotencyKey());
+        refunds.finish(claim, result, false);
+        postSettlement(claim, result);
     }
 
     void recover(Claim claim) {
@@ -75,12 +103,11 @@ public class RefundExecutor {
         }
         if (anchor != null) {
             String id = anchor;
-            refunds.finish(
-                    claim,
-                    call(
-                            () -> port.queryRefund(RefundRepository.scope(claim.payment()), id),
-                            str(claim.operation(), "operation_key")),
-                    true);
+            var result = call(
+                    () -> port.queryRefund(RefundRepository.scope(claim.payment()), id),
+                    str(claim.operation(), "operation_key"));
+            refunds.finish(claim, result, true);
+            postSettlement(claim, result);
             return;
         }
         if ("QUERY_REFUND".equals(claim.type())) {
@@ -89,6 +116,10 @@ public class RefundExecutor {
         }
         if ("PREPARED".equals(claim.operation().get("status"))) {
             executeClaim(claim);
+            return;
+        }
+        if (search != null) {
+            recoverBySearch(claim);
             return;
         }
         Instant horizon = instant(claim.operation(), "retry_until"),
@@ -102,6 +133,56 @@ public class RefundExecutor {
         else
             operations.escalate(
                     claim, horizon == null ? "IDEMPOTENCY_WINDOW_UNVERIFIED" : "IDEMPOTENCY_WINDOW_EXPIRED");
+    }
+
+    /** ADR §7 / D12: find the refund by custom_id; never resend. */
+    private void recoverBySearch(Claim claim) {
+        var payment = operations.payment((UUID) claim.payment().get("payment_id"));
+        String orderId = str(payment, "checkout_session_id");
+        String refundId = claim.operation().get("refund_id").toString();
+        if (orderId == null) {
+            operations.escalate(claim, "REFUND_WITHOUT_ORDER");
+            return;
+        }
+        Instant requested = operations.now();
+        ProviderCallResult<List<OrderRefundFact>> result;
+        try {
+            result = search.queryOrderRefunds(RefundRepository.scope(claim.payment()), orderId);
+        } catch (RuntimeException unavailable) {
+            result = new ProviderCallResult<>(
+                    ProviderCallClassification.TIMEOUT_UNKNOWN,
+                    null,
+                    new ProviderEvidence(null, null, requested, null, null, "port_exception", null, null));
+        }
+        if (result.classification() != ProviderCallClassification.SUCCESS || result.payload() == null) {
+            refunds.finish(claim, new ProviderCallResult<>(result.classification(), null, result.evidence()), true);
+            return;
+        }
+        var matches = result.payload().stream()
+                .filter(f -> refundId.equals(f.customId()))
+                .toList();
+        if (matches.size() > 1) refunds.conflictingAnchors(claim);
+        else if (matches.size() == 1) {
+            var adopted = new ProviderCallResult<>(
+                    ProviderCallClassification.SUCCESS, matches.getFirst().refund(), result.evidence());
+            refunds.finish(claim, adopted, true);
+            postSettlement(claim, adopted);
+        } else
+            refunds.finish(
+                    claim,
+                    new ProviderCallResult<>(ProviderCallClassification.TRANSIENT_EMPTY, null, result.evidence()),
+                    true);
+    }
+
+    /** Posts a refund settlement after its write-back committed; failures leave it for the next query. */
+    private void postSettlement(Claim claim, ProviderCallResult<RefundFact> result) {
+        if (settlements == null || result.payload() == null || result.payload().settlement() == null) return;
+        try {
+            settlements.record(
+                    RefundRepository.scope(claim.payment()), result.payload().settlement(), result.evidence());
+        } catch (RuntimeException unavailable) {
+            // Leave the settlement for a later authoritative query.
+        }
     }
 
     public void refreshProviderRefund(ProviderScope scope, String providerRefundId) {

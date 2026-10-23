@@ -23,7 +23,11 @@ public final class RefundFactRules {
             "failed", "FAILED",
             "canceled", "CANCELED",
             "pending", "PENDING",
-            "requires_action", "REQUIRES_ACTION");
+            "requires_action", "REQUIRES_ACTION",
+            "COMPLETED", "SUCCEEDED",
+            "PENDING", "PENDING",
+            "FAILED", "FAILED",
+            "CANCELLED", "CANCELED");
 
     private RefundFactRules() {}
 
@@ -81,6 +85,11 @@ public final class RefundFactRules {
                 && classification == ProviderCallClassification.DEFINITIVE_REJECT
                 && refund.providerRefundId() == null
                 && !refund.terminal();
+    }
+
+    /** ADR §7: PayPal refused the refund because it already knows refunds the ledger does not. */
+    public static boolean rejectionRevealsExternalRefund(String providerErrorCode) {
+        return "REFUND_AMOUNT_EXCEEDED".equals(providerErrorCode) || "CAPTURE_FULLY_REFUNDED".equals(providerErrorCode);
     }
 
     /** A reservation may be sent to the provider only while it is unsent, certain and its control NORMAL. */

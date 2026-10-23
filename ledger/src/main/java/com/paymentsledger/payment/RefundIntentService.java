@@ -89,7 +89,9 @@ final class RefundIntentService {
                     payment.latestChargeId(),
                     null,
                     request.amountMinor(),
-                    RefundReservationRules.providerReason(request.reason()));
+                    RefundReservationRules.providerReason(request.reason()),
+                    request.currency(),
+                    refund);
             Instant reservedAt = now.get();
             intents.reserve(
                     tenant,
