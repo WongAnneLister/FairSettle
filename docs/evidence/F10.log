@@ -1,0 +1,7 @@
+feature: F10
+kind: command
+command: cd ledger && ./mvnw -q -Dtest='PayPalWebhookPostingTest' test
+commit: 94d97fcefc9c26418226766a77b9b9c2916e71a0
+started_at: 2026-10-23T18:33:03+08:00
+exit_code: 0
+----
