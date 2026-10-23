@@ -1,0 +1,9 @@
+feature: F09
+kind: command
+command: cd ledger && ./mvnw -q -Dtest='PayPalWebhookVerificationTest' test
+commit: f3ba84d8cabf9136a92d86646386ae184fe8475d
+started_at: 2026-10-23T16:50:54+08:00
+exit_code: 0
+----
+16:51:08.388 [main] WARN org.springframework.context.annotation.AnnotationConfigApplicationContext -- Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'payPalWebhookEndpoint': Failed to instantiate [com.paymentsledger.webhook.PayPalWebhookEndpoint]: Constructor threw exception
+16:51:08.428 [main] WARN org.springframework.context.annotation.AnnotationConfigApplicationContext -- Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'payPalWebhookEndpoint': Failed to instantiate [com.paymentsledger.webhook.PayPalWebhookEndpoint]: Constructor threw exception
