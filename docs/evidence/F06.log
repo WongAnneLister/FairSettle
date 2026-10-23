@@ -1,0 +1,7 @@
+feature: F06
+kind: command
+command: cd ledger && ./mvnw -q -Dtest='PayPalCaptureTest,PaymentStateMachinePayPalTest' test
+commit: 5799bafa32ffbb9cca2395a5ec9bcc5346007d5a
+started_at: 2026-10-23T11:09:27+08:00
+exit_code: 0
+----
