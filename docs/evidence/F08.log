@@ -1,0 +1,7 @@
+feature: F08
+kind: command
+command: cd ledger && ./mvnw -q -Dtest='PayPalRefundTest' test
+commit: 2a85752644df3b8d113bfb9d1810d7af3e5b8c80
+started_at: 2026-10-23T15:44:11+08:00
+exit_code: 0
+----
