@@ -1,0 +1,14 @@
+feature: F14
+kind: command
+command: npx --yes @redocly/cli lint contracts/ledger-openapi.yaml
+commit: 4d0ad46d0a556e1ba4fb0ed77fa74ef17a1ae29e
+started_at: 2026-10-24T20:18:36+08:00
+exit_code: 0
+----
+No configurations were provided -- using built in recommended configuration by default.
+
+validating contracts/ledger-openapi.yaml...
+contracts/ledger-openapi.yaml: validated in 68ms
+
+Woohoo! Your API description is valid. 🎉
+
