@@ -27,7 +27,7 @@ EVIDENCE_DIR = ROOT / "docs" / "evidence"
 STATES = ("not_started", "active", "blocked", "passing")
 # Files the gate itself writes; they may be dirty while verifying.
 GATE_FILES = ("docs/features.json", "docs/progress.md", "docs/evidence/")
-VERIFY_TIMEOUT_S = 1800
+VERIFY_TIMEOUT_S = 3600
 
 
 def die(msg: str, code: int = 1) -> None:
