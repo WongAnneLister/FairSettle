@@ -27,6 +27,10 @@ registerEnumType(OrderStatus, {name: 'OrderStatus'});
 @Index(['restaurant', 'status'])
 @Index(['driver', 'status'])
 @Index(['customer', 'status'])
+@Index('IDX_order_ledger_payment', ['ledgerPaymentId'], {
+  unique: true,
+  where: '"ledgerPaymentId" IS NOT NULL',
+})
 export class Order extends CoreEntity {
   @Field(type => User, {nullable: true})
   @ManyToOne(type => User, user => user.orders, {onDelete: 'SET NULL', nullable: true, eager: true})
@@ -64,6 +68,16 @@ export class Order extends CoreEntity {
   @Field(type => Int, {nullable: true})
   @IsNumber()
   totalCents?: number;
+
+  /** Ledger payment accepted for this order; null until checkout is delivered. */
+  @Column({type: 'varchar', length: 64, nullable: true})
+  @Field(type => String, {nullable: true})
+  ledgerPaymentId?: string;
+
+  /** Hosted approval link returned by the ledger; null while checkout is pending. */
+  @Column({type: 'text', nullable: true})
+  @Field(type => String, {nullable: true})
+  checkoutUrl?: string;
 
   @Column({type: 'enum', enum: OrderStatus, default: OrderStatus.Pending})
   @Field(type => OrderStatus)

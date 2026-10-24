@@ -26,6 +26,143 @@ tags:
 - name: ops-review
   description: Human review of submitted refund proposals.
 paths:
+  /v1/payments:
+    post:
+      tags:
+      - payments
+      summary: Create a payment checkout session
+      operationId: createPayment
+      description: 'Creates a controlled-price payment. Dispatch uses productRef dispatch-order, priceVersion
+        1 and a unit price of 1 USD cent with a 0 bps share policy: quantity = amountMinor = the order total
+        in cents, from 1 to 10000. Both orderKey and Idempotency-Key are dispatch-order-<orderId>. Dispatch
+        sends no metadata or customerRef. Same key and same body replay the original payment with 200 and
+        Idempotent-Replay: true; different semantic content returns 409 IDEMPOTENCY_CONFLICT. Reusing orderKey
+        under a different key returns 409 ORDER_INTENT_CONFLICT. A new confirmed hosted session returns
+        201 with nextAction REDIRECT_TO_HOSTED_CHECKOUT and hostedUrl. A saved but unconfirmed intent returns
+        500 PROVIDER_UNKNOWN_RESULT with details [{field: paymentId, issue: <saved payment id>}]; query
+        that payment and never resend with a new key.'
+      security:
+      - ApplicationBearer:
+        - payments:write
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyRequired'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreateRequest'
+            example:
+              orderKey: dispatch-order-42
+              productRef: dispatch-order
+              priceVersion: 1
+              quantity: 1875
+              amountMinor: 1875
+              currency: USD
+              successUrl: https://example.com/f15/return
+              cancelUrl: https://example.com/f15/cancel
+      responses:
+        '201':
+          description: New hosted checkout session created.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Location:
+              description: Relative URI of the created payment.
+              schema:
+                type: string
+              example: /v1/payments/pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSummary'
+              example: &id001
+                id: pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+                orderKey: dispatch-order-42
+                provider:
+                  checkoutSessionId: paypal-order-001
+                  latestChargeId: null
+                paymentStatus: AWAITING_CUSTOMER
+                resolutionStatus: KNOWN
+                financialStatus: NOT_APPLICABLE
+                amountMinor: 1875
+                currency: USD
+                capturedAmountMinor: 0
+                createdAt: '2026-10-24T10:00:00Z'
+                updatedAt: '2026-10-24T10:00:00Z'
+                nextAction:
+                  type: REDIRECT_TO_HOSTED_CHECKOUT
+                  hostedUrl: https://www.sandbox.paypal.com/checkoutnow?token=FAKE1
+                  expiresAt: '2026-10-24T10:30:00Z'
+        '200':
+          description: Original payment returned on an idempotent replay; nextAction may still require waiting.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Idempotent-Replay:
+              $ref: '#/components/headers/IdempotentReplay'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSummary'
+              example: *id001
+        '400':
+          description: VALIDATION_ERROR for invalid input or IDEMPOTENCY_KEY_REQUIRED for a missing key.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: 'NOT_FOUND: the controlled price is unknown in the caller scope.'
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: IDEMPOTENCY_CONFLICT for same-key different content, or ORDER_INTENT_CONFLICT for
+            a reused orderKey.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: AMOUNT_MISMATCH with the controlled price, or CURRENCY_NOT_ENABLED in the caller
+            scope.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          description: PROVIDER_UNKNOWN_RESULT with detail field paymentId if the saved checkout is unconfirmed;
+            retryable false. Query the payment; never resend with a new key. INTERNAL_ERROR for an unclassified
+            failure.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /v1/payments/{paymentId}:
     get:
       tags:
@@ -866,6 +1003,10 @@ components:
         | `RATE_LIMITED` | 429 | true | Account rate limit reached. |
         | `INTERNAL_ERROR` | 500 | false | Unclassified internal error. |
         | `SERVICE_UNAVAILABLE` | 503 | true | A dependency is unavailable and no funds request has been sent. |
+        | `ORDER_INTENT_CONFLICT` | 409 | false | The scoped orderKey already has a payment. |
+        | `AMOUNT_MISMATCH` | 422 | false | The amount does not match the controlled unit price times quantity. |
+        | `CURRENCY_NOT_ENABLED` | 422 | false | The currency is not enabled in the caller scope. |
+        | `PROVIDER_UNKNOWN_RESULT` | 500 | false | The saved intent has an unknown provider outcome; query the payment, never resend with a new key. |
       enum:
       - VALIDATION_ERROR
       - IDEMPOTENCY_KEY_REQUIRED
@@ -881,6 +1022,10 @@ components:
       - RATE_LIMITED
       - INTERNAL_ERROR
       - SERVICE_UNAVAILABLE
+      - ORDER_INTENT_CONFLICT
+      - AMOUNT_MISMATCH
+      - CURRENCY_NOT_ENABLED
+      - PROVIDER_UNKNOWN_RESULT
     ErrorDetail:
       type: object
       description: A field-level validation or conflict detail.
@@ -1350,6 +1495,8 @@ components:
       - createdAt
       - updatedAt
       properties:
+        nextAction:
+          $ref: '#/components/schemas/NextAction'
         id:
           $ref: '#/components/schemas/ResourceId'
         orderKey:
@@ -1433,3 +1580,87 @@ components:
           type: string
           format: date-time
       additionalProperties: true
+    PaymentCreateRequest:
+      type: object
+      description: Controlled-price payment request. Ownership fields never authorize access. Dispatch sets
+        quantity and amountMinor to the order total in cents.
+      required:
+      - orderKey
+      - productRef
+      - priceVersion
+      - amountMinor
+      - currency
+      - successUrl
+      - cancelUrl
+      additionalProperties: false
+      properties:
+        orderKey:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Business order key, unique within organization, environment and application.
+        productRef:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Controlled product reference; dispatch uses dispatch-order.
+        priceVersion:
+          type: integer
+          minimum: 1
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 10000
+          default: 1
+        amountMinor:
+          allOf:
+          - $ref: '#/components/schemas/AmountMinor'
+          minimum: 1
+          description: Positive integer minor units; equals the controlled unit price times quantity.
+        currency:
+          $ref: '#/components/schemas/Currency'
+        successUrl:
+          type: string
+          format: uri
+          pattern: ^https://
+          maxLength: 2048
+          description: HTTPS return URL without a user information segment.
+        cancelUrl:
+          type: string
+          format: uri
+          pattern: ^https://
+          maxLength: 2048
+          description: HTTPS cancellation URL without a user information segment.
+        customerRef:
+          type: string
+          minLength: 1
+          maxLength: 255
+          nullable: true
+          description: Optional merchant customer reference; never raw card data.
+        metadata:
+          type: object
+          maxProperties: 44
+          additionalProperties:
+            type: string
+            maxLength: 500
+          description: Optional business strings. Keys are 1 to 40 characters; control characters, brackets,
+            identity or secret fields and the pr06 prefix are forbidden. Dispatch omits this field.
+    NextAction:
+      type: object
+      description: Existing payment next action. A redirect supplies the hosted checkout URL; waiting does
+        not mean failure.
+      required:
+      - type
+      properties:
+        type:
+          type: string
+          enum:
+          - NONE
+          - REDIRECT_TO_HOSTED_CHECKOUT
+          - WAIT_FOR_CONFIRMATION
+        hostedUrl:
+          type: string
+          format: uri
+        expiresAt:
+          type: string
+          format: date-time

@@ -15,6 +15,18 @@ export const schema = Joi.object({
   REDIS_PORT: Joi.number().required(),
   FULFILLMENT_SIGNING_SECRET: Joi.string().required(),
   OUTBOX_POLLING: Joi.string().valid('enabled', 'disabled').default('enabled'),
+  LEDGER_CHECKOUT: Joi.string().valid('enabled', 'disabled').default('disabled'),
+  LEDGER_BASE_URL: Joi.string()
+    .uri()
+    .when('LEDGER_CHECKOUT', {is: 'enabled', then: Joi.required()}),
+  LEDGER_APP_TOKEN: Joi.string().when('LEDGER_CHECKOUT', {is: 'enabled', then: Joi.required()}),
+  LEDGER_CHECKOUT_SUCCESS_URL: Joi.string()
+    .uri({scheme: ['https']})
+    .when('LEDGER_CHECKOUT', {is: 'enabled', then: Joi.required()}),
+  LEDGER_CHECKOUT_CANCEL_URL: Joi.string()
+    .uri({scheme: ['https']})
+    .when('LEDGER_CHECKOUT', {is: 'enabled', then: Joi.required()}),
+  LEDGER_TIMEOUT_MS: Joi.number().default(10000),
   MAIL_HOST: Joi.string(),
   MAIL_PORT: Joi.number(),
   MAIL_USER: Joi.string(),

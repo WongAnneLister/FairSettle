@@ -1,4 +1,8 @@
 import {Inject, Injectable, Logger} from '@nestjs/common';
+import {ConfigService} from '@nestjs/config';
+import {checkoutKey, paymentRequestFor} from 'src/ledger/checkout';
+import {LEDGER_CLIENT, LedgerClient, LedgerPaymentRequest} from 'src/ledger/ledger-client';
+import {Order} from 'src/orders/entities/order.entity';
 import {DataSource, EntityManager} from 'typeorm';
 
 import {OutboxEvent, OutboxEventType, OutboxStatus} from './entities/outbox-event.entity';
@@ -28,6 +32,8 @@ export class OutboxService {
   constructor(
     private readonly dataSource: DataSource,
     @Inject(FULFILLMENT_PROVIDER) private readonly provider: FulfillmentProvider,
+    @Inject(LEDGER_CLIENT) private readonly ledger: LedgerClient,
+    private readonly config: ConfigService,
   ) {}
 
   /**
@@ -47,6 +53,21 @@ export class OutboxService {
     return manager.save(
       manager.create(OutboxEvent, {
         type: OutboxEventType.OrderDispatch,
+        aggregateId: orderId,
+        payload,
+      }),
+    );
+  }
+
+  /** Records the payment intent in the same transaction as its order. */
+  enqueueOrderPayment(
+    manager: EntityManager,
+    orderId: number,
+    payload: {totalCents: number},
+  ): Promise<OutboxEvent> {
+    return manager.save(
+      manager.create(OutboxEvent, {
+        type: OutboxEventType.OrderPayment,
         aggregateId: orderId,
         payload,
       }),
@@ -110,6 +131,91 @@ export class OutboxService {
   }
 
   private async deliver(event: OutboxEvent): Promise<void> {
+    switch (event.type) {
+      case OutboxEventType.OrderDispatch:
+        return this.deliverDispatch(event);
+      case OutboxEventType.OrderPayment:
+        return this.deliverPayment(event);
+      default:
+        return this.markDead(event, 'unknown outbox event type ' + event.type);
+    }
+  }
+
+  private async deliverPayment(event: OutboxEvent): Promise<void> {
+    try {
+      let request: LedgerPaymentRequest;
+      try {
+        request = paymentRequestFor(
+          event.aggregateId,
+          (event.payload as {totalCents: number}).totalCents,
+          {
+            successUrl: this.config.get<string>('LEDGER_CHECKOUT_SUCCESS_URL'),
+            cancelUrl: this.config.get<string>('LEDGER_CHECKOUT_CANCEL_URL'),
+          },
+        );
+      } catch (error) {
+        if (error instanceof RangeError) {
+          await this.markDead(event, 'invalid checkout total');
+          return;
+        }
+        throw error;
+      }
+      const outcome = await this.ledger.createPayment(request, checkoutKey(event.aggregateId));
+      if (outcome.kind === 'accepted') {
+        const matched = await this.dataSource.transaction(async manager => {
+          const updated = await manager
+            .createQueryBuilder()
+            .update(Order)
+            .set({ledgerPaymentId: outcome.paymentId, checkoutUrl: outcome.checkoutUrl})
+            .where('id = :orderId', {orderId: event.aggregateId})
+            .andWhere('("ledgerPaymentId" IS NULL OR "ledgerPaymentId" = :paymentId)', {
+              paymentId: outcome.paymentId,
+            })
+            .execute();
+          if (updated.affected === 0) {
+            return false;
+          }
+          await manager.update(OutboxEvent, event.id, {
+            status: OutboxStatus.Sent,
+            providerRef: outcome.paymentId,
+            lastError: null,
+          });
+          return true;
+        });
+        if (!matched) {
+          await this.markDead(event, 'ledger payment id mismatch');
+        }
+      } else if (outcome.kind === 'pending') {
+        if (outcome.paymentId !== null) {
+          await this.dataSource
+            .createQueryBuilder()
+            .update(Order)
+            .set({ledgerPaymentId: outcome.paymentId})
+            .where('id = :orderId', {orderId: event.aggregateId})
+            .andWhere('("ledgerPaymentId" IS NULL OR "ledgerPaymentId" = :paymentId)', {
+              paymentId: outcome.paymentId,
+            })
+            .execute();
+        }
+        await this.recordFailure(event, 'ledger checkout not ready');
+      } else {
+        await this.markDead(event, 'ledger ' + outcome.status + ' ' + outcome.code);
+      }
+    } catch (error) {
+      await this.recordFailure(event, error);
+    }
+  }
+
+  private async markDead(event: OutboxEvent, message: string): Promise<void> {
+    await this.dataSource.getRepository(OutboxEvent).update(event.id, {
+      status: OutboxStatus.Dead,
+      attempts: event.attempts + 1,
+      lastError: message,
+    });
+    this.logger.error('order ' + event.aggregateId + ' quarantined: ' + message);
+  }
+
+  private async deliverDispatch(event: OutboxEvent): Promise<void> {
     const payload = event.payload as {
       restaurantName: string;
       address: string;

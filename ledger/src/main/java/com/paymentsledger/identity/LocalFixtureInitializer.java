@@ -22,6 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @ConditionalOnProperty(name = "platform.fixtures.enabled", havingValue = "true")
 public class LocalFixtureInitializer implements InitializingBean {
     public static final UUID APP_CREDENTIAL = id(41), OPS_CREDENTIAL = id(61), PRICE = id(81);
+    public static final UUID DISPATCH_ORDER_PRICE = id(82);
     private static final List<String> PROVIDER_ACCOUNTS = List.of("PSP_FUNDS", "PSP_FEE_EXPENSE", "SUSPENSE");
     private static final List<String> INTERNAL_ACCOUNTS =
             List.of("SALES_REVENUE", "SALES_RETURNS", "PARTNER_SHARE_EXPENSE", "PARTNER_PAYABLE");
@@ -99,6 +100,7 @@ public class LocalFixtureInitializer implements InitializingBean {
                     throw new IllegalStateException("Existing fixture provider differs; recreate the local database");
                 verifyExisting(jdbc, "application_credential", app);
                 verifyExisting(jdbc, "ops_credential", ops);
+                provisionDispatchOrderPrice(jdbc);
                 return;
             }
             jdbc.update("INSERT INTO platform.organization(id,code) VALUES (?,'local-fixture')", id(1));
@@ -144,6 +146,7 @@ public class LocalFixtureInitializer implements InitializingBean {
                     INSERT INTO platform.price_fixture(id,organization_id,environment_id,product_ref,price_version,
                         currency,amount_minor,share_policy_id)
                     VALUES (?,?,?,'demo-product',1,'USD',10000,?)""", PRICE, id(1), id(11), id(71));
+            provisionDispatchOrderPrice(jdbc);
             if (provider.paypal()) {
                 jdbc.update("""
                         INSERT INTO platform.ingestion_policy
@@ -162,6 +165,19 @@ public class LocalFixtureInitializer implements InitializingBean {
                             """, id(1), id(11), purpose);
             }
         });
+    }
+
+    private void provisionDispatchOrderPrice(JdbcTemplate jdbc) {
+        jdbc.update("""
+                INSERT INTO platform.share_policy_fixture(id,organization_id,environment_id,product_ref,
+                    policy_version,partner_ref,share_basis_points)
+                VALUES (?,?,?,'dispatch-order',1,'fixture-partner',0)
+                ON CONFLICT (id) DO NOTHING""", id(72), id(1), id(11));
+        jdbc.update("""
+                INSERT INTO platform.price_fixture(id,organization_id,environment_id,product_ref,price_version,
+                    currency,amount_minor,share_policy_id)
+                VALUES (?,?,?,'dispatch-order',1,'USD',1,?)
+                ON CONFLICT (id) DO NOTHING""", DISPATCH_ORDER_PRICE, id(1), id(11), id(72));
     }
 
     private void verifyExisting(JdbcTemplate jdbc, String table, CredentialTokens.Parsed token) {

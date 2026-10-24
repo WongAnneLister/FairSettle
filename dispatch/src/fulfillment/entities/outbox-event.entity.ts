@@ -13,6 +13,7 @@ export enum OutboxStatus {
 
 export enum OutboxEventType {
   OrderDispatch = 'order.dispatch',
+  OrderPayment = 'order.payment',
 }
 
 /**
@@ -76,7 +77,8 @@ export class OutboxEvent extends CoreEntity {
   lastError?: string;
 
   /**
-   * The provider's own identifier, once it has accepted the dispatch.
+   * The remote system's identifier once it accepted the event: the fulfillment
+   * provider's ref, or the ledger payment id.
    *
    * Indexed because it is the correlation key on the way back in: a callback
    * quotes the provider's reference, not ours, and the webhook handler resolves

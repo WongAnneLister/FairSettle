@@ -4,6 +4,8 @@ This directory holds shared API contracts and fixtures used by FairSettle servic
 `ledger-openapi.yaml` defines the agent-to-ledger contract for refund proposals,
 human review and liability allocation (F14).
 
+Dispatch checkout uses `dispatch-order` at 1 USD cent per unit, with `quantity = amountMinor` (1–10000) and a 0 bps share policy (F15).
+
 Amounts use integer minor units (USD cents). Liability shares use integer basis
 points summing to 10000. Enums use UPPER_SNAKE literals; fields use camelCase.
 The agent maps its lowercase party literals one to one to the contract enums.

@@ -1,6 +1,8 @@
 import {Global, Module} from '@nestjs/common';
 import {TypeOrmModule} from '@nestjs/typeorm';
 
+import {LedgerModule} from 'src/ledger/ledger.module';
+
 import {OutboxEvent} from './entities/outbox-event.entity';
 import {ProcessedEvent} from './entities/processed-event.entity';
 import {OutboxPoller} from './outbox.poller';
@@ -19,7 +21,7 @@ import {WebhooksController} from './webhooks.controller';
  */
 @Global()
 @Module({
-  imports: [TypeOrmModule.forFeature([OutboxEvent, ProcessedEvent])],
+  imports: [LedgerModule, TypeOrmModule.forFeature([OutboxEvent, ProcessedEvent])],
   controllers: [WebhooksController],
   providers: [
     MockFulfillmentProvider,

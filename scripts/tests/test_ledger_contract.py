@@ -7,6 +7,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT = ROOT / "contracts/ledger-openapi.yaml"
 OPERATIONS = {
+    ("post", "/v1/payments"): ("createPayment", "payments:write"),
     ("get", "/v1/payments/{paymentId}"): ("getPayment", "payments:read"),
     ("get", "/v1/payments/{paymentId}/refundable"): ("getRefundableAmount", "payments:read"),
     ("post", "/v1/refund-proposals"): ("createRefundProposal", "refund-proposals:write"),
@@ -203,7 +204,9 @@ class LedgerContractTest(unittest.TestCase):
         codes = self.schemas["ErrorCode"]
         self.assertTrue(set(codes["enum"]) >= {
             "LIABILITY_SPLIT_INVALID", "PROPOSAL_EXISTS", "PROPOSAL_NOT_PENDING",
-            "REFUND_LIMIT_EXCEEDED", "REFUND_BLOCKED", "IDEMPOTENCY_CONFLICT"})
+            "REFUND_LIMIT_EXCEEDED", "REFUND_BLOCKED", "IDEMPOTENCY_CONFLICT",
+            "ORDER_INTENT_CONFLICT", "AMOUNT_MISMATCH", "CURRENCY_NOT_ENABLED",
+            "PROVIDER_UNKNOWN_RESULT"})
         for code in codes["enum"]:
             self.assertRegex(codes["description"], r"\|\s*`?" + code + r"`?\s*\|")
 

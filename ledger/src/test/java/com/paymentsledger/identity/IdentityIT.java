@@ -478,4 +478,63 @@ class IdentityIT {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM platform.ledger_account", Long.class))
                 .isZero();
     }
+
+    @Test
+    void fixturesProvisionDispatchOrderPrice() {
+        write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        initializer(fixtureEnvironment(false)).afterPropertiesSet();
+        assertThat(LocalFixtureInitializer.DISPATCH_ORDER_PRICE).isEqualTo(fixtureId(82));
+        assertThat(jdbc.queryForMap("""
+                SELECT product_ref,price_version,currency,amount_minor,share_policy_id
+                FROM platform.price_fixture WHERE id=?""", LocalFixtureInitializer.DISPATCH_ORDER_PRICE))
+                .containsEntry("product_ref", "dispatch-order")
+                .containsEntry("price_version", 1)
+                .containsEntry("currency", "USD")
+                .containsEntry("amount_minor", 1L)
+                .containsEntry("share_policy_id", fixtureId(72));
+        assertThat(jdbc.queryForMap("""
+                SELECT product_ref,policy_version,partner_ref,share_basis_points
+                FROM platform.share_policy_fixture WHERE id=?""", fixtureId(72)))
+                .containsEntry("product_ref", "dispatch-order")
+                .containsEntry("policy_version", 1)
+                .containsEntry("partner_ref", "fixture-partner")
+                .containsEntry("share_basis_points", 0);
+        var response = get(
+                "/v1/prices/" + LocalFixtureInitializer.DISPATCH_ORDER_PRICE,
+                "Bearer app_" + LocalFixtureInitializer.APP_CREDENTIAL + "." + SECRET);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).contains("\"amountMinor\":1", "dispatch-order");
+    }
+
+    @Test
+    void existingFixturesGainDispatchOrderPriceOnce() {
+        write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        var initializer = initializer(fixtureEnvironment(false));
+        initializer.afterPropertiesSet();
+        var counts = fixtureTableCounts();
+        write(() -> {
+            jdbc.update("DELETE FROM platform.price_fixture WHERE id=?", LocalFixtureInitializer.DISPATCH_ORDER_PRICE);
+            jdbc.update("DELETE FROM platform.share_policy_fixture WHERE id=?", fixtureId(72));
+        });
+        initializer.afterPropertiesSet();
+        initializer.afterPropertiesSet();
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM platform.price_fixture WHERE id=?",
+                        Long.class,
+                        LocalFixtureInitializer.DISPATCH_ORDER_PRICE))
+                .isEqualTo(1L);
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM platform.share_policy_fixture WHERE id=?", Long.class, fixtureId(72)))
+                .isEqualTo(1L);
+        assertThat(fixtureTableCounts()).isEqualTo(counts);
+    }
+
+    private java.util.Map<String, Long> fixtureTableCounts() {
+        var counts = new java.util.LinkedHashMap<String, Long>();
+        for (String table : jdbc.queryForList(
+                "SELECT tablename FROM pg_tables WHERE schemaname='platform' ORDER BY tablename", String.class)) {
+            counts.put(table, jdbc.queryForObject("SELECT count(*) FROM platform.\"" + table + "\"", Long.class));
+        }
+        return counts;
+    }
 }

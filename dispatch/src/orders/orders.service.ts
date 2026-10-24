@@ -1,4 +1,5 @@
 import {Inject, Injectable, Logger} from '@nestjs/common';
+import {ConfigService} from '@nestjs/config';
 import {InjectRepository} from '@nestjs/typeorm';
 import {PubSub} from 'graphql-subscriptions';
 import {
@@ -7,9 +8,15 @@ import {
   NEW_PENDING_ORDER,
   PUB_SUB,
 } from 'src/common/common.constants';
-import {ConflictError, ForbiddenError, NotFoundError} from 'src/common/errors/app-error';
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from 'src/common/errors/app-error';
 import {failure} from 'src/common/errors/failure';
 import {OutboxService} from 'src/fulfillment/outbox.service';
+import {isCheckoutTotal} from 'src/ledger/checkout';
 import {Dish} from 'src/restaurants/entities/dish.entity';
 import {Restaurant} from 'src/restaurants/entities/restaurant.entity';
 import {User, UserRole} from 'src/users/entities/user.entity';
@@ -29,6 +36,7 @@ const ORDERS_PAGE_SIZE = 25;
 @Injectable()
 export class OrderService {
   private readonly logger = new Logger(OrderService.name);
+  private readonly checkoutEnabled: boolean;
 
   constructor(
     @InjectRepository(Order) private readonly orders: Repository<Order>,
@@ -38,7 +46,10 @@ export class OrderService {
     @Inject(PUB_SUB) private readonly pubsub: PubSub,
     private readonly dataSource: DataSource,
     private readonly outbox: OutboxService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.checkoutEnabled = config.get('LEDGER_CHECKOUT') === 'enabled';
+  }
 
   async createOrder(
     customer: User,
@@ -108,6 +119,10 @@ export class OrderService {
           orderItems.push(manager.create(OrderItem, {dish, options: item.options}));
         }
 
+        if (this.checkoutEnabled && !isCheckoutTotal(orderFinalPriceCents)) {
+          throw new ValidationError('Order total must be between 1 and 10000 cents for checkout');
+        }
+
         const saved = await manager.save(
           manager.create(Order, {
             customer,
@@ -126,6 +141,12 @@ export class OrderService {
           address: restaurant.address,
           totalCents: orderFinalPriceCents,
         });
+
+        if (this.checkoutEnabled) {
+          await this.outbox.enqueueOrderPayment(manager, saved.id, {
+            totalCents: orderFinalPriceCents,
+          });
+        }
 
         return {order: saved, ownerId: restaurant.ownerId};
       });
