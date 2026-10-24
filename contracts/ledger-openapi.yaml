@@ -132,7 +132,7 @@ paths:
         | Malformed body, unknown field, explanation or evidenceRefs out of bounds | 400 VALIDATION_ERROR |
         | Missing Idempotency-Key | 400 IDEMPOTENCY_KEY_REQUIRED |
         | paymentId absent from caller scope | 404 NOT_FOUND |
-        | currency differs from payment currency | 422 VALIDATION_ERROR with detail field currency |
+        | currency differs from payment currency | 400 VALIDATION_ERROR with detail field currency |
         | Shares do not sum to 10000, or a party is repeated or missing | 422 LIABILITY_SPLIT_INVALID |
         | amountMinor exceeds current refundableMinor | 422 REFUND_LIMIT_EXCEEDED |
         | Refund control state is not NORMAL | 409 REFUND_BLOCKED |
@@ -696,8 +696,8 @@ components:
       example: /v1/refund-proposals/prop_01HZX9K2M4N6P8Q0R2S4T6V8W2
   responses:
     BadRequest:
-      description: VALIDATION_ERROR for malformed bodies, unknown fields or explanation/evidence bounds;
-        IDEMPOTENCY_KEY_REQUIRED when the header is missing.
+      description: VALIDATION_ERROR for malformed bodies, unknown fields, explanation/evidence bounds or
+        a currency that differs from the payment's; IDEMPOTENCY_KEY_REQUIRED when the header is missing.
       headers:
         X-Request-Id:
           $ref: '#/components/headers/XRequestId'
@@ -744,8 +744,7 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     UnprocessableEntity:
-      description: VALIDATION_ERROR for currency mismatch, LIABILITY_SPLIT_INVALID for invalid shares,
-        or REFUND_LIMIT_EXCEEDED.
+      description: LIABILITY_SPLIT_INVALID for invalid shares, or REFUND_LIMIT_EXCEEDED.
       headers:
         X-Request-Id:
           $ref: '#/components/headers/XRequestId'
@@ -853,7 +852,7 @@ components:
 
         | code | HTTP | retryable | meaning |
         |---|---|---|---|
-        | `VALIDATION_ERROR` | 400 / 422 | false | Malformed or invalid input; currency mismatch uses 422. |
+        | `VALIDATION_ERROR` | 400 | false | Malformed or invalid input, including a currency that differs from the payment's. |
         | `IDEMPOTENCY_KEY_REQUIRED` | 400 | false | Idempotency-Key is missing. |
         | `UNAUTHORIZED` | 401 | false | Credentials are missing, invalid, expired or revoked. |
         | `FORBIDDEN` | 403 | false | Required scope or reviewer role is missing. |
