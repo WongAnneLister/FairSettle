@@ -185,7 +185,7 @@ No automatic resend for refunds (D7), not even with the original request id.
 | `PAYMENT.CAPTURE.COMPLETED` | capture | Per §4 `COMPLETED`; linked to the payment through `supplementary_data.related_ids.order_id` |
 | `PAYMENT.CAPTURE.PENDING` | capture | Per §4 `PENDING` |
 | `PAYMENT.CAPTURE.DECLINED` | capture | Records the attempt; payment stays PROCESSING; CANCELED only after a GET (P1) |
-| `PAYMENT.CAPTURE.REFUNDED` | refund (from the spec, not yet observed) | Per §7 `COMPLETED`, matched by refund id, else by `custom_id` |
+| `PAYMENT.CAPTURE.REFUNDED` | refund (observed in sandbox, F12, 2026-10-24) | Per §7 `COMPLETED`, matched by refund id, else by `custom_id` |
 | `PAYMENT.REFUND.PENDING` | refund | Per §7 `PENDING` |
 | `PAYMENT.REFUND.FAILED` | refund | Per §7 `FAILED` |
 | `PAYMENT.CAPTURE.REVERSED` | capture | Stored in the inbox and left unprocessed (WAITING). Reversals belong to the dispute module, which is out of scope |
