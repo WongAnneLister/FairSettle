@@ -1,0 +1,69 @@
+feature: F13
+kind: command
+command: docker compose up -d --wait && curl -fsS localhost:8080/actuator/health && curl -fsS localhost:8081/actuator/health && curl -fsS -o /dev/null localhost:4000/graphql?query=%7B__typename%7D
+commit: de35431090c9e750e81853708b6ee2e736a1e6fc
+started_at: 2026-10-24T18:05:02+08:00
+exit_code: 0
+----
+{"status":"UP"}{"status":"UP"} Network fairsettle_default  Creating
+ Network fairsettle_default  Created
+ Container fairsettle-ledger-postgres-1  Creating
+ Container fairsettle-dispatch-redis-1  Creating
+ Container fairsettle-kafka-1  Creating
+ Container fairsettle-ledger-redis-1  Creating
+ Container fairsettle-dispatch-postgres-1  Creating
+ Container fairsettle-ledger-postgres-1  Created
+ Container fairsettle-dispatch-postgres-1  Created
+ Container fairsettle-ledger-redis-1  Created
+ Container fairsettle-ledger-api-1  Creating
+ Container fairsettle-dispatch-redis-1  Created
+ Container fairsettle-dispatch-1  Creating
+ Container fairsettle-kafka-1  Created
+ Container fairsettle-dispatch-1  Created
+ Container fairsettle-ledger-api-1  Created
+ Container fairsettle-ledger-worker-1  Creating
+ Container fairsettle-ledger-worker-1  Created
+ Container fairsettle-kafka-1  Starting
+ Container fairsettle-dispatch-postgres-1  Starting
+ Container fairsettle-dispatch-redis-1  Starting
+ Container fairsettle-ledger-postgres-1  Starting
+ Container fairsettle-ledger-redis-1  Starting
+ Container fairsettle-dispatch-postgres-1  Started
+ Container fairsettle-ledger-postgres-1  Started
+ Container fairsettle-dispatch-redis-1  Started
+ Container fairsettle-dispatch-redis-1  Waiting
+ Container fairsettle-dispatch-postgres-1  Waiting
+ Container fairsettle-ledger-redis-1  Started
+ Container fairsettle-ledger-postgres-1  Waiting
+ Container fairsettle-ledger-redis-1  Waiting
+ Container fairsettle-kafka-1  Started
+ Container fairsettle-dispatch-redis-1  Healthy
+ Container fairsettle-dispatch-postgres-1  Healthy
+ Container fairsettle-dispatch-1  Starting
+ Container fairsettle-ledger-postgres-1  Healthy
+ Container fairsettle-ledger-redis-1  Healthy
+ Container fairsettle-ledger-api-1  Starting
+ Container fairsettle-dispatch-1  Started
+ Container fairsettle-ledger-api-1  Started
+ Container fairsettle-ledger-api-1  Waiting
+ Container fairsettle-kafka-1  Waiting
+ Container fairsettle-kafka-1  Healthy
+ Container fairsettle-ledger-api-1  Healthy
+ Container fairsettle-ledger-worker-1  Starting
+ Container fairsettle-ledger-worker-1  Started
+ Container fairsettle-ledger-worker-1  Waiting
+ Container fairsettle-dispatch-postgres-1  Waiting
+ Container fairsettle-dispatch-redis-1  Waiting
+ Container fairsettle-dispatch-1  Waiting
+ Container fairsettle-ledger-postgres-1  Waiting
+ Container fairsettle-ledger-redis-1  Waiting
+ Container fairsettle-kafka-1  Waiting
+ Container fairsettle-ledger-api-1  Waiting
+ Container fairsettle-dispatch-postgres-1  Healthy
+ Container fairsettle-dispatch-redis-1  Healthy
+ Container fairsettle-ledger-api-1  Healthy
+ Container fairsettle-kafka-1  Healthy
+ Container fairsettle-dispatch-1  Healthy
+ Container fairsettle-ledger-redis-1  Healthy
+ Container fairsettle-ledger-postgres-1  Healthy
+ Container fairsettle-ledger-worker-1  Healthy
