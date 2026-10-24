@@ -1,0 +1,1436 @@
+openapi: 3.0.3
+info:
+  title: FairSettle Ledger API (cross-service contract)
+  version: 0.1.0-F14
+  description: Shared agent-to-ledger contract for immutable refund proposals, human review and liability
+    allocation. Existing reads retain their current response shape; new endpoints are implemented by F17
+    and F18. Sandbox only. The agent holds no payment credentials and never calls PayPal.
+  license:
+    name: Proprietary
+    url: https://github.com/WongAnneLister/FairSettle
+servers:
+- url: '{scheme}://{host}:{port}'
+  description: The defaults access the root compose stack from the host machine. Inside the compose
+    network, host is ledger-api.
+  variables:
+    scheme: { enum: [http, https], default: http }
+    host: { default: localhost }
+    port: { default: '8080' }
+tags:
+- name: payments
+  description: Payment and refundable amount reads.
+- name: refund-proposals
+  description: Immutable refund proposals submitted and polled by the agent.
+- name: refunds
+  description: Refund status and three-party liability reads.
+- name: ops-review
+  description: Human review of submitted refund proposals.
+paths:
+  /v1/payments/{paymentId}:
+    get:
+      tags:
+      - payments
+      summary: Read a payment
+      description: Existing payment read API. Returns the PaymentReader subset without changing its field
+        names or provider reference nesting. Business status, outcome certainty and accounting confirmation
+        are independent. An UNKNOWN outcome must be resolved by querying and must not cause repeat payment.
+      operationId: getPayment
+      security:
+      - ApplicationBearer:
+        - payments:read
+      parameters:
+      - $ref: '#/components/parameters/PaymentIdPath'
+      responses:
+        '200':
+          description: Resource returned.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSummary'
+              example:
+                id: pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+                orderKey: order-001
+                provider:
+                  checkoutSessionId: paypal-order-001
+                  latestChargeId: paypal-capture-001
+                paymentStatus: SUCCEEDED
+                resolutionStatus: KNOWN
+                financialStatus: POSTED
+                amountMinor: 2500
+                currency: USD
+                capturedAmountMinor: 2500
+                createdAt: '2026-10-24T10:00:00Z'
+                updatedAt: '2026-10-24T10:00:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /v1/payments/{paymentId}/refundable:
+    get:
+      tags:
+      - payments
+      summary: Read the current refundable amount
+      description: Returns captured minus refunded and reserved, clamped to zero. When controlState is
+        not NORMAL, refundableMinor is zero. This read reserves nothing; approval rechecks both amount
+        and control state. Implemented by F18.
+      operationId: getRefundableAmount
+      security:
+      - ApplicationBearer:
+        - payments:read
+      parameters:
+      - $ref: '#/components/parameters/PaymentIdPath'
+      responses:
+        '200':
+          description: Resource returned.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundableAmount'
+              example:
+                paymentId: pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+                currency: USD
+                capturedMinor: 2500
+                refundedMinor: 0
+                reservedMinor: 0
+                refundableMinor: 2500
+                controlState: NORMAL
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /v1/refund-proposals:
+    post:
+      tags:
+      - refund-proposals
+      summary: Propose a refund and liability split
+      description: |
+        Submit immutable proposed content for human review. Creating a proposal reserves nothing; F18 rechecks the refundable amount at approval. The agent never calls a money-moving endpoint.
+
+        Idempotency-Key is required; the agent derives it as refund-proposal:<complaintId>. Same key and same body return 200 with Idempotent-Replay: true and the original proposal. Same key with a different body returns 409 IDEMPOTENCY_CONFLICT. complaintId is unique per application: a new key for an existing complaint returns 409 PROPOSAL_EXISTS with details: [{field: "complaintId", issue: "<existing proposal id>"}]. A new proposal returns 201 with Location: /v1/refund-proposals/{id}.
+
+        Creation validation:
+        | Condition | Response |
+        |---|---|
+        | Malformed body, unknown field, explanation or evidenceRefs out of bounds | 400 VALIDATION_ERROR |
+        | Missing Idempotency-Key | 400 IDEMPOTENCY_KEY_REQUIRED |
+        | paymentId absent from caller scope | 404 NOT_FOUND |
+        | currency differs from payment currency | 422 VALIDATION_ERROR with detail field currency |
+        | Shares do not sum to 10000, or a party is repeated or missing | 422 LIABILITY_SPLIT_INVALID |
+        | amountMinor exceeds current refundableMinor | 422 REFUND_LIMIT_EXCEEDED |
+        | Refund control state is not NORMAL | 409 REFUND_BLOCKED |
+      operationId: createRefundProposal
+      security:
+      - ApplicationBearer:
+        - refund-proposals:write
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKeyRequired'
+      responses:
+        '200':
+          description: Original proposal returned on same-key, same-body replay.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Idempotent-Replay:
+              $ref: '#/components/headers/IdempotentReplay'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundProposal'
+              example:
+                complaintId: complaint-missing-drink-001
+                orderRef: order-001
+                paymentId: pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+                decision: PARTIAL_REFUND
+                amountMinor: 450
+                currency: USD
+                reasonCode: MISSING_ITEM
+                liability:
+                - party: RESTAURANT
+                  basisPoints: 10000
+                - party: DRIVER
+                  basisPoints: 0
+                - party: PLATFORM
+                  basisPoints: 0
+                explanation: The ordered drink was missing; refund its USD 4.50 price to the customer.
+                evidenceRefs:
+                - evidence-order-receipt-001
+                - evidence-delivery-photo-001
+                agentRun:
+                  threadId: refund-thread-001
+                  traceId: refund-trace-001
+                id: prop_01HZX9K2M4N6P8Q0R2S4T6V8W2
+                status: PENDING_REVIEW
+                createdAt: '2026-10-24T10:00:00Z'
+                reviewedAt: null
+                reviewer: null
+                rejectionReason: null
+                refundId: null
+                allocation: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        '201':
+          description: New proposal awaiting human review; no funds are reserved.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundProposal'
+              example:
+                complaintId: complaint-missing-drink-001
+                orderRef: order-001
+                paymentId: pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+                decision: PARTIAL_REFUND
+                amountMinor: 450
+                currency: USD
+                reasonCode: MISSING_ITEM
+                liability:
+                - party: RESTAURANT
+                  basisPoints: 10000
+                - party: DRIVER
+                  basisPoints: 0
+                - party: PLATFORM
+                  basisPoints: 0
+                explanation: The ordered drink was missing; refund its USD 4.50 price to the customer.
+                evidenceRefs:
+                - evidence-order-receipt-001
+                - evidence-delivery-photo-001
+                agentRun:
+                  threadId: refund-thread-001
+                  traceId: refund-trace-001
+                id: prop_01HZX9K2M4N6P8Q0R2S4T6V8W2
+                status: PENDING_REVIEW
+                createdAt: '2026-10-24T10:00:00Z'
+                reviewedAt: null
+                reviewer: null
+                rejectionReason: null
+                refundId: null
+                allocation: null
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundProposalCreateRequest'
+            example:
+              complaintId: complaint-missing-drink-001
+              orderRef: order-001
+              paymentId: pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+              decision: PARTIAL_REFUND
+              amountMinor: 450
+              currency: USD
+              reasonCode: MISSING_ITEM
+              liability:
+              - party: RESTAURANT
+                basisPoints: 10000
+              - party: DRIVER
+                basisPoints: 0
+              - party: PLATFORM
+                basisPoints: 0
+              explanation: The ordered drink was missing; refund its USD 4.50 price to the customer.
+              evidenceRefs:
+              - evidence-order-receipt-001
+              - evidence-delivery-photo-001
+              agentRun:
+                threadId: refund-thread-001
+                traceId: refund-trace-001
+  /v1/refund-proposals/{proposalId}:
+    get:
+      tags:
+      - refund-proposals
+      summary: Read a refund proposal
+      description: Poll the immutable proposal and review result. PENDING_REVIEW transitions to APPROVED
+        or REJECTED; both outcomes are final. On approval, poll refundId through getRefund. There is no
+        webhook to the agent. Implemented by F18.
+      operationId: getRefundProposal
+      security:
+      - ApplicationBearer:
+        - refund-proposals:read
+      parameters:
+      - $ref: '#/components/parameters/ProposalIdPath'
+      responses:
+        '200':
+          description: Resource returned.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundProposal'
+              example:
+                complaintId: complaint-missing-drink-001
+                orderRef: order-001
+                paymentId: pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+                decision: PARTIAL_REFUND
+                amountMinor: 450
+                currency: USD
+                reasonCode: MISSING_ITEM
+                liability:
+                - party: RESTAURANT
+                  basisPoints: 10000
+                - party: DRIVER
+                  basisPoints: 0
+                - party: PLATFORM
+                  basisPoints: 0
+                explanation: The ordered drink was missing; refund its USD 4.50 price to the customer.
+                evidenceRefs:
+                - evidence-order-receipt-001
+                - evidence-delivery-photo-001
+                agentRun:
+                  threadId: refund-thread-001
+                  traceId: refund-trace-001
+                id: prop_01HZX9K2M4N6P8Q0R2S4T6V8W2
+                status: PENDING_REVIEW
+                createdAt: '2026-10-24T10:00:00Z'
+                reviewedAt: null
+                reviewer: null
+                rejectionReason: null
+                refundId: null
+                allocation: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /v1/refunds/{refundId}:
+    get:
+      tags:
+      - refunds
+      summary: Read a refund
+      description: Existing refund read API. Returns the RefundReader subset. Refund business/provider
+        status and accounting evidence are independent. SUCCEEDED with PENDING_EVIDENCE must not invent
+        PSP postings or imply a proportional refund of the original processing fee.
+      operationId: getRefund
+      security:
+      - ApplicationBearer:
+        - refunds:read
+      parameters:
+      - $ref: '#/components/parameters/RefundIdPath'
+      responses:
+        '200':
+          description: Resource returned.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundSummary'
+              example:
+                id: ref_01HZX9K2M4N6P8Q0R2S4T6V8W1
+                paymentId: pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+                amountMinor: 450
+                currency: USD
+                refundStatus: SUCCEEDED
+                resolutionStatus: KNOWN
+                financialStatus: POSTED
+                providerRefundId: paypal-refund-001
+                providerStatus: COMPLETED
+                controlState: NORMAL
+                createdAt: '2026-10-24T10:00:00Z'
+                updatedAt: '2026-10-24T10:00:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /v1/refunds/{refundId}/liability:
+    get:
+      tags:
+      - refunds
+      summary: Read a refund liability allocation
+      description: Returns the stored three-party allocation. A refund that did not come from a proposal
+        returns 404 NOT_FOUND. RESTAURANT and DRIVER amounts are floored, and PLATFORM receives the remainder.
+        F17 decides posting timing and accounts; this API exposes postingStatus and nullable journalId.
+      operationId: getRefundLiability
+      security:
+      - ApplicationBearer:
+        - refunds:read
+      parameters:
+      - $ref: '#/components/parameters/RefundIdPath'
+      responses:
+        '200':
+          description: Resource returned.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LiabilityAllocation'
+              example:
+                refundId: ref_01HZX9K2M4N6P8Q0R2S4T6V8W1
+                proposalId: prop_01HZX9K2M4N6P8Q0R2S4T6V8W2
+                currency: USD
+                amountMinor: 1250
+                lines:
+                - party: RESTAURANT
+                  basisPoints: 3333
+                  amountMinor: 416
+                - party: DRIVER
+                  basisPoints: 3333
+                  amountMinor: 416
+                - party: PLATFORM
+                  basisPoints: 3334
+                  amountMinor: 418
+                postingStatus: PENDING
+                journalId: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /ops/refund-proposals:
+    get:
+      tags:
+      - ops-review
+      summary: List refund proposals for review
+      description: Requires ops:refund-proposal:read and OPS_VIEWER or above. Access is restricted to
+        the trusted organization and environment. Lists cursor-paginated proposals; the status filter
+        defaults to PENDING_REVIEW. Implemented by F18.
+      operationId: listRefundProposals
+      security:
+      - OpsBearer:
+        - ops:refund-proposal:read
+      parameters:
+      - $ref: '#/components/parameters/LimitQuery'
+      - $ref: '#/components/parameters/CursorQuery'
+      - $ref: '#/components/parameters/ProposalStatusQuery'
+      responses:
+        '200':
+          description: Resource returned.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundProposalPage'
+              example:
+                items:
+                - complaintId: complaint-missing-drink-001
+                  orderRef: order-001
+                  paymentId: pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+                  decision: PARTIAL_REFUND
+                  amountMinor: 450
+                  currency: USD
+                  reasonCode: MISSING_ITEM
+                  liability:
+                  - party: RESTAURANT
+                    basisPoints: 10000
+                  - party: DRIVER
+                    basisPoints: 0
+                  - party: PLATFORM
+                    basisPoints: 0
+                  explanation: The ordered drink was missing; refund its USD 4.50 price to the customer.
+                  evidenceRefs:
+                  - evidence-order-receipt-001
+                  - evidence-delivery-photo-001
+                  agentRun:
+                    threadId: refund-thread-001
+                    traceId: refund-trace-001
+                  id: prop_01HZX9K2M4N6P8Q0R2S4T6V8W2
+                  status: PENDING_REVIEW
+                  createdAt: '2026-10-24T10:00:00Z'
+                  reviewedAt: null
+                  reviewer: null
+                  rejectionReason: null
+                  refundId: null
+                  allocation: null
+                nextCursor: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /ops/refund-proposals/{proposalId}/decision:
+    post:
+      tags:
+      - ops-review
+      summary: Approve or reject a refund proposal
+      description: |
+        Requires ops:refund-proposal:review and OPS_REVIEWER only. Approve exactly as submitted, or reject with a reason; no amount or liability edits are allowed. Implemented by F18.
+
+        APPROVE uses a conditional update and one transaction to recheck the refundable amount and control state, create the refund through the existing refund reservation, store the liability allocation, and set APPROVED with refundId, reviewer and reviewedAt. The worker then sends the refund to PayPal through the existing refund flow. A failed recheck returns 422 REFUND_LIMIT_EXCEEDED or 409 REFUND_BLOCKED: the proposal stays PENDING_REVIEW and nothing is changed. The reviewer may still reject it.
+
+        REJECT requires reason of 1 to 500 characters and sets REJECTED, reviewer, reviewedAt and rejectionReason; nothing else changes. APPROVED and REJECTED are final. Repeating the same decision with any Idempotency-Key returns 200 with the current proposal and Idempotent-Replay: true, without creating another refund or allocation. A different decision on a decided proposal returns 409 PROPOSAL_NOT_PENDING. Reusing a key with different semantic content returns 409 IDEMPOTENCY_CONFLICT.
+      operationId: decideRefundProposal
+      security:
+      - OpsBearer:
+        - ops:refund-proposal:review
+      parameters:
+      - $ref: '#/components/parameters/ProposalIdPath'
+      - $ref: '#/components/parameters/IdempotencyKeyRequired'
+      responses:
+        '200':
+          description: Decision completed, or current proposal returned on same-decision replay.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+            Idempotent-Replay:
+              $ref: '#/components/headers/IdempotentReplay'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundProposal'
+              example:
+                complaintId: complaint-missing-drink-001
+                orderRef: order-001
+                paymentId: pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+                decision: PARTIAL_REFUND
+                amountMinor: 450
+                currency: USD
+                reasonCode: MISSING_ITEM
+                liability:
+                - party: RESTAURANT
+                  basisPoints: 10000
+                - party: DRIVER
+                  basisPoints: 0
+                - party: PLATFORM
+                  basisPoints: 0
+                explanation: The ordered drink was missing; refund its USD 4.50 price to the customer.
+                evidenceRefs:
+                - evidence-order-receipt-001
+                - evidence-delivery-photo-001
+                agentRun:
+                  threadId: refund-thread-001
+                  traceId: refund-trace-001
+                id: prop_01HZX9K2M4N6P8Q0R2S4T6V8W2
+                status: APPROVED
+                createdAt: '2026-10-24T10:00:00Z'
+                reviewedAt: '2026-10-24T10:05:00Z'
+                reviewer:
+                  subject: reviewer-001
+                  role: OPS_REVIEWER
+                rejectionReason: null
+                refundId: ref_01HZX9K2M4N6P8Q0R2S4T6V8W1
+                allocation:
+                  refundId: ref_01HZX9K2M4N6P8Q0R2S4T6V8W1
+                  proposalId: prop_01HZX9K2M4N6P8Q0R2S4T6V8W2
+                  currency: USD
+                  amountMinor: 450
+                  lines:
+                  - party: RESTAURANT
+                    basisPoints: 10000
+                    amountMinor: 450
+                  - party: DRIVER
+                    basisPoints: 0
+                    amountMinor: 0
+                  - party: PLATFORM
+                    basisPoints: 0
+                    amountMinor: 0
+                  postingStatus: PENDING
+                  journalId: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewDecisionRequest'
+            example:
+              action: APPROVE
+components:
+  securitySchemes:
+    ApplicationBearer:
+      type: http
+      scheme: bearer
+      description: Business application credentials resolve an immutable TenantContext (organization,
+        environment, application, provider account, livemode, currency and scopes). Ownership fields in
+        bodies or headers never authorize access. Only secure credential digests are stored; livemode=true
+        configuration is rejected at startup.
+    OpsBearer:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: 'Header format: Authorization: OpsBearer ops_<credential-uuid>.<43-character random
+        secret>. Operations identities use separate tables and scope namespaces from business application
+        credentials and cannot be interchanged. Roles are OPS_VIEWER, OPS_OPERATOR, OPS_REVIEWER, OPS_ADMIN
+        and PARTNER_VIEWER. Cross-organization and cross-environment access is denied by default.'
+  parameters:
+    IdempotencyKeyRequired:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated idempotency key scoped by (organization, environment, application,
+        operationType, key). Persisted in PostgreSQL and not invalidated by Redis cache expiry. Same key
+        and same content return the original resource; same key and different semantic content return
+        409.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 255
+      example: idem-2026-09-10-7f3a9c21
+    PaymentIdPath:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceId'
+    RefundIdPath:
+      name: refundId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceId'
+    LimitQuery:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    CursorQuery:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+    ProposalIdPath:
+      name: proposalId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/ResourceId'
+    ProposalStatusQuery:
+      name: status
+      in: query
+      required: false
+      description: Filter proposals by review status; defaults to PENDING_REVIEW.
+      schema:
+        allOf:
+        - $ref: '#/components/schemas/RefundProposalStatus'
+        default: PENDING_REVIEW
+  headers:
+    XRequestId:
+      description: Correlation identifier for this request, matching requestId in errors, logs and traces.
+      schema:
+        type: string
+    IdempotentReplay:
+      description: Present with the string true on an idempotent replay.
+      schema:
+        type: string
+        enum:
+        - 'true'
+    Location:
+      description: 'Relative URI of the new proposal: /v1/refund-proposals/{id}.'
+      schema:
+        type: string
+      example: /v1/refund-proposals/prop_01HZX9K2M4N6P8Q0R2S4T6V8W2
+  responses:
+    BadRequest:
+      description: VALIDATION_ERROR for malformed bodies, unknown fields or explanation/evidence bounds;
+        IDEMPOTENCY_KEY_REQUIRED when the header is missing.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: 'UNAUTHORIZED: credentials are missing, malformed, expired or revoked.'
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: 'FORBIDDEN: the caller lacks the required scope or operations role.'
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: 'NOT_FOUND: resource does not exist in the caller scope, or the refund has no proposal
+        liability.'
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: IDEMPOTENCY_CONFLICT, PROPOSAL_EXISTS, PROPOSAL_NOT_PENDING or REFUND_BLOCKED; see
+        the operation description.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnprocessableEntity:
+      description: VALIDATION_ERROR for currency mismatch, LIABILITY_SPLIT_INVALID for invalid shares,
+        or REFUND_LIMIT_EXCEEDED.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RateLimited:
+      description: 'RATE_LIMITED: account rate limit reached; retryable.'
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: 'INTERNAL_ERROR: unclassified internal error.'
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServiceUnavailable:
+      description: 'SERVICE_UNAVAILABLE: a dependency is unavailable and no funds request has been sent;
+        retryable.'
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/XRequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    ResourceId:
+      type: string
+      description: Local resource identifier in prefixed ULID form.
+      pattern: ^[a-z]+_[0-9A-HJKMNP-TV-Z]{26}$
+      example: pay_01HZX9K2M4N6P8Q0R2S4T6V8W0
+    OpsResourceId:
+      description: Operations accept existing prefixed ULID identifiers and persisted UUIDs. All inputs
+        are still resolved within the trusted organization and environment.
+      oneOf:
+      - $ref: '#/components/schemas/ResourceId'
+      - type: string
+        format: uuid
+        pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
+    Currency:
+      type: string
+      description: ISO 4217 three-letter currency; must be enabled for the organization and environment.
+      pattern: ^[A-Z]{3}$
+      example: USD
+    AmountMinor:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Integer minor units; for USD, cents (10000 = USD 100.00); never a float. For JPY, exponent
+        0 means 10000 = JPY 10000. Implementations must check overflow.
+      example: 10000
+    ResolutionStatus:
+      type: string
+      description: Outcome certainty, independent of business status. UNKNOWN does not overwrite the last
+        known providerStatus and does not mean failure.
+      enum:
+      - KNOWN
+      - UNKNOWN
+      - CONFLICT
+    FinancialStatus:
+      type: string
+      description: 'Accounting confirmation, independent of business status. A successful payment without
+        balance transaction evidence is PENDING_EVIDENCE: payment success is known, but fees and bank
+        assets must not be invented.'
+      enum:
+      - NOT_APPLICABLE
+      - PENDING_EVIDENCE
+      - PARTIALLY_POSTED
+      - POSTED
+      - CONFLICT
+    RefundStatus:
+      type: string
+      enum:
+      - RESERVED
+      - SUBMITTED
+      - PENDING
+      - REQUIRES_ACTION
+      - SUCCEEDED
+      - FAILED
+      - CANCELED
+      description: Local refund business status, separate from provider status and accounting evidence.
+    RefundControlState:
+      type: string
+      description: NORMAL guarantees 0 <= refunded + reserved <= captured. EXTERNAL_CONFLICT means an
+        external dashboard refund has unresolved mapping and blocks new refunds. DISPUTE_BLOCKED means
+        a dispute blocks refunds.
+      enum:
+      - NORMAL
+      - EXTERNAL_CONFLICT
+      - DISPUTE_BLOCKED
+    ErrorCode:
+      type: string
+      description: |
+        Stable error codes. Clients use retryable, rather than parsing message text.
+
+        | code | HTTP | retryable | meaning |
+        |---|---|---|---|
+        | `VALIDATION_ERROR` | 400 / 422 | false | Malformed or invalid input; currency mismatch uses 422. |
+        | `IDEMPOTENCY_KEY_REQUIRED` | 400 | false | Idempotency-Key is missing. |
+        | `UNAUTHORIZED` | 401 | false | Credentials are missing, invalid, expired or revoked. |
+        | `FORBIDDEN` | 403 | false | Required scope or reviewer role is missing. |
+        | `NOT_FOUND` | 404 | false | Resource is absent or outside the caller scope; no proposal liability exists. |
+        | `IDEMPOTENCY_CONFLICT` | 409 | false | The same key was used with different semantic content. |
+        | `REFUND_BLOCKED` | 409 | false | Refund control is not NORMAL because of a dispute or external conflict. |
+        | `PROPOSAL_EXISTS` | 409 | false | This application already has a proposal for the complaint. |
+        | `PROPOSAL_NOT_PENDING` | 409 | false | A different decision was submitted after the proposal was decided. |
+        | `REFUND_LIMIT_EXCEEDED` | 422 | false | The requested refund exceeds captured minus refunded and reserved. |
+        | `LIABILITY_SPLIT_INVALID` | 422 | false | Shares do not sum to 10000 or a party is repeated or missing. |
+        | `RATE_LIMITED` | 429 | true | Account rate limit reached. |
+        | `INTERNAL_ERROR` | 500 | false | Unclassified internal error. |
+        | `SERVICE_UNAVAILABLE` | 503 | true | A dependency is unavailable and no funds request has been sent. |
+      enum:
+      - VALIDATION_ERROR
+      - IDEMPOTENCY_KEY_REQUIRED
+      - UNAUTHORIZED
+      - FORBIDDEN
+      - NOT_FOUND
+      - IDEMPOTENCY_CONFLICT
+      - REFUND_BLOCKED
+      - PROPOSAL_EXISTS
+      - PROPOSAL_NOT_PENDING
+      - REFUND_LIMIT_EXCEEDED
+      - LIABILITY_SPLIT_INVALID
+      - RATE_LIMITED
+      - INTERNAL_ERROR
+      - SERVICE_UNAVAILABLE
+    ErrorDetail:
+      type: object
+      description: A field-level validation or conflict detail.
+      required:
+      - field
+      - issue
+      properties:
+        field:
+          type: string
+        issue:
+          type: string
+    Error:
+      type: object
+      description: Uniform error response. Every error includes code, message, retryable and requestId.
+      required:
+      - code
+      - message
+      - retryable
+      - requestId
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+        message:
+          type: string
+          description: Developer-facing English message; must not contain secrets, card numbers or sensitive
+            customer fields.
+        retryable:
+          type: boolean
+          description: Whether retrying is safe. For a funds write, false does not imply the remote operation
+            did not execute; unknown outcomes require querying rather than resending.
+        requestId:
+          type: string
+          description: Matches the X-Request-Id response header and server logs.
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+        docUrl:
+          type: string
+          format: uri
+    BasisPoints:
+      type: integer
+      description: Integer basis points of a whole represented by 10000.
+      minimum: 0
+      maximum: 10000
+    LiabilityParty:
+      type: string
+      description: Liable party. DRIVER is the courier in F17. The agent maps PRD lowercase literals one
+        to one, for example driver to DRIVER.
+      enum:
+      - RESTAURANT
+      - DRIVER
+      - PLATFORM
+    LiabilityShare:
+      type: object
+      description: One party and its proposed liability share.
+      required:
+      - party
+      - basisPoints
+      properties:
+        party:
+          $ref: '#/components/schemas/LiabilityParty'
+        basisPoints:
+          $ref: '#/components/schemas/BasisPoints'
+      additionalProperties: false
+    LiabilitySplit:
+      type: array
+      description: The three basisPoints sum to exactly 10000; each party appears once; otherwise 422
+        LIABILITY_SPLIT_INVALID. JSON Schema cannot express the sum; the server enforces it in F18.
+      minItems: 3
+      maxItems: 3
+      items:
+        $ref: '#/components/schemas/LiabilityShare'
+    RefundReasonCode:
+      type: string
+      description: Reason for the proposed refund, mapped from the agent reason_code.
+      enum:
+      - LATE_DELIVERY
+      - MISSING_ITEM
+      - WRONG_ITEM
+      - QUALITY
+      - DELIVERY_FAILED
+      - OTHER
+    ProposalDecision:
+      type: string
+      description: The ledger stores this decision as given and derives no rules from it. Agent reject
+        and escalate outcomes stay with the agent and are never submitted as proposals.
+      enum:
+      - FULL_REFUND
+      - PARTIAL_REFUND
+    RefundProposalStatus:
+      type: string
+      description: PENDING_REVIEW transitions to APPROVED or REJECTED. Both outcomes are final.
+      enum:
+      - PENDING_REVIEW
+      - APPROVED
+      - REJECTED
+    AgentRun:
+      type: object
+      description: Agent execution references for correlation.
+      required:
+      - threadId
+      properties:
+        threadId:
+          type: string
+          description: LangGraph thread identifier.
+          minLength: 1
+          maxLength: 128
+        traceId:
+          type: string
+          description: Optional Langfuse trace identifier.
+          minLength: 1
+          maxLength: 128
+    RefundProposalCreateRequest:
+      type: object
+      description: Immutable refund proposal submitted by the agent. Creating a proposal reserves no funds.
+      required:
+      - complaintId
+      - orderRef
+      - paymentId
+      - decision
+      - amountMinor
+      - currency
+      - reasonCode
+      - liability
+      - explanation
+      - evidenceRefs
+      - agentRun
+      properties:
+        complaintId:
+          type: string
+          description: Complaint identifier, unique per application.
+          pattern: ^[A-Za-z0-9._:-]{1,128}$
+        orderRef:
+          type: string
+          description: Dispatch order identifier.
+          minLength: 1
+          maxLength: 64
+        paymentId:
+          $ref: '#/components/schemas/ResourceId'
+        decision:
+          $ref: '#/components/schemas/ProposalDecision'
+        amountMinor:
+          allOf:
+          - $ref: '#/components/schemas/AmountMinor'
+          minimum: 1
+          description: Positive proposed refund amount in integer minor units.
+        currency:
+          $ref: '#/components/schemas/Currency'
+        reasonCode:
+          $ref: '#/components/schemas/RefundReasonCode'
+        liability:
+          $ref: '#/components/schemas/LiabilitySplit'
+        explanation:
+          type: string
+          description: Explanation shown to the reviewer.
+          minLength: 1
+          maxLength: 2000
+        evidenceRefs:
+          type: array
+          description: References to evidence supporting the proposal.
+          minItems: 1
+          maxItems: 50
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+        agentRun:
+          $ref: '#/components/schemas/AgentRun'
+      additionalProperties: false
+    ProposalReviewer:
+      type: object
+      description: Operations identity that decided the proposal.
+      required:
+      - subject
+      - role
+      properties:
+        subject:
+          type: string
+          description: Trusted operations identity subject.
+        role:
+          type: string
+          enum:
+          - OPS_REVIEWER
+    LiabilityLine:
+      type: object
+      description: Allocated integer minor units and proposed basis points for one party.
+      required:
+      - party
+      - basisPoints
+      - amountMinor
+      properties:
+        party:
+          $ref: '#/components/schemas/LiabilityParty'
+        basisPoints:
+          $ref: '#/components/schemas/BasisPoints'
+        amountMinor:
+          $ref: '#/components/schemas/AmountMinor'
+    LiabilityAllocation:
+      type: object
+      description: 'Liability for a proposal refund. For a refund of A minor units, RESTAURANT receives
+        floor(A * bp_restaurant / 10000), DRIVER receives floor(A * bp_driver / 10000), and PLATFORM receives
+        A - restaurant - driver. Lines always sum to A; the sub-cent remainder goes to the platform. Worked
+        example: A = 1250 with 3333/3333/3334 basis points allocates 416/416/418. F17 defines posting
+        timing and accounts; this contract only exposes postingStatus and journalId.'
+      required:
+      - refundId
+      - proposalId
+      - currency
+      - amountMinor
+      - lines
+      - postingStatus
+      - journalId
+      properties:
+        refundId:
+          $ref: '#/components/schemas/ResourceId'
+        proposalId:
+          $ref: '#/components/schemas/ResourceId'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        amountMinor:
+          $ref: '#/components/schemas/AmountMinor'
+        lines:
+          type: array
+          description: Exactly one line per party.
+          minItems: 3
+          maxItems: 3
+          items:
+            $ref: '#/components/schemas/LiabilityLine'
+        postingStatus:
+          type: string
+          enum:
+          - PENDING
+          - POSTED
+        journalId:
+          description: OpsResourceId when available; otherwise null.
+          oneOf:
+          - $ref: '#/components/schemas/OpsResourceId'
+          - type: string
+            nullable: true
+            enum:
+            - null
+      example:
+        refundId: ref_01HZX9K2M4N6P8Q0R2S4T6V8W1
+        proposalId: prop_01HZX9K2M4N6P8Q0R2S4T6V8W2
+        currency: USD
+        amountMinor: 1250
+        lines:
+        - party: RESTAURANT
+          basisPoints: 3333
+          amountMinor: 416
+        - party: DRIVER
+          basisPoints: 3333
+          amountMinor: 416
+        - party: PLATFORM
+          basisPoints: 3334
+          amountMinor: 418
+        postingStatus: PENDING
+        journalId: null
+    RefundProposal:
+      type: object
+      description: Immutable submitted content and review result. APPROVED includes refundId and allocation;
+        REJECTED includes rejectionReason. PENDING_REVIEW has no review result.
+      required:
+      - complaintId
+      - orderRef
+      - paymentId
+      - decision
+      - amountMinor
+      - currency
+      - reasonCode
+      - liability
+      - explanation
+      - evidenceRefs
+      - agentRun
+      - id
+      - status
+      - createdAt
+      - reviewedAt
+      - reviewer
+      - rejectionReason
+      - refundId
+      - allocation
+      properties:
+        complaintId:
+          type: string
+          description: Complaint identifier, unique per application.
+          pattern: ^[A-Za-z0-9._:-]{1,128}$
+        orderRef:
+          type: string
+          description: Dispatch order identifier.
+          minLength: 1
+          maxLength: 64
+        paymentId:
+          $ref: '#/components/schemas/ResourceId'
+        decision:
+          $ref: '#/components/schemas/ProposalDecision'
+        amountMinor:
+          allOf:
+          - $ref: '#/components/schemas/AmountMinor'
+          minimum: 1
+          description: Positive proposed refund amount in integer minor units.
+        currency:
+          $ref: '#/components/schemas/Currency'
+        reasonCode:
+          $ref: '#/components/schemas/RefundReasonCode'
+        liability:
+          $ref: '#/components/schemas/LiabilitySplit'
+        explanation:
+          type: string
+          description: Explanation shown to the reviewer.
+          minLength: 1
+          maxLength: 2000
+        evidenceRefs:
+          type: array
+          description: References to evidence supporting the proposal.
+          minItems: 1
+          maxItems: 50
+          items:
+            type: string
+            minLength: 1
+            maxLength: 128
+        agentRun:
+          $ref: '#/components/schemas/AgentRun'
+        id:
+          allOf:
+          - $ref: '#/components/schemas/ResourceId'
+          description: Proposal resource identifier with the prop_ prefix.
+          pattern: ^prop_[0-9A-HJKMNP-TV-Z]{26}$
+        status:
+          $ref: '#/components/schemas/RefundProposalStatus'
+        createdAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+        reviewer:
+          description: ProposalReviewer when available; otherwise null.
+          oneOf:
+          - $ref: '#/components/schemas/ProposalReviewer'
+          - type: object
+            nullable: true
+            enum:
+            - null
+        rejectionReason:
+          type: string
+          description: Rejection reason when REJECTED; otherwise null.
+          nullable: true
+          minLength: 1
+          maxLength: 500
+        refundId:
+          description: Created refund identifier when APPROVED; otherwise null.
+          oneOf:
+          - $ref: '#/components/schemas/ResourceId'
+          - type: string
+            nullable: true
+            enum:
+            - null
+        allocation:
+          description: LiabilityAllocation when available; otherwise null.
+          oneOf:
+          - $ref: '#/components/schemas/LiabilityAllocation'
+          - type: object
+            nullable: true
+            enum:
+            - null
+    RefundProposalPage:
+      type: object
+      description: Cursor page of refund proposals.
+      required:
+      - items
+      - nextCursor
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RefundProposal'
+        nextCursor:
+          type: string
+          nullable: true
+    ReviewDecisionRequest:
+      type: object
+      description: Approve exactly as submitted, or reject with a reason of 1 to 500 characters. reason
+        is required for REJECT. Amounts and liability shares cannot be edited.
+      required:
+      - action
+      properties:
+        action:
+          type: string
+          enum:
+          - APPROVE
+          - REJECT
+        reason:
+          type: string
+          description: Required rejection reason.
+          minLength: 1
+          maxLength: 500
+      additionalProperties: false
+      oneOf:
+      - type: object
+        required:
+        - action
+        additionalProperties: false
+        properties:
+          action:
+            type: string
+            enum:
+            - APPROVE
+      - type: object
+        required:
+        - action
+        - reason
+        additionalProperties: false
+        properties:
+          action:
+            type: string
+            enum:
+            - REJECT
+          reason:
+            type: string
+            minLength: 1
+            maxLength: 500
+    RefundableAmount:
+      type: object
+      description: Current refundable amount. When controlState is NORMAL, refundableMinor = max(0, capturedMinor
+        - refundedMinor - reservedMinor); otherwise refundableMinor = 0.
+      required:
+      - paymentId
+      - currency
+      - capturedMinor
+      - refundedMinor
+      - reservedMinor
+      - refundableMinor
+      - controlState
+      properties:
+        paymentId:
+          $ref: '#/components/schemas/ResourceId'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        capturedMinor:
+          $ref: '#/components/schemas/AmountMinor'
+        refundedMinor:
+          $ref: '#/components/schemas/AmountMinor'
+        reservedMinor:
+          $ref: '#/components/schemas/AmountMinor'
+        refundableMinor:
+          $ref: '#/components/schemas/AmountMinor'
+        controlState:
+          $ref: '#/components/schemas/RefundControlState'
+    PaymentSummary:
+      type: object
+      description: Existing PaymentReader response subset. Provider references retain their existing nested
+        provider object. Business, certainty and accounting status are independent; UNKNOWN is not failure
+        and must not prompt repeat payment.
+      required:
+      - id
+      - orderKey
+      - provider
+      - paymentStatus
+      - resolutionStatus
+      - financialStatus
+      - amountMinor
+      - currency
+      - capturedAmountMinor
+      - createdAt
+      - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/ResourceId'
+        orderKey:
+          type: string
+        provider:
+          type: object
+          description: Existing provider reference object.
+          additionalProperties: true
+          properties:
+            checkoutSessionId:
+              type: string
+              nullable: true
+            latestChargeId:
+              type: string
+              nullable: true
+        paymentStatus:
+          type: string
+          description: Existing local payment business status.
+        resolutionStatus:
+          $ref: '#/components/schemas/ResolutionStatus'
+        financialStatus:
+          $ref: '#/components/schemas/FinancialStatus'
+        amountMinor:
+          $ref: '#/components/schemas/AmountMinor'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        capturedAmountMinor:
+          $ref: '#/components/schemas/AmountMinor'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: true
+    RefundSummary:
+      type: object
+      description: Existing RefundReader response subset. Provider status and accounting evidence remain
+        separate; a successful refund without balance transaction evidence does not justify invented fees
+        or postings.
+      required:
+      - id
+      - paymentId
+      - amountMinor
+      - currency
+      - refundStatus
+      - resolutionStatus
+      - financialStatus
+      - providerRefundId
+      - providerStatus
+      - controlState
+      - createdAt
+      - updatedAt
+      properties:
+        id:
+          $ref: '#/components/schemas/ResourceId'
+        paymentId:
+          $ref: '#/components/schemas/ResourceId'
+        amountMinor:
+          $ref: '#/components/schemas/AmountMinor'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        refundStatus:
+          $ref: '#/components/schemas/RefundStatus'
+        resolutionStatus:
+          $ref: '#/components/schemas/ResolutionStatus'
+        financialStatus:
+          $ref: '#/components/schemas/FinancialStatus'
+        providerRefundId:
+          type: string
+          nullable: true
+        providerStatus:
+          type: string
+          nullable: true
+        controlState:
+          $ref: '#/components/schemas/RefundControlState'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      additionalProperties: true
