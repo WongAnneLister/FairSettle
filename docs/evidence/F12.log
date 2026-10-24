@@ -1,0 +1,9 @@
+feature: F12
+kind: manual
+commit: 50d763661e156f288352c7ea9e563ace56a3b99c
+confirmed_at: 2026-10-24T14:18:06+08:00
+----
+[x] Payment and refund visible in the sandbox merchant account
+[x] Both webhooks arrived through ngrok or the deployed URL and were posted once
+[x] Ledger balance check passes; order id, capture id and refund id recorded in docs/progress.md
+note: 
