@@ -182,7 +182,7 @@ No automatic resend for refunds (D7), not even with the original request id.
 | --- | --- | --- |
 | `CHECKOUT.ORDER.APPROVED` | order | Same as a GET showing `APPROVED` (§3): approved-not-captured, `CAPTURE_ORDER` prepared once |
 | `CHECKOUT.PAYMENT-APPROVAL.REVERSED` | order | No direct state change; schedules a GET order, whose result is applied per §3 |
-| `PAYMENT.CAPTURE.COMPLETED` | capture | Per §4 `COMPLETED`; linked to the payment through `supplementary_data.related_ids.order_id` |
+| `PAYMENT.CAPTURE.COMPLETED` | capture | Per §4 `COMPLETED`; linked to the payment through `supplementary_data.related_ids.order_id`. Delivered after a refund, it carries the capture's status at send time, `PARTIALLY_REFUNDED` or `REFUNDED` (observed in sandbox, 2026-10-25), and maps per §4 like a GET: captured, no settlement of its own |
 | `PAYMENT.CAPTURE.PENDING` | capture | Per §4 `PENDING` |
 | `PAYMENT.CAPTURE.DECLINED` | capture | Records the attempt; payment stays PROCESSING; CANCELED only after a GET (P1) |
 | `PAYMENT.CAPTURE.REFUNDED` | refund (observed in sandbox, F12, 2026-10-24) | Per §7 `COMPLETED`, matched by refund id, else by `custom_id` |

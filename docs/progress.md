@@ -635,3 +635,42 @@ Next
 Pitfalls found
 - A config key that becomes required breaks every existing test that enables the feature. Plans must list those test setups explicitly, because the implementer may not edit existing tests on their own
 - The signature covers the raw bytes, so `rawBody: true` must be set in both `main.ts` and the e2e harness's `createNestApplication`
+
+## 2026-10-25 · session 14 · full test run and a PayPal webhook fix
+
+### State on 2026-10-25
+
+- passing 16/32
+- recently passing: F12 (50d7636), F13 (de35431), F14 (4d0ad46), F15 (4ad66e0), F16 (ffcc084)
+- ready next: F17 Liability accounts and allocation, F19 Agent clients against fixtures
+
+Done this session
+- Full run on the current code (d5c79cb), all green:
+  - root compose: 8/8 healthy, the three F13 probes pass;
+  - dispatch: unit 71/71, full e2e 85/85, lint, typecheck and build;
+  - ledger `./mvnw verify`: no failures (671 integration tests, 3 skipped);
+  - Redocly lint, script tests 21/21.
+- Live sandbox run with `ledger/scripts/paypal_sandbox_run.py`:
+  - order `6VU54619S8145584P`, capture `2S976987P5762051U`, refund `33107982G7973264X`;
+  - ledger payment `pay_01M5QMBNBECWKTVMB07JEKF7V1`, refund `ref_01M5QMF1XD5EEA47TW2RQ7Y9F1`.
+  - Capture (10000, fee 370, net 9630) and refund (-2500) are each posted once.
+  - The script reported FAIL for two reasons:
+    - The capture webhook stayed `WAITING` (`INCOMPLETE_CAPTURE`), the bug below.
+    - Its PSP-entry and balance checks expect an empty database, and this one also holds the 2026-10-24 run. Every balance was exactly twice the single-run value, and the accounts sum to 0.
+- Fix (this commit): PayPal delivered `PAYMENT.CAPTURE.COMPLETED` together with the refund event, after the refund, with the capture's status at send time, `PARTIALLY_REFUNDED`. `PayPalWebhookFacts.capture` only accepted `COMPLETED`, so the event waited forever.
+  - It now accepts `PARTIALLY_REFUNDED` and `REFUNDED` as captured, mapped as `PayPalOrderMapping` maps a GET: the raw status, no settlement of its own.
+  - `DECLINED`, `FAILED` and `PENDING` are still rejected.
+  - Tests: unit `lateCaptureSnapshotEqualsOrderQueryFacts`, plus two rejected statuses. IT `captureEventArrivingAfterRefundIsDoneAndPostsNothing` reproduced the `WAITING` row before the fix.
+  - Checks: ledger unit 477/477; `PayPalWebhookPostingIT` 13/13 and `PayPalSandboxFlowIT` 2/2; Spotless clean.
+  - ADR row for `PAYMENT.CAPTURE.COMPLETED` updated.
+
+Not done / left half-way
+- The stuck inbox row for capture `2S976987P5762051U` is still `WAITING` in the local ledger database. Its `available_at` lets the processor retry it the next time the ledger runs with this code; it should then become `DONE` without posting anything.
+- The live-run script assumes an empty ledger database; rerunning it on a used one always fails the balance checks. Recreate the database first, or teach the script to compare deltas.
+- The merchant-account check for this run is the user's.
+
+Next
+- F17 (liability accounts) or F19 (agent clients)
+
+Pitfalls found
+- PayPal can deliver webhooks late and in any order; the resource in a webhook shows its state at send time, not at the event's time

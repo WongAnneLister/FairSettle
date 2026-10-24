@@ -241,6 +241,41 @@ class PayPalWebhookPostingIT extends PayPalCaptureFixture {
     }
 
     @Test
+    void captureEventArrivingAfterRefundIsDoneAndPostsNothing() throws Exception {
+        paid();
+        var i = reserve("pp-whk-late-cap", 2500);
+        transport
+                .token()
+                .reply(
+                        201,
+                        refund(
+                                R1,
+                                CAPTURE,
+                                "COMPLETED",
+                                "25.00",
+                                "0.00",
+                                i.refundId().toString()));
+        refundExecutor.execute(i.operationId());
+        long journals = count("journal"), bts = count("balance_transaction");
+        var event = captureEvent("WH-F10-CAP-LATE", payment, later(5));
+        ((ObjectNode) event.path("resource")).put("status", "PARTIALLY_REFUNDED");
+        deliver(event);
+        assertThat(process()).isEqualTo(1);
+        assertThat(inboxRow("WH-F10-CAP-LATE")).containsEntry("status", "DONE");
+        assertThat(paymentRow(payment))
+                .containsEntry("payment_status", "SUCCEEDED")
+                .containsEntry("financial_status", "POSTED")
+                .containsEntry("captured_amount_minor", 10000L)
+                .containsEntry("latest_charge_id", CAPTURE);
+        assertThat(row(i)).containsEntry("refund_status", "SUCCEEDED");
+        assertThat(control()).containsEntry("refunded_minor", 2500L).containsEntry("control_state", "NORMAL");
+        assertThat(count("journal")).isEqualTo(journals);
+        assertThat(count("balance_transaction")).isEqualTo(bts);
+        assertThat(count("dependency_wait")).isZero();
+        assertThat(captureCalls()).hasSize(1);
+    }
+
+    @Test
     void refundEventAfterRefundResponseChangesNothing() throws Exception {
         paid();
         var i = reserve("pp-whk-r27", 4000);

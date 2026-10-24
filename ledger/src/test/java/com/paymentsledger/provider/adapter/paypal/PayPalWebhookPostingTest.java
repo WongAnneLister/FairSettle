@@ -42,6 +42,27 @@ class PayPalWebhookPostingTest {
     }
 
     @Test
+    void lateCaptureSnapshotEqualsOrderQueryFacts() throws Exception {
+        // PayPal can deliver PAYMENT.CAPTURE.COMPLETED after a refund, with the capture's status at send time
+        // (sandbox, 2026-10-25). It is still a captured payment, mapped exactly as a GET order would map it.
+        for (var status : List.of("PARTIALLY_REFUNDED", "REFUNDED")) {
+            var late = capSnap();
+            late.put("status", status);
+            var capture = PayPalWebhookFacts.capture(late).orElseThrow();
+            var order = PayPalOrderMapping.orderFact(json.readTree(
+                            PayPalTestTransport.capturedOrder(ORDER, PAYMENT.toString(), CAPTURE, status, true)))
+                    .orElseThrow();
+            assertThat(capture.orderId()).isEqualTo(ORDER);
+            assertThat(capture.paymentId()).isEqualTo(PAYMENT);
+            assertThat(capture.charge()).isEqualTo(order.captures().getFirst());
+            assertThat(capture.charge().captured()).isTrue();
+            assertThat(capture.charge().amountMinor()).isEqualTo(10000);
+            assertThat(capture.settlement()).isNull();
+            assertThat(order.settlements()).isEmpty();
+        }
+    }
+
+    @Test
     void refundSnapshotEqualsRefundResponseFact() throws Exception {
         var refund = PayPalWebhookFacts.refund(refSnap()).orElseThrow();
         var response = PayPalRefundMapping.refund(
@@ -61,6 +82,8 @@ class PayPalWebhookPostingTest {
     void captureFactsRejectUnsupportedSnapshots() throws Exception {
         List<Consumer<ObjectNode>> variants = List.of(
                 n -> n.put("status", "PENDING"),
+                n -> n.put("status", "DECLINED"),
+                n -> n.put("status", "FAILED"),
                 n -> n.put("event_type", "PAYMENT.CAPTURE.PENDING"),
                 n -> n.put("object", "paypal.refund"),
                 n -> n.put("id", "41995584gm234064g"),

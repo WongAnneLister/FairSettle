@@ -6,10 +6,17 @@ import java.time.DateTimeException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /** Ledger facts from stored PayPal webhook snapshots; the same values and digests as the API mappings (ADR D4, D9). */
 public final class PayPalWebhookFacts {
+    /**
+     * Capture statuses that mean the capture happened (ADR §4). A PAYMENT.CAPTURE.COMPLETED event delivered after a
+     * refund carries the capture's status at send time, PARTIALLY_REFUNDED or REFUNDED (sandbox, 2026-10-25).
+     */
+    private static final Set<String> CAPTURED = Set.of("COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED");
+
     /** @param updatedAt update_time, else create_time, else null */
     public record Capture(
             String orderId, UUID paymentId, ChargeFact charge, BalanceTransactionFact settlement, Instant updatedAt) {}
@@ -20,15 +27,20 @@ public final class PayPalWebhookFacts {
     private PayPalWebhookFacts() {}
 
     public static Optional<Capture> capture(JsonNode snapshot) {
-        if (!matches(snapshot, "paypal.capture", "PAYMENT.CAPTURE.COMPLETED")) return Optional.empty();
-        String id = text(snapshot, "id"), orderId = text(snapshot, "order_id");
+        if (!matches(snapshot, "paypal.capture", "PAYMENT.CAPTURE.COMPLETED", CAPTURED)) return Optional.empty();
+        String id = text(snapshot, "id"), orderId = text(snapshot, "order_id"), status = text(snapshot, "status");
         UUID paymentId = uuid(text(snapshot, "custom_id"));
         String currency = text(snapshot.path("amount"), "currency_code");
         var amount = PayPalOrderMapping.minor(text(snapshot.path("amount"), "value"), currency);
         if (orderId == null || paymentId == null || amount.isEmpty() || amount.get() <= 0) return Optional.empty();
         Instant created = time(text(snapshot, "create_time"));
-        var settlement = settlement(snapshot, id, "charge", amount.get(), currency, created);
-        if (snapshot.has("breakdown") && settlement.isEmpty()) return Optional.empty();
+        // As PayPalOrderMapping: only a COMPLETED capture carries its settlement. A refunded one was settled when it
+        // completed, and its refunds are facts of their own (ADR §7).
+        boolean completed = "COMPLETED".equals(status);
+        var settlement = completed
+                ? settlement(snapshot, id, "charge", amount.get(), currency, created)
+                : Optional.<BalanceTransactionFact>empty();
+        if (completed && snapshot.has("breakdown") && settlement.isEmpty()) return Optional.empty();
         var charge = new ChargeFact(
                 id,
                 orderId,
@@ -39,14 +51,15 @@ public final class PayPalWebhookFacts {
                 currency,
                 settlement.isEmpty() ? null : id,
                 null,
-                "COMPLETED",
+                status,
                 created);
         return Optional.of(
                 new Capture(orderId, paymentId, charge, settlement.orElse(null), updatedAt(snapshot, created)));
     }
 
     public static Optional<Refund> refund(JsonNode snapshot) {
-        if (!matches(snapshot, "paypal.refund", "PAYMENT.CAPTURE.REFUNDED")) return Optional.empty();
+        if (!matches(snapshot, "paypal.refund", "PAYMENT.CAPTURE.REFUNDED", Set.of("COMPLETED")))
+            return Optional.empty();
         String id = text(snapshot, "id"), captureId = text(snapshot, "capture_id");
         String currency = text(snapshot.path("amount"), "currency_code");
         var amount = PayPalOrderMapping.minor(text(snapshot.path("amount"), "value"), currency);
@@ -68,12 +81,12 @@ public final class PayPalWebhookFacts {
         return Optional.of(new Refund(uuid(text(snapshot, "custom_id")), fact, updatedAt(snapshot, created)));
     }
 
-    private static boolean matches(JsonNode snapshot, String object, String eventType) {
+    private static boolean matches(JsonNode snapshot, String object, String eventType, Set<String> statuses) {
         if (snapshot == null) return false;
         String id = text(snapshot, "id");
         return object.equals(text(snapshot, "object"))
                 && eventType.equals(text(snapshot, "event_type"))
-                && "COMPLETED".equals(text(snapshot, "status"))
+                && statuses.contains(text(snapshot, "status"))
                 && id != null
                 && id.matches("[A-Z0-9]{1,36}");
     }
