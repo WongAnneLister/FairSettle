@@ -58,3 +58,7 @@ git diff --check
 ```
 
 集成测试使用一次性 PostgreSQL 数据库，认证 HTTP 实际以只读 `payments_app` 连接；种子由测试的管理连接写入。不要对日常开发库执行测试中的清理语句。完整证据与验收边界见 [PR02 验证记录](../evidence/pr02.md)。
+
+## PayPal fixture mode (F12)
+
+With `PAYPAL_ENABLED=true`, local fixtures provision a `PAYPAL` provider account bound to the client id, an ingestion policy and seven USD ledger accounts, including the two partner accounts required by revenue share. The configured organization, environment and provider account ids must be the fixture ids `10000000-0000-0000-0000-000000000001`, `10000000-0000-0000-0000-000000000011` and `10000000-0000-0000-0000-000000000021`. An existing `FAKE` database is refused; fixtures never overwrite its provider binding. See the [PayPal sandbox run](paypal-sandbox-run.md) for setup and manual verification.

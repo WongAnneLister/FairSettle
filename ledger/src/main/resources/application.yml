@@ -82,6 +82,8 @@ platform:
   webhooks:
     stripe:
       enabled: ${STRIPE_WEBHOOK_ENABLED:false}
+    paypal:
+      enabled: ${PAYPAL_WEBHOOK_ENABLED:false}
   stripe:
     enabled: ${STRIPE_ENABLED:false}
   paypal:

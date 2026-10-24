@@ -330,4 +330,152 @@ class IdentityIT {
                 .isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(get("/v1/prices/not-a-uuid", appToken(41)).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
+
+    private static UUID fixtureId(int n) {
+        return UUID.fromString("10000000-0000-0000-0000-" + "%012d".formatted(n));
+    }
+
+    private org.springframework.mock.env.MockEnvironment fixtureEnvironment(boolean paypal) {
+        var env = new org.springframework.mock.env.MockEnvironment()
+                .withProperty("platform.fixtures.app-secret", SECRET)
+                .withProperty("platform.fixtures.ops-secret", "b".repeat(43));
+        env.setActiveProfiles("local");
+        if (paypal) {
+            env.withProperty("platform.paypal.enabled", "true")
+                    .withProperty("platform.paypal.client-id", "client-fixture")
+                    .withProperty(
+                            "platform.paypal.organization-id", fixtureId(1).toString())
+                    .withProperty(
+                            "platform.paypal.environment-id", fixtureId(11).toString())
+                    .withProperty(
+                            "platform.paypal.provider-account-id", fixtureId(21).toString());
+        }
+        return env;
+    }
+
+    private LocalFixtureInitializer initializer(org.springframework.mock.env.MockEnvironment env) {
+        return new LocalFixtureInitializer(flyway, tokens, java.time.Clock.systemUTC(), env);
+    }
+
+    private java.util.Map<String, Object> fixtureProvider() {
+        return jdbc.queryForMap(
+                "SELECT provider,provider_account_ref,livemode FROM platform.provider_account WHERE id=?",
+                fixtureId(21));
+    }
+
+    @Test
+    void paypalFixturesProvisionAccountPolicyAndLedgerAccounts() {
+        write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        var initializer = initializer(fixtureEnvironment(true));
+        initializer.afterPropertiesSet();
+        assertThat(fixtureProvider())
+                .containsEntry("provider", "PAYPAL")
+                .containsEntry("provider_account_ref", "client-fixture")
+                .containsEntry("livemode", false);
+        var policies = jdbc.queryForList(
+                "SELECT organization_id,environment_id,provider_account_id,livemode,opening_mode,business_zone FROM platform.ingestion_policy");
+        assertThat(policies)
+                .containsExactly(java.util.Map.of(
+                        "organization_id",
+                        fixtureId(1),
+                        "environment_id",
+                        fixtureId(11),
+                        "provider_account_id",
+                        fixtureId(21),
+                        "livemode",
+                        false,
+                        "opening_mode",
+                        "ZERO",
+                        "business_zone",
+                        "UTC"));
+        var accounts = jdbc.queryForList(
+                "SELECT currency,account_purpose,source_domain,provider_account_id,balance_domain FROM platform.ledger_account ORDER BY account_purpose");
+        assertThat(accounts).hasSize(7);
+        assertThat(accounts)
+                .extracting(row -> row.get("account_purpose"))
+                .containsExactly(
+                        "PARTNER_PAYABLE",
+                        "PARTNER_SHARE_EXPENSE",
+                        "PSP_FEE_EXPENSE",
+                        "PSP_FUNDS",
+                        "SALES_RETURNS",
+                        "SALES_REVENUE",
+                        "SUSPENSE");
+        for (var row : accounts) {
+            boolean provider =
+                    java.util.Set.of("PSP_FUNDS", "PSP_FEE_EXPENSE", "SUSPENSE").contains(row.get("account_purpose"));
+            assertThat(row)
+                    .containsEntry("currency", "USD")
+                    .containsEntry("source_domain", provider ? "PROVIDER" : "INTERNAL")
+                    .containsEntry("provider_account_id", provider ? fixtureId(21) : null)
+                    .containsEntry("balance_domain", provider ? "PAYMENTS" : null);
+        }
+        initializer.afterPropertiesSet();
+        assertThat(
+                        jdbc.queryForList(
+                                "SELECT organization_id,environment_id,provider_account_id,livemode,opening_mode,business_zone FROM platform.ingestion_policy"))
+                .isEqualTo(policies);
+        assertThat(
+                        jdbc.queryForList(
+                                "SELECT currency,account_purpose,source_domain,provider_account_id,balance_domain FROM platform.ledger_account ORDER BY account_purpose"))
+                .isEqualTo(accounts);
+    }
+
+    @Test
+    void paypalFixturesRequireClientId() {
+        write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        var env = fixtureEnvironment(true);
+        ((org.springframework.mock.env.MockPropertySource)
+                        env.getPropertySources().get("mockProperties"))
+                .getSource()
+                .remove("platform.paypal.client-id");
+        var initializer = initializer(env);
+        assertThatThrownBy(initializer::afterPropertiesSet)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("PayPal fixtures require PAYPAL_CLIENT_ID");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM platform.organization", Long.class))
+                .isZero();
+    }
+
+    @Test
+    void paypalFixturesRequireFixtureScope() {
+        write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        var env = fixtureEnvironment(true)
+                .withProperty(
+                        "platform.paypal.provider-account-id", fixtureId(99).toString());
+        var initializer = initializer(env);
+        assertThatThrownBy(initializer::afterPropertiesSet)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("PayPal fixtures require the local fixture scope ids");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM platform.organization", Long.class))
+                .isZero();
+    }
+
+    @Test
+    void existingFixtureProviderMustMatchMode() {
+        write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        for (boolean paypal : new boolean[] {false, true}) {
+            initializer(fixtureEnvironment(paypal)).afterPropertiesSet();
+            var before = fixtureProvider();
+            var other = initializer(fixtureEnvironment(!paypal));
+            assertThatThrownBy(other::afterPropertiesSet)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage("Existing fixture provider differs; recreate the local database");
+            assertThat(fixtureProvider()).isEqualTo(before);
+            write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        }
+    }
+
+    @Test
+    void fakeFixturesUnchanged() {
+        write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        initializer(fixtureEnvironment(false)).afterPropertiesSet();
+        assertThat(fixtureProvider())
+                .containsEntry("provider", "FAKE")
+                .containsEntry("provider_account_ref", "fixture_local_account");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM platform.ingestion_policy", Long.class))
+                .isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM platform.ledger_account", Long.class))
+                .isZero();
+    }
 }

@@ -3,6 +3,7 @@ package com.paymentsledger.identity;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.InitializingBean;
@@ -15,12 +16,35 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** Explicit local-only provisioning using the migration role, never the runtime role. */
+/** Explicit local-only FAKE or PayPal provisioning using the migration role, never the runtime role. */
 @Component
 @DependsOn("testModeGuard")
 @ConditionalOnProperty(name = "platform.fixtures.enabled", havingValue = "true")
 public class LocalFixtureInitializer implements InitializingBean {
     public static final UUID APP_CREDENTIAL = id(41), OPS_CREDENTIAL = id(61), PRICE = id(81);
+    private static final List<String> PROVIDER_ACCOUNTS = List.of("PSP_FUNDS", "PSP_FEE_EXPENSE", "SUSPENSE");
+    private static final List<String> INTERNAL_ACCOUNTS =
+            List.of("SALES_REVENUE", "SALES_RETURNS", "PARTNER_SHARE_EXPENSE", "PARTNER_PAYABLE");
+
+    private record Provider(String provider, String accountRef, boolean paypal) {}
+
+    private Provider provider() {
+        if (!environment.getProperty("platform.paypal.enabled", Boolean.class, false))
+            return new Provider("FAKE", "fixture_local_account", false);
+        String clientId = value("client-id", "PAYPAL_CLIENT_ID");
+        if (clientId == null || clientId.isBlank())
+            throw new IllegalStateException("PayPal fixtures require PAYPAL_CLIENT_ID");
+        if (!id(1).toString().equals(value("organization-id", "PAYPAL_ORGANIZATION_ID"))
+                || !id(11).toString().equals(value("environment-id", "PAYPAL_ENVIRONMENT_ID"))
+                || !id(21).toString().equals(value("provider-account-id", "PAYPAL_PROVIDER_ACCOUNT_ID")))
+            throw new IllegalStateException("PayPal fixtures require the local fixture scope ids");
+        return new Provider("PAYPAL", clientId, true);
+    }
+
+    private String value(String key, String fallback) {
+        return environment.getProperty("platform.paypal." + key, environment.getProperty(fallback));
+    }
+
     private final Flyway flyway;
     private final CredentialTokens tokens;
     private final Clock clock;
@@ -41,6 +65,7 @@ public class LocalFixtureInitializer implements InitializingBean {
     public void afterPropertiesSet() {
         if (!environment.acceptsProfiles(Profiles.of("local")))
             throw new IllegalStateException("Fixture initialization requires local profile");
+        var provider = provider();
         CredentialTokens.Parsed app, ops;
         try {
             app = tokens.parse(
@@ -66,6 +91,12 @@ public class LocalFixtureInitializer implements InitializingBean {
                 if (existing.size() != 1 || !existing.getFirst().equals(id(1)))
                     throw new IllegalStateException(
                             "Fixture initialization requires an empty or matching fixture database");
+                var providers = jdbc.queryForList(
+                        "SELECT provider,provider_account_ref FROM platform.provider_account WHERE id=?", id(21));
+                if (providers.size() != 1
+                        || !provider.provider().equals(providers.getFirst().get("provider"))
+                        || !provider.accountRef().equals(providers.getFirst().get("provider_account_ref")))
+                    throw new IllegalStateException("Existing fixture provider differs; recreate the local database");
                 verifyExisting(jdbc, "application_credential", app);
                 verifyExisting(jdbc, "ops_credential", ops);
                 return;
@@ -80,7 +111,7 @@ public class LocalFixtureInitializer implements InitializingBean {
             jdbc.update("""
                     INSERT INTO platform.provider_account(id,organization_id,environment_id,provider,
                         provider_account_ref,livemode)
-                    VALUES (?,?,?,'FAKE','fixture_local_account',false)""", id(21), id(1), id(11));
+                    VALUES (?,?,?,?,?,false)""", id(21), id(1), id(11), provider.provider(), provider.accountRef());
             jdbc.update("""
                     INSERT INTO platform.currency_config(code,minor_unit_exponent)
                     VALUES ('USD',2)
@@ -113,6 +144,23 @@ public class LocalFixtureInitializer implements InitializingBean {
                     INSERT INTO platform.price_fixture(id,organization_id,environment_id,product_ref,price_version,
                         currency,amount_minor,share_policy_id)
                     VALUES (?,?,?,'demo-product',1,'USD',10000,?)""", PRICE, id(1), id(11), id(71));
+            if (provider.paypal()) {
+                jdbc.update("""
+                        INSERT INTO platform.ingestion_policy
+                        (organization_id,environment_id,provider_account_id,livemode,opening_mode,business_zone)
+                        VALUES (?,?,?,false,'ZERO','UTC')
+                        """, id(1), id(11), id(21));
+                for (String purpose : PROVIDER_ACCOUNTS) jdbc.update("""
+                            INSERT INTO platform.ledger_account
+                            (organization_id,environment_id,currency,account_purpose,source_domain,provider_account_id,balance_domain)
+                            VALUES (?,?,'USD',?,'PROVIDER',?,'PAYMENTS')
+                            """, id(1), id(11), purpose, id(21));
+                for (String purpose : INTERNAL_ACCOUNTS) jdbc.update("""
+                            INSERT INTO platform.ledger_account
+                            (organization_id,environment_id,currency,account_purpose,source_domain,provider_account_id,balance_domain)
+                            VALUES (?,?,'USD',?,'INTERNAL',NULL,NULL)
+                            """, id(1), id(11), purpose);
+            }
         });
     }
 
