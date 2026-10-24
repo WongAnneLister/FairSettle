@@ -224,7 +224,7 @@ Positive
 Negative
 
 - Payments can sit in approved-not-captured while the worker is down. The L2 scan finds PROCESSING payments with an open `CAPTURE_ORDER`.
-- Refunds with lost responses need a person more often than Stripe refunds, because they are never resent.
+- Refunds with lost responses need a person more often than Stripe refunds, because they are never resent. Observed in the F12 live run; impact, workarounds and a proposed fix are in [KI-1](../known-issues.md#ki-1--a-refund-whose-request-is-lost-stays-unknown-until-a-person-steps-in).
 - PayPal posting relies on the capture's `seller_receivable_breakdown`, not on a balance-transaction import, so fee corrections PayPal makes later are not picked up.
 - The 5-hour window rests on PayPal's documentation. It is not measured, and F12 does not measure it either.
 
