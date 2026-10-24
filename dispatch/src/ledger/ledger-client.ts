@@ -13,6 +13,7 @@ export interface LedgerPaymentRequest {
 
 export type LedgerPaymentOutcome =
   | {kind: 'accepted'; paymentId: string; checkoutUrl: string}
+  | {kind: 'settled'; paymentId: string}
   | {kind: 'pending'; paymentId: string | null}
   | {kind: 'rejected'; status: number; code: string};
 

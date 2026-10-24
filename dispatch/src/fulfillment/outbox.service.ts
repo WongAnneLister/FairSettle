@@ -161,12 +161,15 @@ export class OutboxService {
         throw error;
       }
       const outcome = await this.ledger.createPayment(request, checkoutKey(event.aggregateId));
-      if (outcome.kind === 'accepted') {
+      if (outcome.kind === 'accepted' || outcome.kind === 'settled') {
         const matched = await this.dataSource.transaction(async manager => {
           const updated = await manager
             .createQueryBuilder()
             .update(Order)
-            .set({ledgerPaymentId: outcome.paymentId, checkoutUrl: outcome.checkoutUrl})
+            .set({
+              ledgerPaymentId: outcome.paymentId,
+              ...(outcome.kind === 'accepted' ? {checkoutUrl: outcome.checkoutUrl} : {}),
+            })
             .where('id = :orderId', {orderId: event.aggregateId})
             .andWhere('("ledgerPaymentId" IS NULL OR "ledgerPaymentId" = :paymentId)', {
               paymentId: outcome.paymentId,

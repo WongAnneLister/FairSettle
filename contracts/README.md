@@ -14,6 +14,9 @@ API changes start here, then update both sides, as required by the root `AGENTS.
 The ledger's complete internal contract remains in
 `ledger/docs/contracts/openapi.yaml`.
 
+`ledger-merchant-notifications.md` defines the signed ledger-to-dispatch payment notification contract (F16).
+`fixtures/ledger-payment-succeeded.json` is its full-capture example for dispatch order 1 (F16).
+
 Lint the shared ledger contract from the repository root:
 
 ```bash

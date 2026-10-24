@@ -34,7 +34,7 @@ export async function createTestApp(): Promise<TestContext> {
     .useValue({sendUserConfirmation: jest.fn().mockResolvedValue(undefined)})
     .compile();
 
-  const app = moduleRef.createNestApplication();
+  const app = moduleRef.createNestApplication({rawBody: true});
   await app.init();
   // Bind once on an ephemeral port. Without this, supertest calls listen(0) per
   // request; firing twenty in parallel then spins up twenty servers, which both

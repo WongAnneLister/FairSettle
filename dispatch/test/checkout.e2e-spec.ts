@@ -21,6 +21,7 @@ describe('checkout (e2e)', () => {
     'LEDGER_CHECKOUT_SUCCESS_URL',
     'LEDGER_CHECKOUT_CANCEL_URL',
     'LEDGER_TIMEOUT_MS',
+    'LEDGER_NOTIFICATION_SECRET',
   ];
   const savedEnv = new Map<string, string | undefined>();
   let harness: typeof import('./utils/e2e');
@@ -44,6 +45,7 @@ describe('checkout (e2e)', () => {
       LEDGER_CHECKOUT_SUCCESS_URL: 'https://example.com/f15/return',
       LEDGER_CHECKOUT_CANCEL_URL: 'https://example.com/f15/cancel',
       LEDGER_TIMEOUT_MS: '300',
+      LEDGER_NOTIFICATION_SECRET: 'n'.repeat(40),
     });
     // AppModule validates config on import, so load it after setting this spec's env.
     harness = await import('./utils/e2e');
@@ -342,5 +344,17 @@ describe('checkout (e2e)', () => {
     });
     expect((await orderFor(id)).ledgerPaymentId).toBe(other);
     expect((await orderFor(id)).checkoutUrl).toBeNull();
+  });
+
+  it('a replay with no next action settles the outbox event', async () => {
+    const id = await placeOrder();
+    fake.script(keyFor(id), [{respond: 'settled'}]);
+    await outbox.drain();
+    const payment = paymentFor(id);
+    expect(await eventFor(id)).toMatchObject({status: OutboxStatus.Sent, providerRef: payment.id});
+    expect(await orderFor(id)).toMatchObject({ledgerPaymentId: payment.id, checkoutUrl: null});
+    expect(requestsFor(id)).toHaveLength(1);
+    await outbox.drain();
+    expect(requestsFor(id)).toHaveLength(1);
   });
 });

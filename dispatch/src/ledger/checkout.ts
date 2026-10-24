@@ -54,6 +54,9 @@ export function interpretLedgerResponse(status: number, body: unknown): LedgerPa
     ) {
       return {kind: 'accepted', paymentId: resource.id, checkoutUrl: action.hostedUrl};
     }
+    if (action?.type === 'NONE') {
+      return {kind: 'settled', paymentId: resource.id};
+    }
     return {kind: 'pending', paymentId: resource.id};
   }
   if (status === 500 && code === 'PROVIDER_UNKNOWN_RESULT') {

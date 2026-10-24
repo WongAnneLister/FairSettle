@@ -2,6 +2,7 @@ import {createServer, IncomingHttpHeaders, Server, ServerResponse} from 'node:ht
 
 export type Step =
   | {respond: 'ok'}
+  | {respond: 'settled'}
   | {respond: 'status'; status: number; code: string}
   | {respond: 'unknown'}
   | {respond: 'slow'; delayMs: number};
@@ -10,6 +11,7 @@ interface FakePayment {
   id: string;
   key: string;
   body: Record<string, unknown>;
+  settled?: boolean;
 }
 
 export class FakeLedger {
@@ -68,7 +70,12 @@ export class FakeLedger {
         return;
       }
       this.sequence += 1;
-      const payment = {id: 'pay_' + String(this.sequence).padStart(26, '0'), key, body};
+      const payment = {
+        id: 'pay_' + String(this.sequence).padStart(26, '0'),
+        key,
+        body,
+        settled: step.respond === 'settled',
+      };
       this.payments.set(orderKey, payment);
       if (step.respond === 'unknown') {
         this.answer(response, 500, {
@@ -111,10 +118,13 @@ export class FakeLedger {
       paymentStatus: 'AWAITING_CUSTOMER',
       amountMinor: payment.body.amountMinor,
       currency: payment.body.currency,
-      nextAction: {
-        type: 'REDIRECT_TO_HOSTED_CHECKOUT',
-        hostedUrl: 'https://www.sandbox.paypal.com/checkoutnow?token=FAKE' + payment.id.slice(4),
-      },
+      nextAction: payment.settled
+        ? {type: 'NONE'}
+        : {
+            type: 'REDIRECT_TO_HOSTED_CHECKOUT',
+            hostedUrl:
+              'https://www.sandbox.paypal.com/checkoutnow?token=FAKE' + payment.id.slice(4),
+          },
     };
   }
 

@@ -28,7 +28,7 @@ import {GetOrdersInput, GetOrdersOutput} from './dto/get-orders.dto';
 import {TakeOrderInput, TakeOrderOutput} from './dto/take-order.dto';
 import {TransitionActor, evaluateTransition} from './order-state-machine';
 import {OrderItem} from './entities/order-item.entity';
-import {Order, OrderStatus} from './entities/order.entity';
+import {Order, OrderPaymentStatus, OrderStatus} from './entities/order.entity';
 
 /** Page size for getOrders. Matches the restaurants module. */
 const ORDERS_PAGE_SIZE = 25;
@@ -128,6 +128,9 @@ export class OrderService {
             customer,
             restaurant,
             totalCents: orderFinalPriceCents,
+            paymentStatus: this.checkoutEnabled
+              ? OrderPaymentStatus.AwaitingPayment
+              : OrderPaymentStatus.NotRequired,
             items: orderItems,
           }),
         );

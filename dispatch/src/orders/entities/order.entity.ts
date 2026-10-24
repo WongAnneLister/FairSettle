@@ -17,6 +17,15 @@ export enum OrderStatus {
 
 registerEnumType(OrderStatus, {name: 'OrderStatus'});
 
+export enum OrderPaymentStatus {
+  NotRequired = 'NotRequired',
+  AwaitingPayment = 'AwaitingPayment',
+  Paid = 'Paid',
+  Failed = 'Failed',
+}
+
+registerEnumType(OrderPaymentStatus, {name: 'OrderPaymentStatus'});
+
 @InputType('OrderInputType', {isAbstract: true})
 @ObjectType()
 @Entity()
@@ -78,6 +87,11 @@ export class Order extends CoreEntity {
   @Column({type: 'text', nullable: true})
   @Field(type => String, {nullable: true})
   checkoutUrl?: string;
+
+  /** Payment progress is independent of fulfillment status. */
+  @Column({type: 'enum', enum: OrderPaymentStatus, default: OrderPaymentStatus.NotRequired})
+  @Field(type => OrderPaymentStatus)
+  paymentStatus: OrderPaymentStatus;
 
   @Column({type: 'enum', enum: OrderStatus, default: OrderStatus.Pending})
   @Field(type => OrderStatus)

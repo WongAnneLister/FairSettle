@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "eventId": "40000000-0000-0000-0000-000000000001",
+  "eventType": "payment.succeeded",
+  "organizationId": "10000000-0000-0000-0000-000000000001",
+  "environmentId": "10000000-0000-0000-0000-000000000011",
+  "applicationId": "10000000-0000-0000-0000-000000000031",
+  "providerAccountId": "10000000-0000-0000-0000-000000000021",
+  "paymentId": "20000000-0000-0000-0000-000000000001",
+  "orderId": "30000000-0000-0000-0000-000000000001",
+  "orderKey": "dispatch-order-1",
+  "resourceVersion": 1,
+  "currency": "USD",
+  "amountMinor": 1875,
+  "capturedAmountMinor": 1875,
+  "paymentStatus": "SUCCEEDED",
+  "origin": "NATIVE",
+  "occurredAt": "2026-10-24T12:00:00Z",
+  "businessKey": "10000000-0000-0000-0000-000000000001:10000000-0000-0000-0000-000000000011:10000000-0000-0000-0000-000000000031:30000000-0000-0000-0000-000000000001:payment.succeeded"
+}

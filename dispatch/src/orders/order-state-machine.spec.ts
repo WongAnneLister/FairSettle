@@ -1,7 +1,7 @@
 import {UserRole} from 'src/users/entities/user.entity';
 
-import {OrderStatus} from './entities/order.entity';
-import {TransitionActor, evaluateTransition} from './order-state-machine';
+import {OrderPaymentStatus, OrderStatus} from './entities/order.entity';
+import {TransitionActor, evaluateTransition, evaluatePaymentEvent} from './order-state-machine';
 
 const ALL_STATUSES = Object.values(OrderStatus);
 const ALL_ACTORS: TransitionActor[] = [
@@ -142,5 +142,41 @@ describe('order state machine', () => {
 
       expect(allowed.sort()).toEqual(LEGAL.map(([f, t, a]) => `${f}->${t}:${a}`).sort());
     });
+  });
+});
+
+describe('order payment state machine', () => {
+  it('payment transitions', () => {
+    expect(evaluatePaymentEvent(OrderPaymentStatus.AwaitingPayment, 'payment.succeeded')).toEqual({
+      kind: 'allowed',
+      next: OrderPaymentStatus.Paid,
+    });
+    expect(evaluatePaymentEvent(OrderPaymentStatus.AwaitingPayment, 'payment.canceled')).toEqual({
+      kind: 'allowed',
+      next: OrderPaymentStatus.Failed,
+    });
+    expect(
+      evaluatePaymentEvent(OrderPaymentStatus.AwaitingPayment, 'payment.state_changed'),
+    ).toEqual({kind: 'ignored', reason: 'informational event'});
+  });
+
+  it('payment events never go backwards or across', () => {
+    expect(evaluatePaymentEvent(OrderPaymentStatus.Paid, 'payment.succeeded')).toEqual({
+      kind: 'noop',
+    });
+    expect(evaluatePaymentEvent(OrderPaymentStatus.Failed, 'payment.canceled')).toEqual({
+      kind: 'noop',
+    });
+    for (const [status, event] of [
+      [OrderPaymentStatus.Paid, 'payment.canceled'],
+      [OrderPaymentStatus.Failed, 'payment.succeeded'],
+      [OrderPaymentStatus.NotRequired, 'payment.succeeded'],
+      [OrderPaymentStatus.NotRequired, 'payment.canceled'],
+    ] as const) {
+      expect(evaluatePaymentEvent(status, event)).toEqual({
+        kind: 'ignored',
+        reason: event + ' cannot apply to a ' + status + ' order',
+      });
+    }
   });
 });

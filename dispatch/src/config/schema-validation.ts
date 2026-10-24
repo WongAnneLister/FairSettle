@@ -26,6 +26,9 @@ export const schema = Joi.object({
   LEDGER_CHECKOUT_CANCEL_URL: Joi.string()
     .uri({scheme: ['https']})
     .when('LEDGER_CHECKOUT', {is: 'enabled', then: Joi.required()}),
+  LEDGER_NOTIFICATION_SECRET: Joi.string()
+    .min(32)
+    .when('LEDGER_CHECKOUT', {is: 'enabled', then: Joi.required()}),
   LEDGER_TIMEOUT_MS: Joi.number().default(10000),
   MAIL_HOST: Joi.string(),
   MAIL_PORT: Joi.number(),

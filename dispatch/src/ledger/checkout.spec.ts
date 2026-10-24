@@ -53,6 +53,15 @@ describe('ledger checkout', () => {
     ).toEqual({kind: 'pending', paymentId: 'pay_X'});
   });
 
+  it('interpret settles a replay with no next action', () => {
+    for (const status of [201, 200]) {
+      expect(interpretLedgerResponse(status, {id: 'pay_X', nextAction: {type: 'NONE'}})).toEqual({
+        kind: 'settled',
+        paymentId: 'pay_X',
+      });
+    }
+  });
+
   it('interpret unknown result', () => {
     expect(
       interpretLedgerResponse(500, {
@@ -125,12 +134,14 @@ describe('ledger checkout', () => {
       LEDGER_APP_TOKEN: 'app_test-token',
       LEDGER_CHECKOUT_SUCCESS_URL: urls.successUrl,
       LEDGER_CHECKOUT_CANCEL_URL: urls.cancelUrl,
+      LEDGER_NOTIFICATION_SECRET: 'n'.repeat(40),
     };
     for (const key of [
       'LEDGER_BASE_URL',
       'LEDGER_APP_TOKEN',
       'LEDGER_CHECKOUT_SUCCESS_URL',
       'LEDGER_CHECKOUT_CANCEL_URL',
+      'LEDGER_NOTIFICATION_SECRET',
     ] as const) {
       const {[key]: _omitted, ...missing} = complete;
       expect(schema.validate(missing).error).toBeDefined();
@@ -141,6 +152,9 @@ describe('ledger checkout', () => {
     ).toBeDefined();
     expect(
       schema.validate({...complete, LEDGER_CHECKOUT_CANCEL_URL: 'http://example.com/cancel'}).error,
+    ).toBeDefined();
+    expect(
+      schema.validate({...complete, LEDGER_NOTIFICATION_SECRET: 'n'.repeat(31)}).error,
     ).toBeDefined();
     expect(schema.validate(complete).error).toBeUndefined();
   });

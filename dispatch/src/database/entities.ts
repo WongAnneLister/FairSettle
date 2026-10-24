@@ -1,3 +1,4 @@
+import {LedgerNotification} from 'src/ledger/entities/ledger-notification.entity';
 import {Category} from 'src/restaurants/entities/category.entity';
 import {Dish} from 'src/restaurants/entities/dish.entity';
 import {EmailVerification} from 'src/users/entities/email-verification.entity';
@@ -18,6 +19,7 @@ import {User} from 'src/users/entities/user.entity';
  * schema — silently, and only in whichever direction was forgotten.
  */
 export const entities = [
+  LedgerNotification,
   Category,
   Dish,
   EmailVerification,

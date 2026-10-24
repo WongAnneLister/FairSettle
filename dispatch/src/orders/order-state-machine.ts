@@ -1,6 +1,6 @@
 import {UserRole} from 'src/users/entities/user.entity';
 
-import {OrderStatus} from './entities/order.entity';
+import {OrderPaymentStatus, OrderStatus} from './entities/order.entity';
 
 /**
  * Who may perform a transition.
@@ -89,4 +89,41 @@ export function evaluateTransition(
   }
 
   return {kind: 'allowed'};
+}
+
+export type LedgerPaymentEvent = 'payment.succeeded' | 'payment.canceled' | 'payment.state_changed';
+
+export const PAYMENT_TRANSITIONS: Readonly<
+  Record<OrderPaymentStatus, Readonly<Partial<Record<LedgerPaymentEvent, OrderPaymentStatus>>>>
+> = {
+  [OrderPaymentStatus.NotRequired]: {},
+  [OrderPaymentStatus.AwaitingPayment]: {
+    'payment.succeeded': OrderPaymentStatus.Paid,
+    'payment.canceled': OrderPaymentStatus.Failed,
+  },
+  [OrderPaymentStatus.Paid]: {},
+  [OrderPaymentStatus.Failed]: {},
+};
+
+export type PaymentVerdict =
+  {kind: 'allowed'; next: OrderPaymentStatus} | {kind: 'noop'} | {kind: 'ignored'; reason: string};
+
+/** Evaluate payment results independently of the fulfillment transition table. */
+export function evaluatePaymentEvent(
+  current: OrderPaymentStatus,
+  event: LedgerPaymentEvent,
+): PaymentVerdict {
+  if (event === 'payment.state_changed') {
+    return {kind: 'ignored', reason: 'informational event'};
+  }
+  const target =
+    event === 'payment.succeeded' ? OrderPaymentStatus.Paid : OrderPaymentStatus.Failed;
+  if (target === current) {
+    return {kind: 'noop'};
+  }
+  const next = PAYMENT_TRANSITIONS[current][event];
+  if (next !== undefined) {
+    return {kind: 'allowed', next};
+  }
+  return {kind: 'ignored', reason: event + ' cannot apply to a ' + current + ' order'};
 }
