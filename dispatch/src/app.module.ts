@@ -5,7 +5,7 @@ import {DatabaseModule} from './database/database.module';
 import {GraphQLModule} from '@nestjs/graphql';
 import {JwtModule} from './jwt/jwt.module';
 import {MailModule} from './mail/mail.module';
-import {Module} from '@nestjs/common';
+import {MiddlewareConsumer, Module, NestModule, RequestMethod} from '@nestjs/common';
 import {FulfillmentModule} from './fulfillment/fulfillment.module';
 import {OrdersModule} from './orders/orders.module';
 import {PaymentsModule} from './payments/payments.module';
@@ -16,6 +16,7 @@ import {environments} from './config/environments';
 import {schema} from './config/schema-validation';
 import {UploadsModule} from './uploads/uploads.module';
 import {ApolloDriver, ApolloDriverConfig} from '@nestjs/apollo';
+import {healthProbeCsrfExemption} from './common/health-probe.middleware';
 
 const TOKEN_KEY = 'Authorization';
 
@@ -70,4 +71,10 @@ type GqlWsExtra = {token?: string};
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer
+      .apply(healthProbeCsrfExemption)
+      .forRoutes({path: 'graphql', method: RequestMethod.GET});
+  }
+}

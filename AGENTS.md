@@ -15,6 +15,8 @@ This file is read by every coding agent (Codex reads it directly; Claude Code im
 | `contracts/` | Cross-service API contracts and shared fixtures | OpenAPI, JSON | |
 | `docs/` | PRD, ADRs, plans, feature list, progress log | | |
 
+Whole stack: `docker compose up -d --wait` from the repository root (F13) starts both databases, both Redis instances, Kafka, the ledger API and worker, and dispatch. Only ports 8080, 8081 and 4000 are published; reach the databases with `docker compose exec <service> psql …`. `docker compose down` stops it and keeps the volumes.
+
 Each service has its own `AGENTS.md` (imported by its `CLAUDE.md`). Before planning, implementing or reviewing work in a service, read that file.
 
 ## Hard rules

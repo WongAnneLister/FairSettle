@@ -10,11 +10,11 @@ WORKDIR /build
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
-RUN chmod +x mvnw && ./mvnw -B -q dependency:go-offline
+RUN --mount=type=cache,target=/root/.m2 chmod +x mvnw && ./mvnw -B -q dependency:go-offline
 
 COPY src src
 # 跳过测试：镜像构建不承担验证职责，测试在 CI 中独立执行并留存证据
-RUN ./mvnw -B -q clean package -DskipTests
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q clean package -DskipTests
 
 # ---------- runtime ----------
 FROM eclipse-temurin:21-jre-alpine AS runtime

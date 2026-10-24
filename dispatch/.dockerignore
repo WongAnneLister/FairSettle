@@ -1,0 +1,12 @@
+node_modules
+dist
+pg_data
+frontend
+docs
+test
+coverage
+.git
+.github
+.husky
+.env*
+*.log

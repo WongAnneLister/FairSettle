@@ -1,0 +1,178 @@
+# Local FairSettle stack: isolated ledger and dispatch stores, Kafka, and both APIs.
+# Only ports 8080, 8081, and 4000 are published.
+# All values are literal: interpolation is deliberately avoided so root environment
+# files cannot inject sandbox credentials or local port overrides into this stack.
+# Start: docker compose up -d --wait
+# Stop and keep volumes: docker compose down
+
+name: fairsettle
+
+services:
+  ledger-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: payments_ledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - fairsettle-ledger-postgres:/var/lib/postgresql/data
+      - ./ledger/scripts/db/init-roles.sql:/docker-entrypoint-initdb.d/10-init-roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d payments_ledger"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  ledger-redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  kafka:
+    image: apache/kafka:3.9.0
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      CLUSTER_ID: pl-local-cluster-00001
+    volumes:
+      - fairsettle-kafka:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+
+  ledger-api:
+    build: ./ledger
+    image: fairsettle-ledger:local
+    command: ["--spring.profiles.active=api"]
+    environment:
+      DB_HOST: ledger-postgres
+      DB_PORT: 5432
+      DB_NAME: payments_ledger
+      DB_APP_USER: payments_app
+      DB_APP_PASSWORD: payments_app_pw
+      DB_MIGRATION_USER: payments_migrator
+      DB_MIGRATION_PASSWORD: payments_migrator_pw
+      REDIS_HOST: ledger-redis
+      REDIS_PORT: 6379
+      API_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      ledger-postgres:
+        condition: service_healthy
+      ledger-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  ledger-worker:
+    build: ./ledger
+    image: fairsettle-ledger:local
+    command: ["--spring.profiles.active=worker"]
+    environment:
+      DB_HOST: ledger-postgres
+      DB_PORT: 5432
+      DB_NAME: payments_ledger
+      DB_APP_USER: payments_app
+      DB_APP_PASSWORD: payments_app_pw
+      DB_MIGRATION_USER: payments_migrator
+      DB_MIGRATION_PASSWORD: payments_migrator_pw
+      REDIS_HOST: ledger-redis
+      REDIS_PORT: 6379
+      WORKER_PORT: 8081
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8081:8081"
+    depends_on:
+      ledger-api:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8081/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  dispatch-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: adminer
+      POSTGRES_PASSWORD: secret123
+      POSTGRES_DB: food_delivery
+    volumes:
+      - fairsettle-dispatch-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adminer -d food_delivery"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  dispatch-redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  dispatch:
+    build: ./dispatch
+    image: fairsettle-dispatch:local
+    environment:
+      NODE_ENV: production
+      DB_HOST: dispatch-postgres
+      DB_PORT: 5432
+      DB_USER: adminer
+      DB_PASSWORD: secret123
+      DB_NAME: food_delivery
+      SECRET_KEY: local-compose-only
+      REDIS_HOST: dispatch-redis
+      REDIS_PORT: 6379
+      FULFILLMENT_SIGNING_SECRET: mock-secret
+    ports:
+      - "4000:4000"
+    depends_on:
+      dispatch-postgres:
+        condition: service_healthy
+      dispatch-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/graphql?query=%7B__typename%7D').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+volumes:
+  fairsettle-ledger-postgres:
+    name: fairsettle-ledger-postgres
+  fairsettle-dispatch-postgres:
+    name: fairsettle-dispatch-postgres
+  fairsettle-kafka:
+    name: fairsettle-kafka
