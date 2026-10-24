@@ -19,10 +19,10 @@ import {User} from 'src/users/entities/user.entity';
  * schema — silently, and only in whichever direction was forgotten.
  */
 export const entities = [
-  LedgerNotification,
   Category,
   Dish,
   EmailVerification,
+  LedgerNotification,
   Order,
   OrderItem,
   OutboxEvent,
