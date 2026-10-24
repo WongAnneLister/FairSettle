@@ -97,3 +97,49 @@ New features cannot be added to `docs/features.json` with the current tooling. `
 - `docs/plans/F07.md`: the capture resend design this mirrors.
 - `docs/plans/F12.md` and the F12 entry in `docs/progress.md`.
 - `docs/adr/paypal-samples/09-refund-same-request-id.json`: same request id within seconds returns the same refund.
+
+## KI-2 · Payment notifications that arrive while dispatch checkout is disabled are lost
+
+Status: **deferred** (2026-10-24, after F16). Area: `dispatch`, `POST /webhooks/ledger`.
+
+### What happens
+
+When `LEDGER_CHECKOUT` is not `enabled`, the receiver answers `404` before it reads the body (F16 decision 4, `contracts/ledger-merchant-notifications.md`). The ledger treats every status other than 2xx, 408, 429 and 5xx as final and moves the notification to `DEAD` (`ledger/docs/contracts/merchant-notifications.md`). Nothing retries it.
+
+An order created while checkout was enabled is `AwaitingPayment`. If checkout is then disabled, for example by a config rollback, the ledger's `payment.succeeded` or `payment.canceled` for that order is dropped. Turning checkout back on does not bring the notification back, and the order stays `AwaitingPayment`.
+
+### Observed
+
+Found in the F16 review (open design issue 1). Not seen in a run: every e2e and demo run keeps checkout enabled for the whole run.
+
+### Impact
+
+- **Money is safe.** The ledger has the payment; only dispatch's view of it is stale.
+- **The order shows the wrong payment status** until someone fixes it, and dispatch has no way to ask the ledger for it again.
+- **A dead notification is visible only on the ledger side.**
+
+### Likelihood
+
+Low. It needs checkout to be turned off while orders are still waiting for payment. The F24 demo keeps it on.
+
+### Workarounds without code
+
+- Do not disable checkout while any order is `AwaitingPayment`.
+- If it happened: replay the dead notification from the ledger after checkout is enabled again, if the ledger's ops tools allow it; otherwise correct the order by hand.
+
+### Proposed fix
+
+Answer `503` instead of `404` while checkout is disabled, so the ledger keeps retrying with backoff until checkout is back or the ledger gives up. The decision to take first: whether a deployment that never enables checkout should still be a valid notification target. If not, `503` only makes the ledger retry for nothing, and the target should not be configured at all.
+
+A smaller change in the same place: the receiver could keep accepting and recording notifications while checkout is disabled, and only skip applying them. That changes F16 decision 4 and needs its own tests.
+
+### Revisit when
+
+- F24 configures the ledger to deliver notifications to dispatch.
+- Checkout becomes something that is switched off in a running deployment.
+
+### Related
+
+- `docs/plans/F16.md`: decision 4.
+- The F16 entry in `docs/progress.md`: the review's open design issues.
+- `contracts/ledger-merchant-notifications.md`: the response table.

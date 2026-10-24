@@ -1,0 +1,30 @@
+feature: F16
+kind: command
+command: cd dispatch && npm run test:e2e -- --testPathPattern=payment-notification
+commit: ffcc084fbb678503348832e39ec01ab172e7a246
+started_at: 2026-10-24T22:16:59+08:00
+exit_code: 0
+----
+
+> food-delivery-backend@0.0.1 test:e2e
+> cross-env NODE_ENV=test jest --config ./test/jest-e2e.json --runInBand --testPathPattern=payment-notification
+
+PASS test/payment-notification.e2e-spec.ts (5.14 s)
+  payment-notification (e2e)
+    ✓ orders start awaiting payment when checkout is enabled (40 ms)
+    ✓ a signed payment.succeeded marks the order paid (44 ms)
+    ✓ a redelivered event is a duplicate (35 ms)
+    ✓ an event id reused with different content is a conflict (36 ms)
+    ✓ payment.canceled marks an awaiting order failed (30 ms)
+    ✓ out-of-order events are ignored (67 ms)
+    ✓ bad signatures store nothing (32 ms)
+    ✓ headers must match the body (29 ms)
+    ✓ inconsistent events are recorded but not applied (89 ms)
+    ✓ concurrent duplicates apply once (84 ms)
+    ✓ raw bytes with extra whitespace verify (33 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        5.438 s
+Ran all test suites matching /payment-notification/i.
