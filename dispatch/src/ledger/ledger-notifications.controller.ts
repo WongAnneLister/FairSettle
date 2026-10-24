@@ -73,9 +73,11 @@ export class LedgerNotificationsController {
           .status(200)
           .json({received: true, duplicate: false, applied: result.applied, reason: result.reason});
       }
-    } catch {
+    } catch (error) {
+      // Keep the cause, as failure() does: the stack carries the driver error, never the body.
       this.logger.error(
         'event ' + n.eventId + ' (' + n.eventType + ') for ' + n.orderKey + ': persistence failed',
+        error instanceof Error ? error.stack : String(error),
       );
       res.status(500).json({error: 'notification persistence failed'});
     }
