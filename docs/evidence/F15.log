@@ -1,0 +1,31 @@
+feature: F15
+kind: command
+command: cd dispatch && npm run test:e2e -- --testPathPattern=checkout
+commit: 4ad66e07ef466b581be3dc9776d12756b7b6fb53
+started_at: 2026-10-24T21:14:25+08:00
+exit_code: 0
+----
+
+> food-delivery-backend@0.0.1 test:e2e
+> cross-env NODE_ENV=test jest --config ./test/jest-e2e.json --runInBand --testPathPattern=checkout
+
+[31m[Nest] 15467  - [39m10/24/2026, 9:14:31 PM [31m  ERROR[39m [38;5;3m[OutboxService] [39m[31morder 7 quarantined: ledger 422 AMOUNT_MISMATCH[39m
+[31m[Nest] 15467  - [39m10/24/2026, 9:14:31 PM [31m  ERROR[39m [38;5;3m[OutboxService] [39m[31morder 9 quarantined: ledger payment id mismatch[39m
+PASS test/checkout.e2e-spec.ts
+  checkout (e2e)
+    ✓ createOrder writes an order.payment event with the order (48 ms)
+    ✓ createOrder refuses totals the ledger cannot price (20 ms)
+    ✓ drain creates one ledger payment and stores it (65 ms)
+    ✓ a timeout after the ledger accepted is retried with the same key (357 ms)
+    ✓ a redelivered sent event creates no second payment (40 ms)
+    ✓ two concurrent drains send one request (30 ms)
+    ✓ transient ledger errors back off and retry (55 ms)
+    ✓ a deterministic rejection dead-letters at once (32 ms)
+    ✓ an unknown result keeps the payment id and resolves on replay (41 ms)
+    ✓ a different payment id is never overwritten (27 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+Snapshots:   0 total
+Time:        4.949 s, estimated 6 s
+Ran all test suites matching /checkout/i.
