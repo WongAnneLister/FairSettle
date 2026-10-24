@@ -126,9 +126,21 @@ describe('ledger checkout', () => {
       LEDGER_CHECKOUT_SUCCESS_URL: urls.successUrl,
       LEDGER_CHECKOUT_CANCEL_URL: urls.cancelUrl,
     };
+    for (const key of [
+      'LEDGER_BASE_URL',
+      'LEDGER_APP_TOKEN',
+      'LEDGER_CHECKOUT_SUCCESS_URL',
+      'LEDGER_CHECKOUT_CANCEL_URL',
+    ] as const) {
+      const {[key]: _omitted, ...missing} = complete;
+      expect(schema.validate(missing).error).toBeDefined();
+    }
     expect(
       schema.validate({...complete, LEDGER_CHECKOUT_SUCCESS_URL: 'http://example.com/return'})
         .error,
+    ).toBeDefined();
+    expect(
+      schema.validate({...complete, LEDGER_CHECKOUT_CANCEL_URL: 'http://example.com/cancel'}).error,
     ).toBeDefined();
     expect(schema.validate(complete).error).toBeUndefined();
   });
