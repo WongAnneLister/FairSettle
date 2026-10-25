@@ -529,6 +529,75 @@ class IdentityIT {
         assertThat(fixtureTableCounts()).isEqualTo(counts);
     }
 
+    @Test
+    void existingFixturesGainProposalReviewOnce() {
+        write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        var initializer = initializer(fixtureEnvironment(false));
+        initializer.afterPropertiesSet();
+        write(() -> {
+            jdbc.update("""
+                    UPDATE platform.application_credential
+                    SET granted_scopes=ARRAY['payments:read','payments:write','refunds:read','refunds:write']::text[]
+                    WHERE id=?""", LocalFixtureInitializer.APP_CREDENTIAL);
+            jdbc.update(
+                    "DELETE FROM platform.ops_credential WHERE id=?", LocalFixtureInitializer.OPS_REVIEWER_CREDENTIAL);
+            jdbc.update("DELETE FROM platform.ops_identity WHERE id=?", fixtureId(52));
+        });
+
+        initializer.afterPropertiesSet();
+        String scopes = jdbc.queryForObject(
+                "SELECT granted_scopes::text FROM platform.application_credential WHERE id=?",
+                String.class,
+                LocalFixtureInitializer.APP_CREDENTIAL);
+        assertThat(scopes)
+                .isEqualTo(
+                        "{payments:read,payments:write,refunds:read,refunds:write,refund-proposals:read,refund-proposals:write}");
+        var identity = get("/v1/identity", "Bearer app_" + LocalFixtureInitializer.APP_CREDENTIAL + "." + SECRET);
+        assertThat(identity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(identity.getBody())
+                .contains(
+                        "payments:read",
+                        "payments:write",
+                        "refunds:read",
+                        "refunds:write",
+                        "refund-proposals:read",
+                        "refund-proposals:write");
+        assertThat(jdbc.queryForMap("SELECT subject,role FROM platform.ops_identity WHERE id=?", fixtureId(52)))
+                .containsEntry("subject", "local-reviewer")
+                .containsEntry("role", "OPS_REVIEWER");
+        var reviewer = get(
+                "/ops/identity",
+                "OpsBearer ops_" + LocalFixtureInitializer.OPS_REVIEWER_CREDENTIAL + "." + "b".repeat(43));
+        assertThat(reviewer.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(reviewer.getBody()).contains("OPS_REVIEWER", fixtureId(52).toString());
+        var counts = fixtureTableCounts();
+        String credential = jdbc.queryForObject(
+                "SELECT md5(to_jsonb(c)::text) FROM platform.ops_credential c WHERE id=?",
+                String.class,
+                LocalFixtureInitializer.OPS_REVIEWER_CREDENTIAL);
+
+        initializer.afterPropertiesSet();
+        assertThat(jdbc.queryForObject(
+                        "SELECT granted_scopes::text FROM platform.application_credential WHERE id=?",
+                        String.class,
+                        LocalFixtureInitializer.APP_CREDENTIAL))
+                .isEqualTo(scopes);
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM platform.ops_identity WHERE id=?", Long.class, fixtureId(52)))
+                .isEqualTo(1L);
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM platform.ops_credential WHERE id=?",
+                        Long.class,
+                        LocalFixtureInitializer.OPS_REVIEWER_CREDENTIAL))
+                .isEqualTo(1L);
+        assertThat(jdbc.queryForObject(
+                        "SELECT md5(to_jsonb(c)::text) FROM platform.ops_credential c WHERE id=?",
+                        String.class,
+                        LocalFixtureInitializer.OPS_REVIEWER_CREDENTIAL))
+                .isEqualTo(credential);
+        assertThat(fixtureTableCounts()).isEqualTo(counts);
+    }
+
     private java.util.Map<String, Long> fixtureTableCounts() {
         var counts = new java.util.LinkedHashMap<String, Long>();
         for (String table : jdbc.queryForList(

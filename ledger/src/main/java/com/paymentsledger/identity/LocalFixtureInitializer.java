@@ -101,6 +101,9 @@ public class LocalFixtureInitializer implements InitializingBean {
                     throw new IllegalStateException("Existing fixture provider differs; recreate the local database");
                 verifyExisting(jdbc, "application_credential", app);
                 verifyExisting(jdbc, "ops_credential", ops);
+                var start = Timestamp.from(clock.instant());
+                var end = Timestamp.from(clock.instant().plus(365, ChronoUnit.DAYS));
+                provisionProposalReview(jdbc, ops, start, end);
                 provisionDispatchOrderPrice(jdbc);
                 return;
             }
@@ -139,13 +142,7 @@ public class LocalFixtureInitializer implements InitializingBean {
                     INSERT INTO platform.ops_credential(id,ops_identity_id,organization_id,environment_id,key_id,
                         secret_hash,not_before,expires_at)
                     VALUES (?,?,?,?,'local',?,?,?)""", OPS_CREDENTIAL, id(51), id(1), id(11), tokens.hash(ops), start, end);
-            jdbc.update("""
-                    INSERT INTO platform.ops_identity(id,organization_id,subject,role)
-                    VALUES (?,?,'local-reviewer','OPS_REVIEWER')""", id(52), id(1));
-            jdbc.update("""
-                    INSERT INTO platform.ops_credential(id,ops_identity_id,organization_id,environment_id,key_id,
-                        secret_hash,not_before,expires_at)
-                    VALUES (?,?,?,?,'local',?,?,?)""", OPS_REVIEWER_CREDENTIAL, id(52), id(1), id(11), tokens.hash(ops), start, end);
+            provisionProposalReview(jdbc, ops, start, end);
             jdbc.update("""
                     INSERT INTO platform.share_policy_fixture(id,organization_id,environment_id,product_ref,
                         policy_version,partner_ref,share_basis_points)
@@ -173,6 +170,28 @@ public class LocalFixtureInitializer implements InitializingBean {
                             """, id(1), id(11), purpose);
             }
         });
+    }
+
+    private void provisionProposalReview(
+            JdbcTemplate jdbc, CredentialTokens.Parsed ops, Timestamp start, Timestamp end) {
+        jdbc.update("""
+                UPDATE platform.application_credential
+                SET granted_scopes=granted_scopes || ARRAY['refund-proposals:read','refund-proposals:write']::text[]
+                WHERE id=? AND NOT granted_scopes @> ARRAY['refund-proposals:read','refund-proposals:write']::text[]
+                """, APP_CREDENTIAL);
+        jdbc.update("""
+                INSERT INTO platform.ops_identity(id,organization_id,subject,role)
+                VALUES (?,?,'local-reviewer','OPS_REVIEWER')
+                ON CONFLICT (id) DO NOTHING""", id(52), id(1));
+        int inserted = jdbc.update("""
+                INSERT INTO platform.ops_credential(id,ops_identity_id,organization_id,environment_id,key_id,
+                    secret_hash,not_before,expires_at)
+                VALUES (?,?,?,?,'local',?,?,?)
+                ON CONFLICT (id) DO NOTHING""", OPS_REVIEWER_CREDENTIAL, id(52), id(1), id(11), tokens.hash(ops), start, end);
+        if (inserted == 0) {
+            var reviewer = tokens.parse("ops_" + OPS_REVIEWER_CREDENTIAL + "." + ops.secret(), "ops_");
+            verifyExisting(jdbc, "ops_credential", reviewer);
+        }
     }
 
     private void provisionDispatchOrderPrice(JdbcTemplate jdbc) {
