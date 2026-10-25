@@ -451,7 +451,7 @@ class LedgerDatabaseIT {
                         .load()
                         .migrate()
                         .migrationsExecuted)
-                .isEqualTo(17); // V3 ledger through V19 refund liability
+                .isEqualTo(18); // V3 ledger through V20 refund proposals
         try (var c = DriverManager.getConnection(url, PG.getUsername(), PG.getPassword());
                 var s = c.createStatement();
                 var r = s.executeQuery("SELECT code FROM platform.organization")) {

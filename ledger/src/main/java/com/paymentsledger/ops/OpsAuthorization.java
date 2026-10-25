@@ -24,7 +24,7 @@ public final class OpsAuthorization {
 
     public static void write(OpsContext c, String action) {
         read(c, false);
-        boolean approval = action.equals("APPROVE_ADJUSTMENT");
+        boolean approval = action.equals("APPROVE_ADJUSTMENT") || action.equals("DECIDE_REFUND_PROPOSAL");
         if (!(approval
                 ? c.role().equals("OPS_REVIEWER")
                 : Set.of("OPS_OPERATOR", "OPS_ADMIN").contains(c.role())))

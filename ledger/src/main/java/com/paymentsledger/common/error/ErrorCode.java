@@ -30,6 +30,8 @@ public enum ErrorCode {
     REFUND_BLOCKED(HttpStatus.CONFLICT, false),
     EVIDENCE_CONFLICT(HttpStatus.CONFLICT, false),
     IMPORT_DUPLICATE_CONFLICT(HttpStatus.CONFLICT, false),
+    PROPOSAL_EXISTS(HttpStatus.CONFLICT, false),
+    PROPOSAL_NOT_PENDING(HttpStatus.CONFLICT, false),
 
     AMOUNT_MISMATCH(HttpStatus.UNPROCESSABLE_ENTITY, false),
     CURRENCY_NOT_ENABLED(HttpStatus.UNPROCESSABLE_ENTITY, false),

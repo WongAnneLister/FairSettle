@@ -65,7 +65,7 @@ public class RefundExecutor {
         this.provider = provider;
     }
 
-    String providerName() {
+    public String providerName() {
         return port == null ? null : provider;
     }
 

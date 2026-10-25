@@ -63,7 +63,7 @@ class RefundSchemaIT {
                 .dataSource(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword())
                 .schemas("platform")
                 .load();
-        assertThat(migration.migrate().migrationsExecuted).isEqualTo(11); // V9 through V19 refund liability
+        assertThat(migration.migrate().migrationsExecuted).isEqualTo(12); // V9 through V20 refund proposals
         assertThat(migration.migrate().migrationsExecuted).isZero();
         var jdbc = new JdbcTemplate(new DriverManagerDataSource(DB.getJdbcUrl(), "payments_app", "pr02_test_only"));
         assertThat(jdbc.queryForObject("SELECT payload FROM platform.outbox_event LIMIT 1", String.class))

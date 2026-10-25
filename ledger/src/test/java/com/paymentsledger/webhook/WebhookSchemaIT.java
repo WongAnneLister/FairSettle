@@ -55,7 +55,7 @@ class WebhookSchemaIT {
                 .dataSource(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword())
                 .schemas("platform")
                 .load();
-        assertThat(migration.migrate().migrationsExecuted).isEqualTo(14); // V6 through V19 refund liability
+        assertThat(migration.migrate().migrationsExecuted).isEqualTo(15); // V6 through V20 refund proposals
         assertThat(migration.migrate().migrationsExecuted).isZero();
         var jdbc = new JdbcTemplate(new DriverManagerDataSource(DB.getJdbcUrl(), "payments_app", "pr02_test_only"));
         assertThat(jdbc.queryForMap("""

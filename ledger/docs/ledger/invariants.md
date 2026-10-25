@@ -97,6 +97,7 @@ UNIQUE (organization_id, environment_id, event_key)
 | rank | 对象 | 说明 |
 |---|---|---|
 | 10 | `business_order` | |
+| 15 | `refund_proposal` | F18; locked first by a review decision, before the refund reservation's locks |
 | 20 | `payment`（支付控制行） | 退款/分润/争议的共同父行 |
 | 30 | `refund_control` | |
 | 40 | `dispute`（争议控制行） | |

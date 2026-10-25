@@ -1519,6 +1519,8 @@ components:
         | `REFUND_BLOCKED` | 409 | false | 争议阻断或外部冲突 |
         | `EVIDENCE_CONFLICT` | 409 | false | 证据冲突，需人工调查 |
         | `IMPORT_DUPLICATE_CONFLICT` | 409 | false | 同摘要文件内容不一致 |
+        | `PROPOSAL_EXISTS` | 409 | false | a proposal already exists for this complaint |
+        | `PROPOSAL_NOT_PENDING` | 409 | false | the proposal has already been decided |
         | `AMOUNT_MISMATCH` | 422 | false | 与受控价格不一致 |
         | `CURRENCY_NOT_ENABLED` | 422 | false | 币种未在该范围启用 |
         | `REFUND_LIMIT_EXCEEDED` | 422 | false | R+H 将超过 C |
@@ -1543,6 +1545,8 @@ components:
         - REFUND_BLOCKED
         - EVIDENCE_CONFLICT
         - IMPORT_DUPLICATE_CONFLICT
+        - PROPOSAL_EXISTS
+        - PROPOSAL_NOT_PENDING
         - AMOUNT_MISMATCH
         - CURRENCY_NOT_ENABLED
         - REFUND_LIMIT_EXCEEDED

@@ -22,6 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @ConditionalOnProperty(name = "platform.fixtures.enabled", havingValue = "true")
 public class LocalFixtureInitializer implements InitializingBean {
     public static final UUID APP_CREDENTIAL = id(41), OPS_CREDENTIAL = id(61), PRICE = id(81);
+    public static final UUID OPS_REVIEWER_CREDENTIAL = id(62);
     public static final UUID DISPATCH_ORDER_PRICE = id(82);
     private static final List<String> PROVIDER_ACCOUNTS = List.of("PSP_FUNDS", "PSP_FEE_EXPENSE", "SUSPENSE");
     private static final List<String> INTERNAL_ACCOUNTS =
@@ -126,7 +127,7 @@ public class LocalFixtureInitializer implements InitializingBean {
             var end = Timestamp.from(clock.instant().plus(365, ChronoUnit.DAYS));
             jdbc.update("""
                     INSERT INTO platform.application_credential(id,key_id,organization_id,environment_id,application_id,provider_account_id,secret_hash,not_before,expires_at,granted_scopes)
-                    VALUES (?,'local',?,?,?,?,?,?,?,ARRAY['payments:read','payments:write','refunds:read','refunds:write'])
+                    VALUES (?,'local',?,?,?,?,?,?,?,ARRAY['payments:read','payments:write','refunds:read','refunds:write','refund-proposals:read','refund-proposals:write'])
                     """, APP_CREDENTIAL, id(1), id(11), id(31), id(21), tokens.hash(app), start, end);
             jdbc.update("""
                     INSERT INTO platform.credential_currency(credential_id,organization_id,environment_id,currency)
@@ -138,6 +139,13 @@ public class LocalFixtureInitializer implements InitializingBean {
                     INSERT INTO platform.ops_credential(id,ops_identity_id,organization_id,environment_id,key_id,
                         secret_hash,not_before,expires_at)
                     VALUES (?,?,?,?,'local',?,?,?)""", OPS_CREDENTIAL, id(51), id(1), id(11), tokens.hash(ops), start, end);
+            jdbc.update("""
+                    INSERT INTO platform.ops_identity(id,organization_id,subject,role)
+                    VALUES (?,?,'local-reviewer','OPS_REVIEWER')""", id(52), id(1));
+            jdbc.update("""
+                    INSERT INTO platform.ops_credential(id,ops_identity_id,organization_id,environment_id,key_id,
+                        secret_hash,not_before,expires_at)
+                    VALUES (?,?,?,?,'local',?,?,?)""", OPS_REVIEWER_CREDENTIAL, id(52), id(1), id(11), tokens.hash(ops), start, end);
             jdbc.update("""
                     INSERT INTO platform.share_policy_fixture(id,organization_id,environment_id,product_ref,
                         policy_version,partner_ref,share_basis_points)

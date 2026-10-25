@@ -108,7 +108,7 @@ class FlywayBaselineIT {
                         .isEqualTo("platform");
             }
         }
-        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(18); // V2 through V19 refund liability
+        assertThat(flyway().migrate().migrationsExecuted).isEqualTo(19); // V2 through V20 refund proposals
         assertThat(flyway().migrate().migrationsExecuted).isZero();
     }
 }

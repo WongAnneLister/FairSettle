@@ -42,7 +42,7 @@ class RevenueShareSchemaIT {
                 .dataSource(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword())
                 .schemas("platform")
                 .load();
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(10); // V10 through V19 refund liability
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(11); // V10 through V20 refund proposals
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         var jdbc = new JdbcTemplate(new DriverManagerDataSource(DB.getJdbcUrl(), "payments_app", "pr02_test_only"));
         assertThat(jdbc.queryForObject("SELECT share_policy_snapshot::text FROM platform.business_order", String.class))
