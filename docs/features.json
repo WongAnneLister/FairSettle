@@ -418,8 +418,13 @@
       "depends_on": [
         "F17"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "11d3710c6a4ece45e2bda25a962d92b20f151f9f",
+        "verified_at": "2026-10-25T21:13:51+08:00",
+        "log": "docs/evidence/F18.log",
+        "log_sha256": "b0c6f7c14e4443d7fbf031bdd592143f8c9b87d74a85d0f3f6134fb720b45a44"
+      },
       "started_at": "2026-10-25T18:07:11+08:00"
     },
     {

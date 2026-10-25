@@ -1,0 +1,239 @@
+feature: F18
+kind: command
+command: cd ledger && ./mvnw -q -Dtest='RefundProposalApiTest' test
+commit: 11d3710c6a4ece45e2bda25a962d92b20f151f9f
+started_at: 2026-10-25T21:13:21+08:00
+exit_code: 0
+----
+21:13:25.897 [main] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+21:13:25.899 [main] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+21:13:25.918 [main] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 1.21.4
+21:13:26.271 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Found Docker environment with Docker accessed via Unix socket (/Users/anne_lister/.docker/run/docker.sock)
+21:13:26.271 [main] INFO org.testcontainers.DockerClientFactory -- Docker host IP address is localhost
+21:13:26.296 [main] INFO org.testcontainers.DockerClientFactory -- Connected to docker: 
+  Server Version: 27.4.0
+  API Version: 1.47
+  Operating System: Docker Desktop
+  Total Memory: 7837 MB
+  Labels: 
+    com.docker.desktop.address=unix:///Users/anne_lister/Library/Containers/com.docker.docker/Data/docker-cli.sock
+21:13:26.337 [main] INFO tc.testcontainers/ryuk:0.12.0 -- Creating container for image: testcontainers/ryuk:0.12.0
+21:13:26.497 [main] INFO org.testcontainers.utility.RegistryAuthLocator -- Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+21:13:26.627 [main] INFO tc.testcontainers/ryuk:0.12.0 -- Container testcontainers/ryuk:0.12.0 is starting: 4f7f3d25d216a35fa5463b16cb5bdfd53f8c8dde02cf2190fe4943df1f714c5b
+21:13:27.356 [main] INFO tc.testcontainers/ryuk:0.12.0 -- Container testcontainers/ryuk:0.12.0 started in PT1.019149S
+21:13:27.364 [main] INFO org.testcontainers.utility.RyukResourceReaper -- Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+21:13:27.364 [main] INFO org.testcontainers.DockerClientFactory -- Checking the system...
+21:13:27.364 [main] INFO org.testcontainers.DockerClientFactory -- ✔︎ Docker server version should be at least 1.6.0
+21:13:27.365 [main] INFO tc.postgres:16 -- Creating container for image: postgres:16
+21:13:27.451 [main] INFO tc.postgres:16 -- Container postgres:16 is starting: 6666c97e9ffcb3f1cd7259c03da61445d4d532eb757cacd9f7ea74591381ea43
+21:13:29.393 [main] INFO tc.postgres:16 -- Container postgres:16 started in PT2.028434S
+21:13:29.394 [main] INFO tc.postgres:16 -- Container is started (JDBC URL: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF)
+21:13:29.401 [main] INFO org.testcontainers.ext.ScriptUtils -- Executing database script from db/pr02-runtime-role.sql
+21:13:29.545 [main] INFO org.testcontainers.ext.ScriptUtils -- Executed database script from db/pr02-runtime-role.sql in 144 ms.
+21:13:29.795 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:29.874 [main] INFO org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory -- Schema history table "platform"."flyway_schema_history" does not exist yet
+21:13:29.881 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.039s)
+21:13:29.917 [main] INFO org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory -- Creating Schema History table "platform"."flyway_schema_history" ...
+21:13:29.979 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": << Empty Schema >>
+21:13:29.991 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "1 - baseline"
+21:13:29.995 [main] WARN org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor -- DB: schema "platform" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+21:13:30.038 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "2 - identity and scoped configuration"
+21:13:30.118 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "3 - immutable ledger"
+21:13:30.190 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "4 - business payments"
+21:13:30.255 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "5 - operation recovery"
+21:13:30.294 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "6 - webhook inbox"
+21:13:30.342 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "7 - payment notifications"
+21:13:30.386 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "8 - financial ingestion"
+21:13:30.439 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "9 - refund lifecycle"
+21:13:30.498 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "10 - revenue share"
+21:13:30.551 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "11 - dispute lifecycle"
+21:13:30.601 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "12 - payout bank evidence"
+21:13:30.677 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "13 - payout query evidence"
+21:13:30.712 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "14 - reconciliation evidence"
+21:13:30.763 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "15 - reconciliation source recovery"
+21:13:30.830 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "16 - ops commands approval audit"
+21:13:30.882 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "17 - paypal provider account"
+21:13:30.898 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "18 - paypal capture operation"
+21:13:30.917 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "19 - refund liability"
+21:13:30.994 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Migrating schema "platform" to version "20 - refund proposals"
+21:13:31.031 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Successfully applied 20 migrations to schema "platform", now at version v20 (execution time 00:00.672s)
+21:13:31.528 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-1 - Starting...
+21:13:31.544 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6baf25d7
+21:13:31.545 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-1 - Start completed.
+21:13:32.257 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-1 - Shutdown initiated...
+21:13:32.258 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-1 - Shutdown completed.
+21:13:32.294 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:32.316 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.010s)
+21:13:32.331 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:32.332 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:32.659 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-2 - Starting...
+21:13:32.668 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-2 - Added connection org.postgresql.jdbc.PgConnection@4776e209
+21:13:32.668 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-2 - Start completed.
+21:13:33.296 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-2 - Shutdown initiated...
+21:13:33.297 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-2 - Shutdown completed.
+21:13:33.337 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:33.355 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.008s)
+21:13:33.372 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:33.373 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:33.668 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-3 - Starting...
+21:13:33.677 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-3 - Added connection org.postgresql.jdbc.PgConnection@8840c98
+21:13:33.678 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-3 - Start completed.
+21:13:34.197 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-3 - Shutdown initiated...
+21:13:34.212 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-3 - Shutdown completed.
+21:13:34.230 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:34.252 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.009s)
+21:13:34.271 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:34.273 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:34.676 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:34.702 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.009s)
+21:13:34.723 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:34.725 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:35.047 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-4 - Starting...
+21:13:35.059 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-4 - Added connection org.postgresql.jdbc.PgConnection@212fafd1
+21:13:35.059 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-4 - Start completed.
+21:13:35.531 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-4 - Shutdown initiated...
+21:13:35.538 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-4 - Shutdown completed.
+21:13:35.556 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:35.579 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.011s)
+21:13:35.604 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:35.605 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:36.002 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-5 - Starting...
+21:13:36.010 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-5 - Added connection org.postgresql.jdbc.PgConnection@61d60e38
+21:13:36.015 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-5 - Start completed.
+21:13:36.544 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-5 - Shutdown initiated...
+21:13:36.594 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-5 - Shutdown completed.
+21:13:36.613 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:36.637 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.008s)
+21:13:36.653 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:36.654 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:37.006 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-6 - Starting...
+21:13:37.015 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-6 - Added connection org.postgresql.jdbc.PgConnection@4d81e83a
+21:13:37.015 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-6 - Start completed.
+21:13:37.532 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-6 - Shutdown initiated...
+21:13:37.551 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-6 - Shutdown completed.
+21:13:37.571 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:37.594 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.012s)
+21:13:37.617 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:37.618 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:37.938 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-7 - Starting...
+21:13:37.945 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-7 - Added connection org.postgresql.jdbc.PgConnection@111a7973
+21:13:37.945 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-7 - Start completed.
+21:13:38.501 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-7 - Shutdown initiated...
+21:13:38.504 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-7 - Shutdown completed.
+21:13:38.519 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:38.535 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.006s)
+21:13:38.548 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:38.549 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:38.816 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-8 - Starting...
+21:13:38.825 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-8 - Added connection org.postgresql.jdbc.PgConnection@5f6494c0
+21:13:38.825 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-8 - Start completed.
+21:13:39.254 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-8 - Shutdown initiated...
+21:13:39.271 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-8 - Shutdown completed.
+21:13:39.286 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:39.302 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.007s)
+21:13:39.316 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:39.317 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:39.575 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-9 - Starting...
+21:13:39.583 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-9 - Added connection org.postgresql.jdbc.PgConnection@d9f5fce
+21:13:39.583 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-9 - Start completed.
+21:13:40.080 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-9 - Shutdown initiated...
+21:13:40.088 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-9 - Shutdown completed.
+21:13:40.112 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:40.135 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.011s)
+21:13:40.155 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:40.156 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:40.476 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-10 - Starting...
+21:13:40.484 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-10 - Added connection org.postgresql.jdbc.PgConnection@4d0e1a9a
+21:13:40.484 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-10 - Start completed.
+21:13:40.924 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-10 - Shutdown initiated...
+21:13:40.946 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-10 - Shutdown completed.
+21:13:40.959 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:40.975 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.006s)
+21:13:40.993 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:40.994 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:41.257 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-11 - Starting...
+21:13:41.263 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-11 - Added connection org.postgresql.jdbc.PgConnection@21527b8
+21:13:41.264 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-11 - Start completed.
+21:13:41.686 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-11 - Shutdown initiated...
+21:13:41.690 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-11 - Shutdown completed.
+21:13:41.703 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:41.718 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.006s)
+21:13:41.733 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:41.733 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:42.044 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-12 - Starting...
+21:13:42.053 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-12 - Added connection org.postgresql.jdbc.PgConnection@a826ff8
+21:13:42.053 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-12 - Start completed.
+21:13:42.543 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-12 - Shutdown initiated...
+21:13:42.572 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-12 - Shutdown completed.
+21:13:42.589 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:42.617 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.007s)
+21:13:42.634 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:42.635 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:42.909 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-13 - Starting...
+21:13:42.917 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-13 - Added connection org.postgresql.jdbc.PgConnection@6fde6f05
+21:13:42.917 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-13 - Start completed.
+21:13:43.426 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-13 - Shutdown initiated...
+21:13:43.437 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-13 - Shutdown completed.
+21:13:43.455 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:43.469 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.006s)
+21:13:43.483 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:43.484 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:43.745 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-14 - Starting...
+21:13:43.753 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-14 - Added connection org.postgresql.jdbc.PgConnection@2086d469
+21:13:43.753 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-14 - Start completed.
+21:13:44.368 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-14 - Shutdown initiated...
+21:13:44.373 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-14 - Shutdown completed.
+21:13:44.394 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:44.408 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.005s)
+21:13:44.425 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:44.426 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:44.686 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-15 - Starting...
+21:13:44.695 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-15 - Added connection org.postgresql.jdbc.PgConnection@66d2885c
+21:13:44.695 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-15 - Start completed.
+21:13:45.340 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-15 - Shutdown initiated...
+21:13:45.341 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-15 - Shutdown completed.
+21:13:45.356 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:45.371 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.007s)
+21:13:45.386 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:45.386 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:46.414 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-16 - Starting...
+21:13:46.430 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-16 - Added connection org.postgresql.jdbc.PgConnection@73b0ed03
+21:13:46.430 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-16 - Start completed.
+21:13:46.996 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-16 - Shutdown initiated...
+21:13:47.003 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-16 - Shutdown completed.
+21:13:47.020 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:47.036 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.006s)
+21:13:47.060 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:47.061 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:47.388 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-17 - Starting...
+21:13:47.399 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-17 - Added connection org.postgresql.jdbc.PgConnection@3982206a
+21:13:47.399 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-17 - Start completed.
+21:13:47.907 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-17 - Shutdown initiated...
+21:13:47.950 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-17 - Shutdown completed.
+21:13:47.982 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:48.003 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.008s)
+21:13:48.022 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:48.023 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:48.329 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-18 - Starting...
+21:13:48.337 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-18 - Added connection org.postgresql.jdbc.PgConnection@709d6de5
+21:13:48.337 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-18 - Start completed.
+21:13:48.842 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-18 - Shutdown initiated...
+21:13:48.871 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-18 - Shutdown completed.
+21:13:48.885 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:48.901 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.006s)
+21:13:48.916 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:48.917 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:49.243 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-19 - Starting...
+21:13:49.252 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-19 - Added connection org.postgresql.jdbc.PgConnection@68821f6
+21:13:49.252 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-19 - Start completed.
+21:13:49.686 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-19 - Shutdown initiated...
+21:13:49.710 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-19 - Shutdown completed.
+21:13:49.725 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:postgresql://localhost:62527/test?loggerLevel=OFF (PostgreSQL 16.14)
+21:13:49.738 [main] INFO org.flywaydb.core.internal.command.DbValidate -- Successfully validated 20 migrations (execution time 00:00.006s)
+21:13:49.757 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Current version of schema "platform": 20
+21:13:49.758 [main] INFO org.flywaydb.core.internal.command.DbMigrate -- Schema "platform" is up to date. No migration necessary.
+21:13:50.028 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-20 - Starting...
+21:13:50.035 [main] INFO com.zaxxer.hikari.pool.HikariPool -- HikariPool-20 - Added connection org.postgresql.jdbc.PgConnection@7b3c0ecb
+21:13:50.035 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-20 - Start completed.
+21:13:50.521 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-20 - Shutdown initiated...
+21:13:50.547 [main] INFO com.zaxxer.hikari.HikariDataSource -- HikariPool-20 - Shutdown completed.

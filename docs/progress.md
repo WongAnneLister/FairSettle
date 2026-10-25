@@ -720,3 +720,52 @@ Pitfalls found
 - Several schema ITs pin the number of migrations; every new migration moves each of them by one.
 - `PayPalTestTransport` replies are strict FIFO, and `PayPalAuthClient` caches its token. Queue `token()` only before the first PayPal call of an adapter in a test.
 - A test that calls a service directly does not see global Jackson settings. Contracted endpoints need one HTTP test each.
+
+## 2026-10-25 · session 15 · F18
+
+### State on 2026-10-25
+
+- passing 18/32
+- recently passing: F14 (4d0ad46), F15 (4ad66e0), F16 (ffcc084), F17 (f871a5d), F18 (11d3710)
+- ready next: F19 Agent clients against fixtures
+
+Done this session
+- commit 777b345: F18 plan. It covers the five remaining F14 contract operations (refundable amount, create and read a proposal, the ops list, the ops decision), V20, and roles and scopes.
+- commit 705b9e5: refund proposals (Codex):
+  - package `proposal`, with SQL in `proposal/repository` and pure rules in `proposal/domain`;
+  - `V20__refund_proposals.sql`: the table, the guard trigger, the deferred check that an approved proposal has its liability allocation, and the two new application scopes;
+  - approval in one transaction: proposal lock, then the existing refund reservation, then `LiabilityService.record`, then the audit row;
+  - the local reviewer fixture;
+  - 18 service tests and 2 HTTP tests;
+  - 8 migration counts each moved by +1.
+- Review (fresh session):
+  - d3e2410: rollback test after the reservation;
+  - 09aab9f: field order and decision replay checked over HTTP;
+  - acc5fd9: Deviations.
+
+  The production code matched the plan; four design issues were listed.
+- Review fixes, decided with the user:
+  - 10c2433 (RF-1): existing local databases gain the proposal scopes and `local-reviewer`;
+  - 3145e52 (RF-2): approved refunds are reserved under a secret per-proposal `refund_key`. `prop_…` encodes the proposal UUID reversibly, so the old key could be pre-empted;
+  - e8c38b0 (RF-3): a decision `Idempotency-Key` belongs to one proposal.
+- Issue 4 recorded as `docs/known-issues.md` KI-3: an approved proposal whose refund fails still reads `APPROVED`, and its allocation stays `PENDING`.
+- commits 86dd6c7, b3507c1, 11d3710: plan updates for the review fixes, their test corrections, and the recorded hashes.
+- Checks on 11d3710:
+  - `verify F18` passing;
+  - ledger unit tests 517/517;
+  - full `./mvnw verify`: 687 integration tests, 3 skipped, 0 failed (33 min 29 s);
+  - Spotless clean.
+
+Not done / left half-way
+- KI-3 is open.
+- V20 was edited in place during review and has only ever run in Testcontainers. After this merge is pushed, any change needs V21. A local database that ran an earlier V20 must be recreated.
+- No ops UI page for proposals yet. Reviewers use the ops API (`ledger/docs/runbook/refund-proposals.md`).
+
+Next
+- F19: typed agent clients against recorded fixtures (dispatch GraphQL and ledger REST), built against `contracts/ledger-openapi.yaml`.
+
+Pitfalls found
+- `prop_…`, `ref_…` and the other ledger ids are reversible encodings of the stored UUIDs. Never treat an internal UUID as a secret.
+- `PaymentRequests.idempotencyKey` requires 8 to 255 printable characters. Short keys in test plans fail validation.
+- When a review fix changes a stored key's format, every test that asserts the old format must be listed for change in the plan.
+- `LocalFixtureInitializer` returns early on an existing database. Each new fixture needs an idempotent upgrade path there too.
