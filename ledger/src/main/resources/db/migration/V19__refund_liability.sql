@@ -85,6 +85,12 @@ END $$;
 CREATE TRIGGER refund_liability_guard BEFORE INSERT OR UPDATE OR DELETE ON platform.refund_liability
     FOR EACH ROW EXECUTE FUNCTION platform.f17_liability_guard();
 
+CREATE TABLE platform.refund_liability_attempt (
+    liability_id uuid PRIMARY KEY REFERENCES platform.refund_liability(id),
+    attempts bigint NOT NULL DEFAULT 1 CHECK(attempts>0),
+    attempted_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+
 CREATE FUNCTION platform.ensure_liability_accounts(refund_arg uuid) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,platform AS $$
 BEGIN
@@ -98,6 +104,8 @@ DO $$ BEGIN
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='payments_app') THEN
         REVOKE ALL ON platform.refund_liability FROM payments_app;
         GRANT SELECT,INSERT,UPDATE ON platform.refund_liability TO payments_app;
+        REVOKE ALL ON platform.refund_liability_attempt FROM payments_app;
+        GRANT SELECT,INSERT,UPDATE ON platform.refund_liability_attempt TO payments_app;
         GRANT EXECUTE ON FUNCTION platform.ensure_liability_accounts(uuid) TO payments_app;
         REVOKE ALL ON FUNCTION platform.f17_liability_guard() FROM payments_app;
     END IF;

@@ -153,10 +153,21 @@ public class LiabilityRepository {
         if (changed != 1) throw new IllegalStateException("Expected one pending refund liability to be posted");
     }
 
+    public long markAttempted(UUID liabilityId) {
+        return jdbc.queryForObject("""
+                INSERT INTO platform.refund_liability_attempt(liability_id) VALUES (?)
+                ON CONFLICT (liability_id) DO UPDATE
+                SET attempts=refund_liability_attempt.attempts+1, attempted_at=clock_timestamp()
+                RETURNING attempts
+                """, Long.class, liabilityId);
+    }
+
     public List<UUID> readyCandidates(int limit) {
         return jdbc.query("""
                 SELECT l.id FROM platform.refund_liability l JOIN platform.refund r ON r.id=l.refund_id
-                WHERE l.posting_status='PENDING' AND r.refund_status='SUCCEEDED' ORDER BY l.created_at,l.id LIMIT ?
+                LEFT JOIN platform.refund_liability_attempt a ON a.liability_id=l.id
+                WHERE l.posting_status='PENDING' AND r.refund_status='SUCCEEDED'
+                ORDER BY a.attempted_at NULLS FIRST,l.created_at,l.id LIMIT ?
                 """, (rs, row) -> rs.getObject("id", UUID.class), limit);
     }
 

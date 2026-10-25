@@ -100,6 +100,7 @@ public final class LiabilityService {
         int posted = 0;
         for (UUID id : ids) {
             try {
+                long attempt = tx.execute(status -> repository.markAttempted(id));
                 if (post(id)) posted++;
             } catch (RuntimeException e) {
                 LOG.warn("liability_post reason=RETRY_REQUIRED liabilityId={}", id);

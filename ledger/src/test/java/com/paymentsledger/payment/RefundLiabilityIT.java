@@ -27,6 +27,7 @@ class RefundLiabilityIT extends PayPalCaptureFixture {
     RefundExecutor refundExecutor;
     LiabilityService liability;
     UUID payment;
+    boolean refundTokenQueued;
 
     @BeforeEach
     void configurePosting() {
@@ -255,6 +256,45 @@ class RefundLiabilityIT extends PayPalCaptureFixture {
                 .hasMessageContaining("ledger_account_purpose_shape");
     }
 
+    @Test
+    void stuckAllocationsDoNotBlockNewerOnes() {
+        paid();
+        var first = refunded("liability-12s1", 1000, "10.00", null);
+        assertThat(row(first)).containsEntry("refund_status", "SUCCEEDED");
+        assertThat(refunds.read(refundsContext, first.refundId())).containsEntry("financialStatus", "PENDING_EVIDENCE");
+        var second = refunded("liability-12s2", 1000, "10.00", null);
+        assertThat(row(second)).containsEntry("refund_status", "SUCCEEDED");
+        assertThat(refunds.read(refundsContext, second.refundId()))
+                .containsEntry("financialStatus", "PENDING_EVIDENCE");
+        var newer = refunded("liability-12n", 1250, "12.50", "0.44");
+        var transaction = new TransactionTemplate(tx);
+        var firstAllocation = transaction.execute(status -> liability.record(first.refundId(), proposal(12), split));
+        var secondAllocation = transaction.execute(status -> liability.record(second.refundId(), proposal(112), split));
+        var newerAllocation = transaction.execute(status -> liability.record(newer.refundId(), proposal(212), split));
+
+        assertThat(liability.postReady(2)).as("First postReady(2)").isZero();
+        assertThat(liability.postReady(2)).as("Second postReady(2)").isEqualTo(1);
+        assertThat(allocationRow(newerAllocation)).containsEntry("posting_status", "POSTED");
+        assertThat(allocationRow(firstAllocation)).containsEntry("posting_status", "PENDING");
+        assertThat(allocationRow(secondAllocation)).containsEntry("posting_status", "PENDING");
+        assertThat(liability.postReady(2)).as("Third postReady(2)").isZero();
+        assertThat(jdbc.queryForObject(
+                        "SELECT attempts FROM platform.refund_liability_attempt WHERE liability_id=?",
+                        Long.class,
+                        firstAllocation))
+                .isEqualTo(3L);
+        assertThat(jdbc.queryForObject(
+                        "SELECT attempts FROM platform.refund_liability_attempt WHERE liability_id=?",
+                        Long.class,
+                        secondAllocation))
+                .isEqualTo(2L);
+        assertThat(jdbc.queryForObject(
+                        "SELECT attempts FROM platform.refund_liability_attempt WHERE liability_id=?",
+                        Long.class,
+                        newerAllocation))
+                .isEqualTo(1L);
+    }
+
     private UUID paid() {
         payment = create();
         approved(payment);
@@ -293,17 +333,19 @@ class RefundLiabilityIT extends PayPalCaptureFixture {
         String providerId = "F17"
                 + i.refundId().toString().replace("-", "").substring(0, 14).toUpperCase(Locale.ROOT);
         int calls = refundCalls().size();
-        transport
-                .token()
-                .reply(
-                        201,
-                        refund(
-                                providerId,
-                                CAPTURE,
-                                "COMPLETED",
-                                value,
-                                fee,
-                                i.refundId().toString()));
+        if (!refundTokenQueued) {
+            transport.token();
+            refundTokenQueued = true;
+        }
+        transport.reply(
+                201,
+                refund(
+                        providerId,
+                        CAPTURE,
+                        "COMPLETED",
+                        value,
+                        fee,
+                        i.refundId().toString()));
         refundExecutor.execute(i.operationId());
         assertThat(row(i)).containsEntry("refund_status", "SUCCEEDED");
         assertThat(refundCalls()).hasSize(calls + 1);
