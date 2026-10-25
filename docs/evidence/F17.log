@@ -1,0 +1,7 @@
+feature: F17
+kind: command
+command: cd ledger && ./mvnw -q -Dtest='LiabilityAllocationTest' test
+commit: f871a5d2b66e8e1851502812dcf83fef4a85663d
+started_at: 2026-10-25T17:36:28+08:00
+exit_code: 0
+----

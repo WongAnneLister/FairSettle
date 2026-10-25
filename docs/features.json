@@ -395,8 +395,13 @@
       "depends_on": [
         "F14"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "f871a5d2b66e8e1851502812dcf83fef4a85663d",
+        "verified_at": "2026-10-25T17:36:32+08:00",
+        "log": "docs/evidence/F17.log",
+        "log_sha256": "795e7ca59ede5682ee4028ad786b009e08764f07a5ebc1a7be6805f79831df9a"
+      },
       "started_at": "2026-10-25T12:07:46+08:00"
     },
     {

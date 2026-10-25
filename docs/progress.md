@@ -674,3 +674,49 @@ Next
 
 Pitfalls found
 - PayPal can deliver webhooks late and in any order; the resource in a webhook shows its state at send time, not at the event's time
+
+## 2026-10-25 · session 15 · F17
+
+### State on 2026-10-25
+
+- passing 17/32
+- recently passing: F13 (de35431), F14 (4d0ad46), F15 (4ad66e0), F16 (ffcc084), F17 (f871a5d)
+- ready next: F18 Refund proposal API and review, F19 Agent clients against fixtures
+
+Done this session
+- commit 7f31988: F17 plan. It was corrected twice before the work commit: SQL moved into a repository (`LayeringArchitectureTest`), and migration counts allowed to move by one.
+- commit 557405f: liability split and posting (Codex):
+  - allocation rule: restaurant and driver floored, platform gets the remainder;
+  - three new INTERNAL accounts and the `L-LIABILITY` journal;
+  - `V19__refund_liability.sql`, the posting worker, and `GET /v1/refunds/{id}/liability`;
+  - 15 unit tests and 11 ITs;
+  - 8 existing migration-count assertions each moved by +1.
+- commit cd776cc: review. The code matched the plan; four design issues were listed.
+- Review fixes, decided with the user:
+  - 2575124 (RF-1): attempt cursor, so stuck rows rotate instead of blocking the worker (head-of-line blocking, `docs/challenges.md` C-1);
+  - 19308a2 (RF-2): first HTTP test of the endpoint. It caught `journalId` missing from the JSON: global `non_null` inclusion versus the F14 contract's required field. Fixed by writing the null explicitly (C-2);
+  - e1f3485 (RF-3): `LIABILITY_ENABLED` / `LIABILITY_POLL_MS` in `application.yml`;
+  - be28448 (RF-4): failure logs carry error class and code or SQL state; stuck rows warn at attempts 10, 100, 1000.
+- commits e06d403 and b19d17b: plan corrections for the RF-1 test (token fixture, attempt counts 3 / 2 / 1).
+- New `docs/challenges.md`: real bugs and difficulties, for the submission write-up (C-1, C-2).
+- Checks on f871a5d:
+  - `verify F17` passing;
+  - ledger unit tests 496/496;
+  - full `./mvnw verify`: 684 integration tests, 3 skipped, 0 failed (33 min 50 s);
+  - Spotless clean.
+
+Not done / left half-way
+- Open F17 risks, all recorded in the plan:
+  - a refund that fails after posting keeps its liability journal;
+  - allocations for failed refunds stay `PENDING`;
+  - a restaurant that is also a revenue-share partner is charged twice.
+- V19 was edited in place during review. It has only ever run in Testcontainers. After this merge is pushed, any change needs V20.
+
+Next
+- F18: refund proposal API and review. It calls `LiabilityService.record` inside the approval transaction. F18 also adds the foreign key from `refund_liability.proposal_id` to the proposal table.
+
+Pitfalls found
+- `LayeringArchitectureTest` forbids `JdbcTemplate` outside `..repository..` packages, and its exemption list may only shrink. Plans for ledger services must put SQL in a repository.
+- Several schema ITs pin the number of migrations; every new migration moves each of them by one.
+- `PayPalTestTransport` replies are strict FIFO, and `PayPalAuthClient` caches its token. Queue `token()` only before the first PayPal call of an adapter in a test.
+- A test that calls a service directly does not see global Jackson settings. Contracted endpoints need one HTTP test each.
