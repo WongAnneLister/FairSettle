@@ -101,6 +101,7 @@ UNIQUE (organization_id, environment_id, event_key)
 | 30 | `refund_control` | |
 | 40 | `dispute`（争议控制行） | |
 | 50 | `share_allocation` | |
+| 55 | `refund_liability` | F17; locked by the posting worker, inserted after the refund reservation's locks |
 | 60 | `payout`（分配控制行） | |
 | 65 | `bank_statement_line` | |
 | 70 | `financial_event` | |

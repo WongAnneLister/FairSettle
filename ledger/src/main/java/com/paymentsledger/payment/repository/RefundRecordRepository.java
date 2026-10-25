@@ -51,6 +51,12 @@ public class RefundRecordRepository {
         this.jdbc = new NamedParameterJdbcTemplate(jdbc);
     }
 
+    /** Unscoped read for trusted internal workers; API reads use findScoped. */
+    public Optional<RefundRecord> find(UUID refundId) {
+        var rows = jdbc.query("SELECT * FROM platform.refund WHERE id=:id", Map.of("id", refundId), REFUND);
+        return rows.isEmpty() ? Optional.empty() : Optional.of(rows.getFirst());
+    }
+
     /** The refund if it belongs to the caller's application and provider account. */
     public Optional<RefundRecord> findScoped(UUID refundId, TenantContext tenant) {
         var rows = jdbc.query(

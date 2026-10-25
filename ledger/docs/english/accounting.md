@@ -70,3 +70,18 @@ An independent closing fixture of 900 with opening 0 and imported net 1000 produ
 [Money flow PNG](accounting-money-flow.png) · [Reconciliation evidence PNG](reconciliation-evidence-flow.png)
 
 [Diagram verification](diagram-verification.json) records local Mermaid rendering only; it does not establish experimental acceptance.
+
+## Refund liability (F17)
+
+Restaurant and driver amounts are `floor(amountMinor × basisPoints / 10000)` using integer arithmetic; the platform receives the remainder so the parts always sum to the refund.
+
+Recording an allocation leaves it `PENDING`; it posts only when the refund is `SUCCEEDED` and its financial status is `POSTED`.
+
+For a refund of 1250 minor units split 3333/3333/3334 basis points, `L-LIABILITY` moves the principal out of `SALES_RETURNS`:
+
+| Account | Debit | Credit |
+| --- | ---: | ---: |
+| `REFUND_RECEIVABLE_RESTAURANT` | 416 | |
+| `REFUND_RECEIVABLE_DRIVER` | 416 | |
+| `REFUND_COST_PLATFORM` | 418 | |
+| `SALES_RETURNS` | | 1250 |

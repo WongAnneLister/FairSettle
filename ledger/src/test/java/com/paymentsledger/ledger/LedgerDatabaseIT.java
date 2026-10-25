@@ -451,7 +451,7 @@ class LedgerDatabaseIT {
                         .load()
                         .migrate()
                         .migrationsExecuted)
-                .isEqualTo(16); // V3 ledger through V18 PayPal capture operation
+                .isEqualTo(17); // V3 ledger through V19 refund liability
         try (var c = DriverManager.getConnection(url, PG.getUsername(), PG.getPassword());
                 var s = c.createStatement();
                 var r = s.executeQuery("SELECT code FROM platform.organization")) {

@@ -1523,6 +1523,7 @@ components:
         | `CURRENCY_NOT_ENABLED` | 422 | false | 币种未在该范围启用 |
         | `REFUND_LIMIT_EXCEEDED` | 422 | false | R+H 将超过 C |
         | `ADJUSTMENT_EVIDENCE_REQUIRED` | 422 | false | 调整缺少理由或证据 |
+        | `LIABILITY_SPLIT_INVALID` | 422 | false | Liability shares are not three parties summing to 10000 basis points |
         | `RATE_LIMITED` | 429 | true | 账户级限流 |
         | `PROVIDER_UNKNOWN_RESULT` | 500 | false | 结果确定性未知，**禁止**换键重发 |
         | `INTERNAL_ERROR` | 500 | false | 未分类内部错误 |
@@ -1546,6 +1547,7 @@ components:
         - CURRENCY_NOT_ENABLED
         - REFUND_LIMIT_EXCEEDED
         - ADJUSTMENT_EVIDENCE_REQUIRED
+        - LIABILITY_SPLIT_INVALID
         - RATE_LIMITED
         - PROVIDER_UNKNOWN_RESULT
         - INTERNAL_ERROR

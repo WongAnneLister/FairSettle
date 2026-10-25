@@ -27,6 +27,9 @@
 | `BANK_FEE_EXPENSE` | 费用 | 借 | 有银行证据的银行侧费用 | `SIMULATED_BANK` | NULL |
 | `SUSPENSE` | 待分类 | — | 已知资金变化但业务归类未完成 | `PROVIDER` | 必填 |
 | `OPENING_EQUITY` | 权益 | 贷 | 明确证据支持的期初 | `INTERNAL` | NULL |
+| `REFUND_RECEIVABLE_RESTAURANT` | Asset | Debit | Refund cost the restaurant owes the platform | `INTERNAL` | NULL |
+| `REFUND_RECEIVABLE_DRIVER` | Asset | Debit | Refund cost the driver owes the platform | `INTERNAL` | NULL |
+| `REFUND_COST_PLATFORM` | Expense | Debit | Refund cost the platform bears | `INTERNAL` | NULL |
 
 ### 1.1 两条关键约束
 
@@ -64,12 +67,28 @@
 | `L-RECLASSIFY` | Suspense 查明归类 | 按目标科目 | `SUSPENSE`（或反向） | PR15/PR16 |
 | `L-OPENING` | 经核对的期初 | 各资产科目 | `OPENING_EQUITY` | PR10 |
 | `L-ADJUSTMENT` | 经**独立审批**的人工调整 | 按申请 | 按申请 | PR16 |
+| `L-LIABILITY` | Posted refund with a liability allocation | Each party account, its amount (zero parties omitted) | `SALES_RETURNS`, the refund amount | F17 |
 
 ### 2.1 三条不能照抄示例的规则
 
 1. **原支付处理费不随退款自动返还。** `L-REFUND` 只动本金；只有 `L-REFUND-FEE-BACK` 且**有实际证据**时才记回费用。旧 PRD"按退款比例退手续费"的政策**已废止**（FR-REF-02）。
 2. **败诉不再扣 PSP。** `L-DISPUTE-LOST` 是 `DISPUTE_RECEIVABLE → DISPUTE_LOSS` 的内部重分类，PSP 在 `L-DISPUTE-DEBIT` 时已经扣过一次。
 3. **争议费不随本金自动返还。** 需要 `fee_details` 级别的实际证据才记 `L-REFUND-FEE-BACK` 的争议版本。
+
+### 2.2 Refund liability (F17)
+
+Restaurant and driver amounts are `floor(amountMinor × basisPoints / 10000)` using integer arithmetic; the platform receives the remainder so the parts always sum to the refund.
+
+Recording an allocation leaves it `PENDING`; it posts only when the refund is `SUCCEEDED` and its financial status is `POSTED`.
+
+For a refund of 1250 minor units split 3333/3333/3334 basis points, `L-LIABILITY` moves the principal out of `SALES_RETURNS`:
+
+| Account | Debit | Credit |
+| --- | ---: | ---: |
+| `REFUND_RECEIVABLE_RESTAURANT` | 416 | |
+| `REFUND_RECEIVABLE_DRIVER` | 416 | |
+| `REFUND_COST_PLATFORM` | 418 | |
+| `SALES_RETURNS` | | 1250 |
 
 ## 3. 规范化财务事件键
 
@@ -85,6 +104,7 @@
 | 银行退回 | `bank.clawback:{payout_id}:{bank_statement_line_id}:{trigger_version}` |
 | 人工调整 | `adjust:{adjustment_id}` |
 | 期初 | `opening:{account_scope_hash}:{cutoff}` |
+| Refund liability | `liability.allocate:{refund_id}` |
 
 **`trigger_version` 是持久化的业务触发版本**（例如 `refund_control.version`），不是时间戳、不是随机数。这保证"同一业务触发的重放产生同一事件键"（PRD FR-SHARE-01、AC-V1-23）。
 

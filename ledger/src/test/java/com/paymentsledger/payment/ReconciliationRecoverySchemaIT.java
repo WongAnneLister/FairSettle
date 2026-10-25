@@ -25,7 +25,7 @@ class ReconciliationRecoverySchemaIT {
                 .dataSource(DB.getJdbcUrl(), DB.getUsername(), DB.getPassword())
                 .schemas("platform")
                 .load();
-        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(5);
+        assertThat(flyway.migrate().migrationsExecuted).isEqualTo(6); // V14 through V19 refund liability
         assertThat(flyway.migrate().migrationsExecuted).isZero();
     }
 }

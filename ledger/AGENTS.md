@@ -18,6 +18,7 @@ Read before changing anything here: `docs/ledger/` (accounts, the seven invarian
 
 | Package | Role |
 | --- | --- |
+| `liability` | Refund liability split: allocation, party accounts, posting worker, read API |
 | `provider` | Provider port plus Fake and Stripe adapters. The PayPal adapter goes here, following the Stripe adapter's structure |
 | `payment` | Business orders and payments, payment state machine |
 | `refund` | Refund limits, reservations, recovery |
