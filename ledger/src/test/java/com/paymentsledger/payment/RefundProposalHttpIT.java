@@ -204,6 +204,27 @@ class RefundProposalHttpIT {
         assertThat(path)
                 .isEqualTo(
                         "/v1/refund-proposals/" + created.getBody().path("id").asText());
+        assertThat(fields(created.getBody()))
+                .containsExactly(
+                        "complaintId",
+                        "orderRef",
+                        "paymentId",
+                        "decision",
+                        "amountMinor",
+                        "currency",
+                        "reasonCode",
+                        "liability",
+                        "explanation",
+                        "evidenceRefs",
+                        "agentRun",
+                        "id",
+                        "status",
+                        "createdAt",
+                        "reviewedAt",
+                        "reviewer",
+                        "rejectionReason",
+                        "refundId",
+                        "allocation");
         for (String field : List.of("reviewedAt", "reviewer", "rejectionReason", "refundId", "allocation"))
             nullField(created.getBody(), field);
         var replay = send(1, "/v1/refund-proposals", HttpMethod.POST, b, "refund-proposal:http-1");
@@ -231,7 +252,20 @@ class RefundProposalHttpIT {
         assertThat(decision.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(decision.getBody().path("status").asText()).isEqualTo("APPROVED");
         assertThat(decision.getBody().path("refundId").asText()).startsWith("ref_");
+        nullField(decision.getBody(), "rejectionReason");
+        assertThat(fields(decision.getBody().path("allocation")))
+                .containsExactly(
+                        "refundId", "proposalId", "currency", "amountMinor", "lines", "postingStatus", "journalId");
         nullField(decision.getBody().path("allocation"), "journalId");
+        var again = sendOps(
+                2,
+                "/ops/refund-proposals/" + created.getBody().path("id").asText() + "/decision",
+                HttpMethod.POST,
+                json.createObjectNode().put("action", "APPROVE"),
+                "approve-http-2");
+        assertThat(again.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(again.getHeaders().getFirst("Idempotent-Replay")).isEqualTo("true");
+        assertThat(again.getBody()).isEqualTo(decision.getBody());
         var refund =
                 send(1, "/v1/refunds/" + decision.getBody().path("refundId").asText(), HttpMethod.GET, null, null);
         assertThat(refund.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -310,6 +344,12 @@ class RefundProposalHttpIT {
                 "NOT_FOUND");
         assertError(
                 sendOps(0, path, HttpMethod.POST, approve, "approve-no-auth"), HttpStatus.UNAUTHORIZED, "UNAUTHORIZED");
+    }
+
+    private List<String> fields(JsonNode body) {
+        var names = new ArrayList<String>();
+        body.fieldNames().forEachRemaining(names::add);
+        return names;
     }
 
     private void nullField(JsonNode body, String field) {
