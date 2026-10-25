@@ -80,7 +80,7 @@ public final class RefundProposalService {
             RefundReservationRules.requireRefundable(tenant, payment, request.currency());
             ProposalRules.requireProposable(proposals.refundable(payment), request.amountMinor());
             UUID id = PaymentIds.newId();
-            proposals.insert(id, tenant, payment, request, key);
+            proposals.insert(id, tenant, payment, request, key, UUID.randomUUID());
             return new Result(resource(proposals.findScoped(tenant, id).orElseThrow()), false);
         });
     }
@@ -156,14 +156,14 @@ public final class RefundProposalService {
                     ProposalRules.requireProposable(proposals.refundable(payment), p.amountMinor());
                     var intent = refunds.prepare(
                             tenant,
-                            "proposal-refund:" + proposalId,
+                            "proposal-refund:" + p.refundKey(),
                             new RefundRequests.Create(
                                     p.paymentId(),
                                     p.amountMinor(),
                                     p.currency(),
                                     "REQUESTED_BY_CUSTOMER",
                                     "Refund proposal " + PaymentIds.format("prop", proposalId),
-                                    "proposal:" + proposalId),
+                                    "proposal:" + p.refundKey()),
                             provider.get());
                     liability.record(intent.refundId(), proposalId, p.split());
                     proposals.approve(proposalId, ops, subject, intent.refundId(), key, request.fingerprint());

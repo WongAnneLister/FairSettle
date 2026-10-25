@@ -31,6 +31,7 @@ evidence_refs jsonb NOT NULL CHECK(jsonb_typeof(evidence_refs)='array' AND jsonb
 agent_thread_id text NOT NULL CHECK(length(agent_thread_id) BETWEEN 1 AND 128),
 agent_trace_id text CHECK(agent_trace_id IS NULL OR length(agent_trace_id) BETWEEN 1 AND 128),
 idempotency_key text NOT NULL, request_fingerprint text NOT NULL CHECK(request_fingerprint ~ '^[a-f0-9]{64}$'),
+refund_key uuid NOT NULL UNIQUE,
 status text NOT NULL DEFAULT 'PENDING_REVIEW' CHECK(status IN ('PENDING_REVIEW','APPROVED','REJECTED')),
 reviewer_id uuid, reviewer_subject text, reviewer_role text CHECK(reviewer_role IS NULL OR reviewer_role='OPS_REVIEWER'),
 reviewed_at timestamptz,

@@ -247,10 +247,13 @@ class RefundProposalApiTest extends PayPalCaptureFixture {
         nullFields(b.path("allocation"), "journalId");
         assertThat(count("refund")).isEqualTo(1);
         var row = jdbc.queryForMap("SELECT * FROM platform.refund");
+        UUID refundKey = jdbc.queryForObject(
+                "SELECT refund_key FROM platform.refund_proposal WHERE id=?", UUID.class, proposalId(pending));
+        assertThat(refundKey).isNotEqualTo(proposalId(pending));
         assertThat(row)
                 .containsEntry("refund_status", "RESERVED")
                 .containsEntry("amount_minor", 1250L)
-                .containsEntry("client_refund_key", "proposal:" + proposalId(pending));
+                .containsEntry("client_refund_key", "proposal:" + refundKey);
         assertThat(reserved()).isEqualTo(1250);
         assertThat(count("refund_liability")).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT proposal_id FROM platform.refund_liability", UUID.class))
@@ -381,7 +384,11 @@ class RefundProposalApiTest extends PayPalCaptureFixture {
         assertThat(jdbc.queryForObject(
                         "SELECT count(*) FROM platform.api_idempotency_record WHERE idempotency_key=?",
                         Long.class,
-                        "proposal-refund:" + proposalId(b)))
+                        "proposal-refund:"
+                                + jdbc.queryForObject(
+                                        "SELECT refund_key FROM platform.refund_proposal WHERE id=?",
+                                        UUID.class,
+                                        proposalId(b))))
                 .isZero();
         assertThat(jdbc.queryForObject(
                         "SELECT count(*) FROM platform.provider_operation WHERE operation_type='CREATE_REFUND'",
@@ -499,6 +506,46 @@ class RefundProposalApiTest extends PayPalCaptureFixture {
                         hash))
                 .isInstanceOf(DataAccessException.class)
                 .hasMessageContaining("application_credential_scopes");
+    }
+
+    @Test
+    void approvalKeyCannotBePreemptedFromTheProposalId() throws Exception {
+        paid();
+        var pending = createProposal("preempted-key", 1250, 3333, 3333, 3334).body();
+        UUID proposal = proposalId(pending);
+        var applicationRefund = refunds.prepare(
+                refundsContext,
+                "proposal-refund:" + proposal,
+                new RefundRequests.Create(payment, 1000, "USD", "REQUESTED_BY_CUSTOMER", null, "proposal:" + proposal),
+                "PAYPAL");
+
+        var approved = approve(pending).body();
+        assertThat(approved.path("status").asText()).isEqualTo("APPROVED");
+        assertThat(count("refund")).isEqualTo(2);
+        assertThat(row(applicationRefund)).containsEntry("amount_minor", 1000L);
+        UUID refund = PaymentIds.parse("ref", approved.path("refundId").asText());
+        assertThat(jdbc.queryForObject("SELECT amount_minor FROM platform.refund WHERE id=?", Long.class, refund))
+                .isEqualTo(1250L);
+        UUID refundKey =
+                jdbc.queryForObject("SELECT refund_key FROM platform.refund_proposal WHERE id=?", UUID.class, proposal);
+        String clientKey =
+                jdbc.queryForObject("SELECT client_refund_key FROM platform.refund WHERE id=?", String.class, refund);
+        assertThat(clientKey.equals("proposal:" + refundKey))
+                .as("Approval uses the secret client refund key")
+                .isTrue();
+        assertThat(clientKey.equals("proposal:" + proposal))
+                .as("Approval does not reuse the public proposal key")
+                .isFalse();
+        assertThat(jdbc.queryForObject(
+                                "SELECT idempotency_key FROM platform.api_idempotency_record WHERE refund_id=?",
+                                String.class,
+                                refund)
+                        .equals("proposal-refund:" + refundKey))
+                .as("Approval uses the secret reservation key")
+                .isTrue();
+        assertThat(json.writeValueAsString(approved).contains(refundKey.toString()))
+                .as("The serialized proposal does not disclose the secret refund key")
+                .isFalse();
     }
 
     private UUID paid() {

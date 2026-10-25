@@ -45,7 +45,8 @@ public class RefundProposalRepository {
             UUID refundId,
             String decisionIdempotencyKey,
             String decisionFingerprint,
-            Instant createdAt) {}
+            Instant createdAt,
+            UUID refundKey) {}
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final RowMapper<Proposal> PROPOSAL = (rs, n) -> new Proposal(
@@ -78,7 +79,8 @@ public class RefundProposalRepository {
             rs.getObject("refund_id", UUID.class),
             rs.getString("decision_idempotency_key"),
             rs.getString("decision_fingerprint"),
-            rs.getTimestamp("created_at").toInstant());
+            rs.getTimestamp("created_at").toInstant(),
+            rs.getObject("refund_key", UUID.class));
     private final NamedParameterJdbcTemplate jdbc;
 
     public RefundProposalRepository(JdbcTemplate jdbc) {
@@ -146,14 +148,19 @@ public class RefundProposalRepository {
     }
 
     public void insert(
-            UUID id, TenantContext tenant, RefundablePayment payment, ProposalRequests.Create request, String key) {
+            UUID id,
+            TenantContext tenant,
+            RefundablePayment payment,
+            ProposalRequests.Create request,
+            String key,
+            UUID refundKey) {
         jdbc.update(
                 """
                 INSERT INTO platform.refund_proposal(id,organization_id,environment_id,application_id,provider_account_id,
                     currency,payment_id,complaint_id,order_ref,decision,amount_minor,reason_code,restaurant_bp,driver_bp,
-                    platform_bp,explanation,evidence_refs,agent_thread_id,agent_trace_id,idempotency_key,request_fingerprint)
+                    platform_bp,explanation,evidence_refs,agent_thread_id,agent_trace_id,idempotency_key,request_fingerprint,refund_key)
                 VALUES (:id,:org,:env,:app,:provider,:currency,:payment,:complaint,:order,:decision,:amount,:reason,
-                    :restaurant,:driver,:platform,:explanation,:evidence::jsonb,:thread,:trace,:key,:fingerprint)
+                    :restaurant,:driver,:platform,:explanation,:evidence::jsonb,:thread,:trace,:key,:fingerprint,:refundKey)
                 """,
                 scope(tenant)
                         .addValue("id", id)
@@ -172,7 +179,8 @@ public class RefundProposalRepository {
                         .addValue("thread", request.threadId())
                         .addValue("trace", request.traceId())
                         .addValue("key", key)
-                        .addValue("fingerprint", request.fingerprint()));
+                        .addValue("fingerprint", request.fingerprint())
+                        .addValue("refundKey", refundKey));
     }
 
     public void approve(UUID id, OpsContext ops, String subject, UUID refundId, String key, String fingerprint) {
