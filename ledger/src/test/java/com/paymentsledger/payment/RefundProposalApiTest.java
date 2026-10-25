@@ -346,6 +346,53 @@ class RefundProposalApiTest extends PayPalCaptureFixture {
     }
 
     @Test
+    void failureAfterTheReservationRollsEverythingBack() {
+        paid();
+        var b = createProposal("rollback", 1250, 3333, 3333, 3334).body();
+        var failing = new RefundProposalService(
+                new RefundProposalRepository(jdbc),
+                tx,
+                json,
+                refunds,
+                liability,
+                new OpsAuditService(jdbc, json, tx) {
+                    @Override
+                    public UUID recordInTransaction(
+                            OpsContext c,
+                            String action,
+                            String target,
+                            JsonNode body,
+                            String result,
+                            JsonNode before,
+                            JsonNode after) {
+                        super.recordInTransaction(c, action, target, body, result, before, after);
+                        throw new IllegalStateException("audit failed after the decision");
+                    }
+                },
+                () -> "PAYPAL");
+        assertThatThrownBy(() -> failing.decide(ops(2), proposalId(b), "approve-key-1", action()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("audit failed after the decision");
+        assertThat(proposals.get(agent, proposalId(b)).path("status").asText()).isEqualTo("PENDING_REVIEW");
+        assertThat(count("refund")).isZero();
+        assertThat(count("refund_liability")).isZero();
+        assertThat(count("audit_log")).isZero();
+        assertThat(reserved()).isZero();
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM platform.api_idempotency_record WHERE idempotency_key=?",
+                        Long.class,
+                        "proposal-refund:" + proposalId(b)))
+                .isZero();
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM platform.provider_operation WHERE operation_type='CREATE_REFUND'",
+                        Long.class))
+                .isZero();
+        assertThat(approve(b).body().path("status").asText()).isEqualTo("APPROVED");
+        assertThat(count("refund")).isEqualTo(1);
+        assertThat(count("refund_liability")).isEqualTo(1);
+    }
+
+    @Test
     void onlyReviewersDecide() {
         paid();
         var b = createProposal("roles", 450, 10000, 0, 0).body();
