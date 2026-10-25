@@ -81,6 +81,8 @@ Restaurant and driver amounts are `floor(amountMinor × basisPoints / 10000)` us
 
 Recording an allocation leaves it `PENDING`; it posts only when the refund is `SUCCEEDED` and its financial status is `POSTED`.
 
+The worker runs in the worker role every `LIABILITY_POLL_MS` (default 30000 ms) and is switched off with `LIABILITY_ENABLED=false`; it rotates through pending rows by last attempt, so a refund that never posts cannot block others.
+
 For a refund of 1250 minor units split 3333/3333/3334 basis points, `L-LIABILITY` moves the principal out of `SALES_RETURNS`:
 
 | Account | Debit | Credit |
