@@ -46,7 +46,7 @@ tick 2: [stuck 1 … stuck 25] | new A, new B …   → posts 0
 - **Visibility.** Failures now log their error class and code or SQL state. A row that is still not ready logs a warning at attempts 10, 100 and 1000.
 - **Test.** `RefundLiabilityIT.stuckAllocationsDoNotBlockNewerOnes` creates two stuck allocations, then one ready one, and runs the worker with a batch of two. Before the fix, the ready one never posts; after it, it posts on the second tick.
 
-Specified in `docs/plans/F17.md`, "Review fixes", RF-1 and RF-4. Implemented in the commits `ledger: rotate liability posting attempts so stuck rows cannot block newer ones (F17), review fix` and `ledger: log why a liability posting attempt failed (F17), review fix`.
+Specified in `docs/plans/F17.md`, "Review fixes", RF-1 and RF-4. Fixed in `2575124` (rotation) and `be28448` (logs).
 
 ### Lesson (C-1)
 
@@ -68,7 +68,7 @@ The agent's typed ledger client (F19) is built against the contract. A client th
 
 The contract stays as it is. The liability endpoint writes its body as a JSON tree and puts `null` explicitly (`ObjectNode.putNull`), the same way the ledger's ops API already does for its nullable fields. The global setting is unchanged, because existing endpoints rely on it. `LiabilityHttpIT.getReturnsTheStoredAllocation` asserts that `journalId` is present and JSON `null`.
 
-Specified in `docs/plans/F17.md`, "Review fixes", RF-2.
+Specified in `docs/plans/F17.md`, "Review fixes", RF-2. Fixed in `19308a2`.
 
 ### Lesson (C-2)
 
