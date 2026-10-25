@@ -16,6 +16,7 @@ import com.paymentsledger.proposal.repository.RefundProposalRepository.Proposal;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.Supplier;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -125,6 +126,7 @@ public final class RefundProposalService {
         var request = ProposalRequests.decision(body);
         return tx.execute(status -> {
             var p = proposals.lockForReview(ops, proposalId).orElseThrow(() -> error(ErrorCode.NOT_FOUND));
+            if (proposals.decisionKeyUsedElsewhere(ops, key, proposalId)) throw error(ErrorCode.IDEMPOTENCY_CONFLICT);
             var before = mapper.createObjectNode().put("status", p.status());
             String result;
             boolean replay = false;
@@ -147,7 +149,11 @@ public final class RefundProposalService {
             } else {
                 String subject = proposals.reviewerSubject(ops);
                 if ("REJECT".equals(request.action())) {
-                    proposals.reject(proposalId, ops, subject, request.reason(), key, request.fingerprint());
+                    try {
+                        proposals.reject(proposalId, ops, subject, request.reason(), key, request.fingerprint());
+                    } catch (DuplicateKeyException e) {
+                        throw error(ErrorCode.IDEMPOTENCY_CONFLICT);
+                    }
                     result = "REJECTED";
                 } else {
                     var tenant = context(p, "refunds:write");
@@ -166,7 +172,11 @@ public final class RefundProposalService {
                                     "proposal:" + p.refundKey()),
                             provider.get());
                     liability.record(intent.refundId(), proposalId, p.split());
-                    proposals.approve(proposalId, ops, subject, intent.refundId(), key, request.fingerprint());
+                    try {
+                        proposals.approve(proposalId, ops, subject, intent.refundId(), key, request.fingerprint());
+                    } catch (DuplicateKeyException e) {
+                        throw error(ErrorCode.IDEMPOTENCY_CONFLICT);
+                    }
                     result = "APPROVED";
                 }
             }

@@ -16,6 +16,8 @@ through the existing refund reservation, records its liability split, decides th
 writes the success audit in one transaction. Failure rolls all of these changes back. The existing
 worker executes the refund; liability posts after the refund's accounting is confirmed. Rejection
 records the reason and reviewer without creating a refund. Neither outcome allows edits.
+A decision `Idempotency-Key` belongs to one proposal; reusing it for another proposal returns
+`409 IDEMPOTENCY_CONFLICT`.
 
 Local fixtures provision `local-reviewer` (`OPS_REVIEWER`) with credential id
 `10000000-0000-0000-0000-000000000062`, using the same local ops secret as `local-viewer`.

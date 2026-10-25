@@ -119,6 +119,14 @@ public class RefundProposalRepository {
                 PROPOSAL));
     }
 
+    public boolean decisionKeyUsedElsewhere(OpsContext ops, String key, UUID proposalId) {
+        return Boolean.TRUE.equals(
+                jdbc.queryForObject("""
+                SELECT EXISTS(SELECT 1 FROM platform.refund_proposal
+                    WHERE organization_id=:org AND environment_id=:env AND decision_idempotency_key=:key AND id<>:id)
+                """, ops(ops).addValue("key", key).addValue("id", proposalId), Boolean.class));
+    }
+
     public Optional<RefundablePayment> payment(TenantContext tenant, UUID paymentId) {
         return first(jdbc.query(
                 "SELECT * FROM platform.payment WHERE organization_id=:org AND environment_id=:env AND application_id=:app AND provider_account_id=:provider AND id=:id",

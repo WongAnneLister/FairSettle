@@ -53,6 +53,7 @@ CHECK(
     AND decision_idempotency_key IS NOT NULL AND decision_fingerprint IS NOT NULL)),
 UNIQUE(organization_id,environment_id,application_id,complaint_id),
 UNIQUE(organization_id,environment_id,application_id,idempotency_key),
+UNIQUE(organization_id,environment_id,decision_idempotency_key),
 FOREIGN KEY(organization_id,environment_id,application_id,provider_account_id,currency,payment_id)
   REFERENCES platform.payment(organization_id,environment_id,application_id,provider_account_id,currency,id),
 FOREIGN KEY(organization_id,environment_id,application_id,provider_account_id,currency,payment_id,refund_id)

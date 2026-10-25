@@ -548,6 +548,42 @@ class RefundProposalApiTest extends PayPalCaptureFixture {
                 .isFalse();
     }
 
+    @Test
+    void decisionKeyCannotDecideAnotherProposal() {
+        paid();
+        var a = createProposal("shared-key-a", 450, 10000, 0, 0).body();
+        var b = createProposal("shared-key-b", 300, 10000, 0, 0).body();
+        assertThat(proposals
+                        .decide(ops(2), proposalId(a), "shared-key", action())
+                        .body()
+                        .path("status")
+                        .asText())
+                .isEqualTo("APPROVED");
+
+        var second = catchThrowable(() -> proposals.decide(ops(2), proposalId(b), "shared-key", action()));
+        assertThat(second)
+                .as(
+                        "Second call leaves proposal B status=%s",
+                        proposals.get(agent, proposalId(b)).path("status").asText())
+                .isInstanceOfSatisfying(
+                        ApiException.class, e -> assertThat(e.errorCode()).isEqualTo(ErrorCode.IDEMPOTENCY_CONFLICT));
+        assertThat(proposals.get(agent, proposalId(b)).path("status").asText()).isEqualTo("PENDING_REVIEW");
+        assertThat(count("refund")).isEqualTo(1);
+        assertThat(count("refund_liability")).isEqualTo(1);
+        fails(
+                () -> proposals.decide(ops(2), proposalId(b), "shared-key", reject("Photo shows the drink")),
+                ErrorCode.IDEMPOTENCY_CONFLICT);
+        assertThat(proposals.get(agent, proposalId(b)).path("status").asText()).isEqualTo("PENDING_REVIEW");
+        assertThat(count("refund")).isEqualTo(1);
+        assertThat(count("refund_liability")).isEqualTo(1);
+        assertThat(proposals
+                        .decide(ops(2), proposalId(b), "approve-key-b", action())
+                        .body()
+                        .path("status")
+                        .asText())
+                .isEqualTo("APPROVED");
+    }
+
     private UUID paid() {
         payment = create();
         approved(payment);
