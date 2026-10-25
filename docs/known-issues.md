@@ -143,3 +143,57 @@ A smaller change in the same place: the receiver could keep accepting and record
 - `docs/plans/F16.md`: decision 4.
 - The F16 entry in `docs/progress.md`: the review's open design issues.
 - `contracts/ledger-merchant-notifications.md`: the response table.
+
+## KI-3 · An approved proposal whose refund fails still reads APPROVED
+
+Status: **deferred** (2026-10-25, after F18). Area: `ledger`, refund proposals and refund liability.
+
+### What happens
+
+Approving a proposal (F18) reserves a refund, records the liability split (F17) and sets the proposal to `APPROVED`, all in one transaction. The worker then sends the refund to PayPal. If PayPal fails or the refund is canceled:
+
+- the refund ends `FAILED` or `CANCELED`, and its reservation is released;
+- the proposal stays `APPROVED`. `APPROVED` and `REJECTED` are final, and there is no later state;
+- the liability allocation stays `PENDING` forever. It posts only after the refund has posted, and it never will (F17 decision 5).
+
+So the proposal and the allocation both look as if the refund is under way.
+
+### Observed
+
+Found in the F18 review (open design issue 4), carried over from F17's risk "Failed refunds stay `PENDING`". It has not happened in a run.
+
+### Impact
+
+- **Money is safe.** No refund went out, and no liability journal was posted. The ledger's balances are right.
+- **The status is misleading.** A reader of `GET /v1/refund-proposals/{id}` or of the liability endpoint sees `APPROVED` / `PENDING` and cannot tell from those alone that the refund failed.
+- **The customer is not refunded**, and nothing proposes the refund again by itself.
+
+### Likelihood
+
+Low in the sandbox: PayPal refunds of a completed capture rarely fail. It is more likely when a refund's request is lost (KI-1), which leaves it `UNKNOWN` rather than failed, with the same effect on the proposal.
+
+### Workarounds without code
+
+- Readers follow `refundId` to `GET /v1/refunds/{id}` and use its `refundStatus`. The agent does this anyway (F22 / F23).
+- A person who sees a failed refund for an approved proposal decides by hand: a manual refund, or a new complaint and proposal.
+
+### Proposed fix
+
+Make the proposal show the refund's outcome without breaking "decisions are final":
+
+- keep `status` as the review decision;
+- add a read-only `execution` field derived from the refund: `PENDING`, `SUCCEEDED`, `FAILED` or `CANCELED`;
+- give the allocation a terminal `VOID` posting status when its refund ends without money moving.
+
+Both are contract changes. They start in `contracts/ledger-openapi.yaml`, then the ledger, then the agent client.
+
+### Revisit when
+
+- The agent (F22 / F23) needs to tell a failed approved refund apart without a second call.
+- The F24 demo shows proposals to a person, and a failed refund would confuse the story.
+
+### Related
+
+- `docs/plans/F18.md`: decision 7, "Review fixes".
+- `docs/plans/F17.md`: decision 5, risk "Failed refunds stay `PENDING`".
+- KI-1: a refund whose request is lost stays `UNKNOWN`.
