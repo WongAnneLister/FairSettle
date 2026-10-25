@@ -19,7 +19,7 @@ public final class LiabilityWorker {
         try {
             service.postReady(25);
         } catch (RuntimeException e) {
-            LOG.warn("liability_post reason=RETRY_REQUIRED");
+            LOG.warn("liability_post reason=RETRY_REQUIRED {}", LiabilityFailures.describe(e));
         }
     }
 }

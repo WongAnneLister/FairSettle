@@ -78,8 +78,15 @@ public final class LiabilityService {
             var transactions = refunds.balanceTransactions(refund);
             boolean conflict = transactions.stream()
                     .anyMatch(b -> "QUARANTINED".equals(b.state()) || refunds.hasEvidenceConflict(b.id()));
-            if (!"SUCCEEDED".equals(refund.status())
-                    || !"POSTED".equals(RefundViewRules.financialStatus(refund, transactions, conflict))) return false;
+            String financialStatus = RefundViewRules.financialStatus(refund, transactions, conflict);
+            if (!"SUCCEEDED".equals(refund.status()) || !"POSTED".equals(financialStatus)) {
+                LOG.debug(
+                        "liability_post reason=NOT_READY liabilityId={} refundStatus={} financialStatus={}",
+                        liabilityId,
+                        refund.status(),
+                        financialStatus);
+                return false;
+            }
             var accounts = repository.provisionAccounts(
                     row.refundId(), row.organizationId(), row.environmentId(), row.currency());
             var command = LiabilityPosting.command(
@@ -99,11 +106,18 @@ public final class LiabilityService {
         var ids = repository.readyCandidates(limit);
         int posted = 0;
         for (UUID id : ids) {
+            long attempt = 0;
             try {
-                long attempt = tx.execute(status -> repository.markAttempted(id));
+                attempt = tx.execute(status -> repository.markAttempted(id));
                 if (post(id)) posted++;
+                else if (LiabilityFailures.milestone(attempt))
+                    LOG.warn("liability_post reason=STILL_NOT_READY liabilityId={} attempt={}", id, attempt);
             } catch (RuntimeException e) {
-                LOG.warn("liability_post reason=RETRY_REQUIRED liabilityId={}", id);
+                LOG.warn(
+                        "liability_post reason=RETRY_REQUIRED liabilityId={} attempt={} {}",
+                        id,
+                        attempt,
+                        LiabilityFailures.describe(e));
             }
         }
         return posted;
