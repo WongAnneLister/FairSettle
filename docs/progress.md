@@ -769,3 +769,32 @@ Pitfalls found
 - `PaymentRequests.idempotencyKey` requires 8 to 255 printable characters. Short keys in test plans fail validation.
 - When a review fix changes a stored key's format, every test that asserts the old format must be listed for change in the plan.
 - `LocalFixtureInitializer` returns early on an existing database. Each new fixture needs an idempotent upgrade path there too.
+
+## 2026-10-27 · session 16 · F19
+
+### State on 2026-10-27
+
+- passing 19/32
+- recently passing: F15 (4ad66e0), F16 (ffcc084), F17 (f871a5d), F18 (11d3710), F19 (bd0e86a)
+- ready next: F20 Policy checks
+
+Done this session
+- commit 63d4430: F19 plan. Decided with the user: dispatch gains an order event log (`order_event`, written in the change's own transaction) and the read-only `orderTimeline` query; the agent authenticates to dispatch with a read-only service token (`AGENT_SERVICE_TOKEN`, header `X-Service-Token`, `getOrder` and `orderTimeline` only), not a user role. Amended once before the work commit: Codex found that `@nestjs/graphql` emits enum keys on the wire, so `OrderEventKind` keys now equal their values, and test D4b checks the wire spellings.
+- commit ff57a52: work commit (Codex). The agent package `fairsettle_agent.clients` (async dispatch and ledger clients, Pydantic models with strict integer cents, typed errors, `FixtureReplay`); the dispatch migration, entity, write sites, guard and query; `contracts/dispatch-agent-operations.graphql`; 11 fixtures in `contracts/fixtures/agent/`, recorded by `dispatch/test/agent-fixtures.e2e-spec.ts` and `AgentFixturesHttpIT` and shape-checked by the same tests without `RECORD_AGENT_FIXTURES`. D16 is a real concurrent test: a fulfillment callback that loses a race now rolls back with 500 instead of answering 200.
+- Review (fresh session): 348cd30 names the `order_event` foreign key as in the migration, so `migration:generate` reports no drift; bd0e86a records the findings under Deviations.
+- Checks on bd0e86a (review session): verification command 20/20; dispatch unit 75, e2e 98 across 9 specs; the whole ledger IT suite green (3 real-provider skips); typecheck, lint and Spotless clean.
+- `python3 scripts/features.py verify F19` passed at bd0e86a; evidence is `docs/evidence/F19.log`. No push.
+
+Not done / left half-way
+- `ledger-payment-captured.json` is not a real capture: `refundBody` sets the captured state by SQL, so the fixture shows `SUCCEEDED` with `providerStatus` `requires_payment_method`, `financialStatus` `NOT_APPLICABLE` and recovery `WAITING`. F19 uses only its amounts. F20/F21 must decide whether to re-record it through a fake-provider capture or to read only amount fields.
+- `docker-compose.yml` sets no `AGENT_SERVICE_TOKEN`, so service access is off in the stack until a later feature provisions it (F22, F24). The agent's real ledger credential is also still F22's.
+- Branch `codex/f19` is not merged into main yet.
+
+Next
+- Merge `codex/f19` into main, then plan F20 (policy checks), starting with the fixture question above.
+
+Pitfalls found
+- `@nestjs/graphql` builds GraphQL enum values from the TypeScript enum's keys, while TypeORM stores its values. Keep keys equal to values for any enum another service reads.
+- A conditional `UPDATE` whose `affected` count is ignored can report success for a change that never happened. Check `affected` at every write site, especially before recording an event.
+- The dispatch e2e on this Mac needs throwaway PostgreSQL/Redis on 127.0.0.1:55432/56380 and an uncommitted `.env.test`. Maven needs JDK 21 (Homebrew `openjdk@21`); the shell default is 17.
+- `python` exists only inside `agent/.venv`; run `verify F19` in the shell where the venv is activated.
