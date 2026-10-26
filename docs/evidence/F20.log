@@ -1,0 +1,9 @@
+feature: F20
+kind: command
+command: cd agent && python -m pytest -q tests/test_policy.py
+commit: c0d48762f2b5f06353bac0ded681400dc6728e83
+started_at: 2026-10-27T01:43:47+08:00
+exit_code: 0
+----
+......................................                                   [100%]
+38 passed in 0.07s

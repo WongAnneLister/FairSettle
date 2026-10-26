@@ -798,3 +798,30 @@ Pitfalls found
 - A conditional `UPDATE` whose `affected` count is ignored can report success for a change that never happened. Check `affected` at every write site, especially before recording an event.
 - The dispatch e2e on this Mac needs throwaway PostgreSQL/Redis on 127.0.0.1:55432/56380 and an uncommitted `.env.test`. Maven needs JDK 21 (Homebrew `openjdk@21`); the shell default is 17.
 - `python` exists only inside `agent/.venv`; run `verify F19` in the shell where the venv is activated.
+
+## 2026-10-27 · session 16 · F20
+
+### State on 2026-10-27
+
+- passing 20/32
+- recently passing: F16 (ffcc084), F17 (f871a5d), F18 (11d3710), F19 (bd0e86a), F20 (c0d4876)
+- ready next: F21 Gather and decide
+
+Done this session
+- commit 7a6c2d9: F20 plan. The agent PRD (2026-10-22) is not in the repository; the user supplied it as a PDF, and the plan copies the parts F20 relies on: the `RefundDecision` contract, the seven hard rules, the refund-cap table and the ten evaluation scenarios. Decided with the user: the late-delivery cap is a fixed `PolicyConfig.delivery_fee_cents` (default 299), since dispatch orders have no delivery-fee field; the 7-day complaint count is an input to the rules, and counting it is F22's.
+- commit c0d4876: work commit (Codex). `fairsettle_agent/decision.py` (strict schema, no coercion), `evidence.py` (one run's evidence and its citable ids: `order:`, `order-item:`, `order-event:`, `payment:`, `refundable:`), `policy.py` (six `check_*` pure functions and `evaluate`). Any violation escalates with every reason in rule order, and `evaluate` returns the input decision object unchanged: nothing trims an amount.
+- Review (fresh session): no defects and no review fixes. It mutation-tested P30 (an `os` import, an `httpx` import, a float literal and `float` each make it fail).
+- `python3 scripts/features.py verify F20` passed at c0d4876 (38 tests, P27 runs 9 scenarios); the whole agent suite is 58. Evidence is `docs/evidence/F20.log`. No push.
+
+Not done / left half-way
+- `delivery_fee_cents` 299 is a placeholder until dispatch has a real delivery fee; until then a late-delivery refund over 299 escalates.
+- PRD scenario 9 (an unconfirmed PayPal capture) is not a hard rule; F21 must escalate it during evidence gathering.
+- F19's `ledger-payment-captured.json` finding is still open for F21 and F27; F20 does not read the status fields it gets wrong.
+- Branch `codex/f20` is not merged into main yet.
+
+Next
+- Plan F21 (gather and decide): evidence gathering in parallel without the model, the schema retry, evidence ids shown to the model, scenario 9, and the fixture question.
+
+Pitfalls found
+- In Pydantic strict mode, `model_validate_json` accepts JSON arrays for tuple fields, but `model_validate` with a Python `list` is a `tuple_type` error. Build decisions from JSON, or pass tuples from Python.
+- The PRD's design principles are not in the repository. Keep the PDF where the next planner can read it, or add it to `docs/`.
