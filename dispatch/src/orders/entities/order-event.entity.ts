@@ -74,6 +74,6 @@ export class OrderEvent {
   occurredAt: Date;
 
   @ManyToOne(() => Order, {onDelete: 'CASCADE'})
-  @JoinColumn({name: 'orderId'})
+  @JoinColumn({name: 'orderId', foreignKeyConstraintName: 'FK_order_event_order'})
   order: Order;
 }
