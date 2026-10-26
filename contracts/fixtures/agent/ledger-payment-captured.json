@@ -1,0 +1,44 @@
+{
+  "name" : "ledger-payment-captured",
+  "source" : "ledger/src/test/java/com/paymentsledger/payment/AgentFixturesHttpIT.java",
+  "request" : {
+    "method" : "GET",
+    "path" : "/v1/payments/pay_01M5WFD4D2Q4P8BCYH2DJSEV0R",
+    "operationName" : null,
+    "variables" : null
+  },
+  "response" : {
+    "status" : 200,
+    "body" : {
+      "recovery" : {
+        "status" : "WAITING",
+        "nextAttemptAt" : "2026-10-26T16:06:32.655931Z",
+        "attemptCount" : 1,
+        "lastQueryAt" : "2026-10-26T16:06:27.731644Z"
+      },
+      "id" : "pay_01M5WFD4D2Q4P8BCYH2DJSEV0R",
+      "businessOrderId" : "bor_01M5WFD4D143KX5ZYMMQZT4S7Q",
+      "orderKey" : "refund-payment",
+      "amountMinor" : 100,
+      "currency" : "USD",
+      "paymentStatus" : "SUCCEEDED",
+      "providerStatus" : "requires_payment_method",
+      "resolutionStatus" : "KNOWN",
+      "financialStatus" : "NOT_APPLICABLE",
+      "capturedAmountMinor" : 100,
+      "revenueShares" : [ ],
+      "createdAt" : "2026-10-26T16:06:27.479114Z",
+      "updatedAt" : "2026-10-26T16:06:27.683189Z",
+      "lastProviderConfirmedAt" : "2026-10-26T16:06:27.652589Z",
+      "provider" : {
+        "checkoutSessionId" : "cs_fake_194d128653083aa48aa88d592cb34363",
+        "paymentIntentId" : "pi_fake_f1bb9ebac6953cc8ab942134f91f0b3f",
+        "latestChargeId" : "ch_http_refund",
+        "attempts" : [ ]
+      },
+      "nextAction" : {
+        "type" : "NONE"
+      }
+    }
+  }
+}

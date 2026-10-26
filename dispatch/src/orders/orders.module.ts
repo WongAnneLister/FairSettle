@@ -1,3 +1,4 @@
+import {OrderEvent} from './entities/order-event.entity';
 import {Dish} from 'src/restaurants/entities/dish.entity';
 import {Module} from '@nestjs/common';
 import {Order} from './entities/order.entity';
@@ -8,7 +9,7 @@ import {Restaurant} from 'src/restaurants/entities/restaurant.entity';
 import {TypeOrmModule} from '@nestjs/typeorm';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Dish, Order, OrderItem, Restaurant])],
+  imports: [TypeOrmModule.forFeature([Dish, Order, OrderEvent, OrderItem, Restaurant])],
   providers: [OrderResolver, OrderService],
 })
 export class OrdersModule {}

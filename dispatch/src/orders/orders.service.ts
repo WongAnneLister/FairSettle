@@ -1,3 +1,7 @@
+import {Caller, callerRef} from 'src/auth/caller';
+import {OrderEvent, OrderEventActor, OrderEventKind} from './entities/order-event.entity';
+import {recordOrderEvent} from './order-events';
+import {OrderTimelineInput, OrderTimelineOutput} from './dto/order-timeline.dto';
 import {Inject, Injectable, Logger} from '@nestjs/common';
 import {ConfigService} from '@nestjs/config';
 import {InjectRepository} from '@nestjs/typeorm';
@@ -40,6 +44,7 @@ export class OrderService {
 
   constructor(
     @InjectRepository(Order) private readonly orders: Repository<Order>,
+    @InjectRepository(OrderEvent) private readonly orderEvents: Repository<OrderEvent>,
     @InjectRepository(OrderItem) private readonly orderItems: Repository<OrderItem>,
     @InjectRepository(Dish) private readonly dishes: Repository<Dish>,
     @InjectRepository(Restaurant) private readonly restaurants: Repository<Restaurant>,
@@ -135,6 +140,8 @@ export class OrderService {
           }),
         );
 
+        await recordOrderEvent(manager, {kind: OrderEventKind.CREATED, orderId: saved.id});
+
         // Same transaction as the order itself. The dispatch is owed the
         // moment the order exists and not a moment before — see
         // fulfillment/entities/outbox-event.entity.ts for why calling the
@@ -217,7 +224,7 @@ export class OrderService {
     }
   }
 
-  async getOrder(user: User, getOrderInput: GetOrderInput): Promise<GetOrderOutput> {
+  async getOrder(caller: Caller, getOrderInput: GetOrderInput): Promise<GetOrderOutput> {
     try {
       const order = await this.orders.findOne({
         where: {id: getOrderInput.id},
@@ -231,7 +238,7 @@ export class OrderService {
         throw new NotFoundError('Order not found');
       }
 
-      if (!this.canSeeOrder(user, order)) {
+      if (!this.canRead(caller, order)) {
         throw new ForbiddenError("You can't see that.");
       }
 
@@ -242,10 +249,26 @@ export class OrderService {
     } catch (error) {
       return failure(error, this.logger, {
         op: 'getOrder',
-        userId: user.id,
+        caller: callerRef(caller),
         orderId: getOrderInput.id,
       });
     }
+  }
+
+  async orderTimeline(caller: Caller, {orderId}: OrderTimelineInput): Promise<OrderTimelineOutput> {
+    try {
+      const order = await this.orders.findOne({where: {id: orderId}, relations: ['restaurant']});
+      if (!order) throw new NotFoundError('Order not found');
+      if (!this.canRead(caller, order)) throw new ForbiddenError("You can't see that.");
+      const events = await this.orderEvents.find({where: {orderId}, order: {id: 'ASC'}});
+      return {ok: true, events};
+    } catch (error) {
+      return failure(error, this.logger, {op: 'orderTimeline', caller: callerRef(caller), orderId});
+    }
+  }
+
+  canRead(caller: Caller, order: Order): boolean {
+    return caller.kind === 'service' || this.canSeeOrder(caller.user, order);
   }
 
   async editOrder(user: User, editOrderInput: EditOrderInput): Promise<EditOrderOutput> {
@@ -277,17 +300,31 @@ export class OrderService {
       // The verdict was computed from a status read a moment ago. Making the
       // write conditional on that same status means a concurrent transition
       // cannot slip in between — the same reasoning as the claim in takeOrder.
-      const applied = await this.orders
-        .createQueryBuilder()
-        .update(Order)
-        .set({status: editOrderInput.status})
-        .where('id = :id', {id: editOrderInput.id})
-        .andWhere('status = :expected', {expected: order.status})
-        .execute();
-
-      if (applied.affected === 0) {
-        throw new ConflictError('The order changed while this update was in flight');
-      }
+      await this.dataSource.transaction(async manager => {
+        const applied = await manager
+          .createQueryBuilder()
+          .update(Order)
+          .set({status: editOrderInput.status})
+          .where('id = :id', {id: editOrderInput.id})
+          .andWhere('status = :expected', {expected: order.status})
+          .execute();
+        if (applied.affected === 0) {
+          throw new ConflictError('The order changed while this update was in flight');
+        }
+        const actor =
+          this.actorFor(user, order) === UserRole.Owner
+            ? OrderEventActor.Owner
+            : OrderEventActor.AssignedDriver;
+        await recordOrderEvent(manager, {
+          kind: OrderEventKind.STATUS_CHANGED,
+          orderId: order.id,
+          from: order.status,
+          to: editOrderInput.status,
+          actor,
+          driverId: actor === OrderEventActor.AssignedDriver ? user.id : null,
+          providerEventId: null,
+        });
+      });
 
       const newOrder = {...order, status: editOrderInput.status};
       if (user.role === UserRole.Owner) {
@@ -319,14 +356,24 @@ export class OrderService {
       // blocks on the first, then RE-EVALUATES its predicate against the newly
       // committed row — finds driverId non-null, matches nothing, and reports
       // affected = 0. That re-evaluation is the whole mechanism.
-      const claim = await this.orders
-        .createQueryBuilder()
-        .update(Order)
-        .set({driver})
-        .where('id = :id', {id})
-        .andWhere('"driverId" IS NULL')
-        .andWhere('status = :cooked', {cooked: OrderStatus.Cooked})
-        .execute();
+      const claim = await this.dataSource.transaction(async manager => {
+        const claimed = await manager
+          .createQueryBuilder()
+          .update(Order)
+          .set({driver})
+          .where('id = :id', {id})
+          .andWhere('"driverId" IS NULL')
+          .andWhere('status = :cooked', {cooked: OrderStatus.Cooked})
+          .execute();
+        if (claimed.affected === 1) {
+          await recordOrderEvent(manager, {
+            kind: OrderEventKind.DRIVER_ASSIGNED,
+            orderId: id,
+            driverId: driver.id,
+          });
+        }
+        return claimed;
+      });
 
       if (claim.affected === 0) {
         // Only on the losing path, so this read cannot reintroduce the race.

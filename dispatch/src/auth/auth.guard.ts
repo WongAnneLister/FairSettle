@@ -1,3 +1,5 @@
+import {ConfigService} from '@nestjs/config';
+import {SERVICE_READABLE, serviceTokenMatches} from './service-token';
 import {CanActivate, ExecutionContext, Injectable} from '@nestjs/common';
 
 import {AllowedRoles} from './role.decorator';
@@ -12,6 +14,7 @@ export class AuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
+    private readonly config: ConfigService,
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const roles = this.reflector.get<AllowedRoles>('roles', context.getHandler());
@@ -19,6 +22,16 @@ export class AuthGuard implements CanActivate {
       return true;
     }
     const gqlContext = GqlExecutionContext.create(context).getContext();
+    if (gqlContext.serviceToken !== undefined) {
+      if (
+        this.reflector.get(SERVICE_READABLE, context.getHandler()) &&
+        serviceTokenMatches(this.config.get('AGENT_SERVICE_TOKEN'), gqlContext.serviceToken)
+      ) {
+        gqlContext['caller'] = {kind: 'service'};
+        return true;
+      }
+      return false;
+    }
     const token = gqlContext.token;
     if (token) {
       const decoded = this.jwtService.verify(token.toString());
@@ -28,6 +41,7 @@ export class AuthGuard implements CanActivate {
           return false;
         }
         gqlContext['user'] = user;
+        gqlContext['caller'] = {kind: 'user', user};
         if (roles.includes('Any')) {
           return true;
         }

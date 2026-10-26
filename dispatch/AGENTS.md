@@ -12,10 +12,13 @@ Read before changing anything here: `docs/adr/` (6 ADRs).
 - E2E tests against real PostgreSQL and Redis: copy `env.test.example` to `.env.test`, then `npm run test:e2e`.
 - Race reproduction, before and after the fix: `./scripts/race-demo.sh`.
 
+- The agent's service token is `AGENT_SERVICE_TOKEN`; it reads `getOrder` and `orderTimeline` only.
+
 ## Where things live
 
 | Path | Role |
 | --- | --- |
+| `src/orders/order-events.ts` | The order event log: one row per applied order change, in the change's own transaction; read by `orderTimeline` (F19) |
 | `src/orders/order-state-machine.ts` | The only place order status changes. API calls, provider callbacks and new ledger notifications all go through it |
 | `src/ledger/` | The only place dispatch calls the ledger. Payment creation goes through the outbox (`order.payment`); the key is derived from the order id (F15); receives signed ledger payment notifications at `POST /webhooks/ledger` (raw-byte HMAC, inbox by eventId) and moves `paymentStatus` through the state machine (F16) |
 | `src/fulfillment/` | Provider adapter, transactional outbox, signed webhook ingestion, retry and dead-letter |
@@ -30,3 +33,5 @@ Read before changing anything here: `docs/adr/` (6 ADRs).
 - Outbox rows commit in the same transaction as the business row; the poller claims with `FOR UPDATE SKIP LOCKED`.
 - Incoming webhooks: HMAC checked in constant time, event id inserted against a unique index before any effect, then the state machine.
 - E2E tests use the real database and Redis on purpose. Do not stub them. Do not share process-level singletons between test application instances (a module-level PubSub once made a cross-replica test pass against the bug).
+
+- A new order write site records an `order_event` in the same transaction (F19).

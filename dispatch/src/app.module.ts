@@ -1,3 +1,4 @@
+import {SERVICE_TOKEN_HEADER} from './auth/service-token';
 import {AuthModule} from './auth/auth.module';
 import {CommonModule} from './common/common.module';
 import {ConfigModule} from '@nestjs/config';
@@ -50,7 +51,10 @@ type GqlWsExtra = {token?: string};
         // HTTP operations carry the token on the request header;
         // WebSocket operations carry it on `extra`, set by onConnect above.
         if (ctx.req) {
-          return {token: ctx.req.headers[TOKEN_KEY.toLowerCase()]};
+          return {
+            token: ctx.req.headers['authorization'],
+            serviceToken: ctx.req.headers[SERVICE_TOKEN_HEADER],
+          };
         }
         return {token: ctx.extra?.token};
       },

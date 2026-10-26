@@ -1,3 +1,6 @@
+import {ConflictError} from 'src/common/errors/app-error';
+import {OrderEventActor, OrderEventKind} from 'src/orders/entities/order-event.entity';
+import {recordOrderEvent} from 'src/orders/order-events';
 import {Injectable, Logger} from '@nestjs/common';
 import {DataSource, QueryFailedError} from 'typeorm';
 
@@ -77,7 +80,23 @@ export class WebhookIngestService {
           return {applied: false, reason: verdict.reason};
         }
 
-        await manager.update(Order, {id: order.id, status: order.status}, {status: target});
+        const updated = await manager.update(
+          Order,
+          {id: order.id, status: order.status},
+          {status: target},
+        );
+        if (updated.affected !== 1) {
+          throw new ConflictError('The order changed while this callback was applied');
+        }
+        await recordOrderEvent(manager, {
+          kind: OrderEventKind.STATUS_CHANGED,
+          orderId: order.id,
+          from: order.status,
+          to: target,
+          actor: OrderEventActor.FulfillmentProvider,
+          driverId: null,
+          providerEventId: event.eventId,
+        });
         return {applied: true, reason: `moved to ${target}`};
       });
     } catch (error) {

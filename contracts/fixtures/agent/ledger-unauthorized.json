@@ -1,0 +1,19 @@
+{
+  "name" : "ledger-unauthorized",
+  "source" : "ledger/src/test/java/com/paymentsledger/payment/AgentFixturesHttpIT.java",
+  "request" : {
+    "method" : "GET",
+    "path" : "/v1/payments/pay_01M5WFD3GEV8JZZX8B3WBND542",
+    "operationName" : null,
+    "variables" : null
+  },
+  "response" : {
+    "status" : 401,
+    "body" : {
+      "code" : "UNAUTHORIZED",
+      "message" : "Valid credentials required",
+      "retryable" : false,
+      "requestId" : "req_7589a20a-02e3-4d55-b63f-d2895d5a4c3d"
+    }
+  }
+}

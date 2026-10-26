@@ -441,8 +441,9 @@
       "depends_on": [
         "F14"
       ],
-      "state": "not_started",
-      "evidence": null
+      "state": "active",
+      "evidence": null,
+      "started_at": "2026-10-27T00:01:27+08:00"
     },
     {
       "id": "F20",

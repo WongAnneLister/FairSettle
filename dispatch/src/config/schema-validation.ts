@@ -14,6 +14,8 @@ export const schema = Joi.object({
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().required(),
   FULFILLMENT_SIGNING_SECRET: Joi.string().required(),
+  // Agent read-only service token for getOrder and orderTimeline (F19); unset disables access.
+  AGENT_SERVICE_TOKEN: Joi.string().min(32),
   OUTBOX_POLLING: Joi.string().valid('enabled', 'disabled').default('enabled'),
   LEDGER_CHECKOUT: Joi.string().valid('enabled', 'disabled').default('disabled'),
   LEDGER_BASE_URL: Joi.string()

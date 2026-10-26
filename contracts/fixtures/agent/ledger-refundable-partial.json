@@ -1,0 +1,22 @@
+{
+  "name" : "ledger-refundable-partial",
+  "source" : "ledger/src/test/java/com/paymentsledger/payment/AgentFixturesHttpIT.java",
+  "request" : {
+    "method" : "GET",
+    "path" : "/v1/payments/pay_01M5WFD4D2Q4P8BCYH2DJSEV0R/refundable",
+    "operationName" : null,
+    "variables" : null
+  },
+  "response" : {
+    "status" : 200,
+    "body" : {
+      "paymentId" : "pay_01M5WFD4D2Q4P8BCYH2DJSEV0R",
+      "currency" : "USD",
+      "capturedMinor" : 100,
+      "refundedMinor" : 0,
+      "reservedMinor" : 60,
+      "refundableMinor" : 40,
+      "controlState" : "NORMAL"
+    }
+  }
+}

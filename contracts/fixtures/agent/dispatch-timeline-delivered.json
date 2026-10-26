@@ -1,0 +1,86 @@
+{
+  "name": "dispatch-timeline-delivered",
+  "source": "dispatch/test/agent-fixtures.e2e-spec.ts",
+  "request": {
+    "method": "POST",
+    "path": "/graphql",
+    "operationName": "AgentOrderTimeline",
+    "variables": {
+      "orderId": 1
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "orderTimeline": {
+          "ok": true,
+          "code": null,
+          "error": null,
+          "events": [
+            {
+              "id": 1,
+              "kind": "CREATED",
+              "fromStatus": null,
+              "toStatus": "Pending",
+              "actor": "Client",
+              "driverId": null,
+              "providerEventId": null,
+              "occurredAt": "2026-10-26T16:05:56.831Z"
+            },
+            {
+              "id": 2,
+              "kind": "STATUS_CHANGED",
+              "fromStatus": "Pending",
+              "toStatus": "Cooking",
+              "actor": "Owner",
+              "driverId": null,
+              "providerEventId": null,
+              "occurredAt": "2026-10-26T16:05:56.856Z"
+            },
+            {
+              "id": 3,
+              "kind": "STATUS_CHANGED",
+              "fromStatus": "Cooking",
+              "toStatus": "Cooked",
+              "actor": "Owner",
+              "driverId": null,
+              "providerEventId": null,
+              "occurredAt": "2026-10-26T16:05:56.871Z"
+            },
+            {
+              "id": 4,
+              "kind": "DRIVER_ASSIGNED",
+              "fromStatus": null,
+              "toStatus": null,
+              "actor": "AssignedDriver",
+              "driverId": 3,
+              "providerEventId": null,
+              "occurredAt": "2026-10-26T16:05:56.883Z"
+            },
+            {
+              "id": 5,
+              "kind": "STATUS_CHANGED",
+              "fromStatus": "Cooked",
+              "toStatus": "PickedUp",
+              "actor": "AssignedDriver",
+              "driverId": 3,
+              "providerEventId": null,
+              "occurredAt": "2026-10-26T16:05:56.903Z"
+            },
+            {
+              "id": 6,
+              "kind": "STATUS_CHANGED",
+              "fromStatus": "PickedUp",
+              "toStatus": "Delivered",
+              "actor": "FulfillmentProvider",
+              "driverId": null,
+              "providerEventId": "eec29eea-eb7a-403c-85ab-6a49e574108e",
+              "occurredAt": "2026-10-26T16:05:56.942Z"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

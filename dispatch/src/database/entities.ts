@@ -1,3 +1,4 @@
+import {OrderEvent} from 'src/orders/entities/order-event.entity';
 import {LedgerNotification} from 'src/ledger/entities/ledger-notification.entity';
 import {Category} from 'src/restaurants/entities/category.entity';
 import {Dish} from 'src/restaurants/entities/dish.entity';
@@ -24,10 +25,11 @@ export const entities = [
   EmailVerification,
   LedgerNotification,
   Order,
+  OrderEvent,
   OrderItem,
   OutboxEvent,
-  ProcessedEvent,
   Payment,
+  ProcessedEvent,
   Restaurant,
   User,
 ];

@@ -1,0 +1,36 @@
+{
+  "name": "dispatch-timeline-pending",
+  "source": "dispatch/test/agent-fixtures.e2e-spec.ts",
+  "request": {
+    "method": "POST",
+    "path": "/graphql",
+    "operationName": "AgentOrderTimeline",
+    "variables": {
+      "orderId": 3
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "orderTimeline": {
+          "ok": true,
+          "code": null,
+          "error": null,
+          "events": [
+            {
+              "id": 12,
+              "kind": "CREATED",
+              "fromStatus": null,
+              "toStatus": "Pending",
+              "actor": "Client",
+              "driverId": null,
+              "providerEventId": null,
+              "occurredAt": "2026-10-26T16:05:57.143Z"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "dispatch-order-not-found",
+  "source": "dispatch/test/agent-fixtures.e2e-spec.ts",
+  "request": {
+    "method": "POST",
+    "path": "/graphql",
+    "operationName": "AgentOrder",
+    "variables": {
+      "id": 999999
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "getOrder": {
+          "ok": false,
+          "code": "NOT_FOUND",
+          "error": "Order not found",
+          "order": null
+        }
+      }
+    }
+  }
+}

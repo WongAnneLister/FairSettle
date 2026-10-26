@@ -1,0 +1,43 @@
+# Dispatch GraphQL operations sent by the FairSettle agent (F19).
+# Sent over HTTP POST /graphql with header X-Service-Token and no Authorization header.
+# Only getOrder and orderTimeline accept the service token. Changing an operation here
+# changes the agent client and dispatch together (root AGENTS.md).
+
+query AgentOrder($id: Float!) {
+  getOrder(input: {id: $id}) {
+    ok
+    code
+    error
+    order {
+      id
+      createdAt
+      updatedAt
+      status
+      paymentStatus
+      totalCents
+      ledgerPaymentId
+      customer { id }
+      driver { id }
+      restaurant { id name }
+      items { id dish { id name priceCents } options { name choice } }
+    }
+  }
+}
+
+query AgentOrderTimeline($orderId: Int!) {
+  orderTimeline(input: {orderId: $orderId}) {
+    ok
+    code
+    error
+    events {
+      id
+      kind
+      fromStatus
+      toStatus
+      actor
+      driverId
+      providerEventId
+      occurredAt
+    }
+  }
+}

@@ -1,3 +1,6 @@
+import {Caller, CurrentCaller} from 'src/auth/caller';
+import {ServiceReadable} from 'src/auth/service-token';
+import {OrderTimelineInput, OrderTimelineOutput} from './dto/order-timeline.dto';
 import {Order} from './entities/order.entity';
 import {OrderService} from './orders.service';
 import {Args, Mutation, Query, Resolver, Subscription} from '@nestjs/graphql';
@@ -46,11 +49,22 @@ export class OrderResolver {
 
   @Query(returns => GetOrderOutput)
   @Role(['Any'])
+  @ServiceReadable()
   getOrder(
-    @AuthUser() user: User,
+    @CurrentCaller() caller: Caller,
     @Args('input') getOrderInput: GetOrderInput,
   ): Promise<GetOrderOutput> {
-    return this.orderService.getOrder(user, getOrderInput);
+    return this.orderService.getOrder(caller, getOrderInput);
+  }
+
+  @Query(returns => OrderTimelineOutput)
+  @Role(['Any'])
+  @ServiceReadable()
+  orderTimeline(
+    @CurrentCaller() caller: Caller,
+    @Args('input') input: OrderTimelineInput,
+  ): Promise<OrderTimelineOutput> {
+    return this.orderService.orderTimeline(caller, input);
   }
 
   @Mutation(returns => EditOrderOutput)

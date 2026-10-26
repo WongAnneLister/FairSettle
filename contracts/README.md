@@ -22,3 +22,13 @@ Lint the shared ledger contract from the repository root:
 ```bash
 npx --yes @redocly/cli lint contracts/ledger-openapi.yaml
 ```
+
+- `dispatch-agent-operations.graphql`: the dispatch queries the agent sends with the read-only service token (F19).
+- `fixtures/agent/`: recorded agent fixtures. Never edit them by hand. Re-record from the repository root with:
+
+  ```bash
+  (cd dispatch && RECORD_AGENT_FIXTURES=1 npm run test:e2e -- --testPathPattern=agent-fixtures)
+  (cd ledger && RECORD_AGENT_FIXTURES=1 ./mvnw -q -Dit.test='AgentFixturesHttpIT' -Dtest='NoSuchTest' -Dsurefire.failIfNoSpecifiedTests=false verify)
+  ```
+
+  Without `RECORD_AGENT_FIXTURES`, these same tests check the committed response shapes.

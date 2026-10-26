@@ -1,0 +1,40 @@
+{
+  "name": "dispatch-unauthorized",
+  "source": "dispatch/test/agent-fixtures.e2e-spec.ts",
+  "request": {
+    "method": "POST",
+    "path": "/graphql",
+    "operationName": "AgentOrder",
+    "variables": {
+      "id": 1
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "errors": [
+        {
+          "message": "Forbidden resource",
+          "locations": [
+            {
+              "line": 7,
+              "column": 3
+            }
+          ],
+          "path": [
+            "getOrder"
+          ],
+          "extensions": {
+            "code": "FORBIDDEN",
+            "originalError": {
+              "message": "Forbidden resource",
+              "error": "Forbidden",
+              "statusCode": 403
+            }
+          }
+        }
+      ],
+      "data": null
+    }
+  }
+}

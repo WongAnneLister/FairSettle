@@ -1,0 +1,19 @@
+{
+  "name" : "ledger-payment-not-found",
+  "source" : "ledger/src/test/java/com/paymentsledger/payment/AgentFixturesHttpIT.java",
+  "request" : {
+    "method" : "GET",
+    "path" : "/v1/payments/pay_01M5WFD3GEV8JZZX8B3WBND542",
+    "operationName" : null,
+    "variables" : null
+  },
+  "response" : {
+    "status" : 404,
+    "body" : {
+      "code" : "NOT_FOUND",
+      "message" : "Payment request cannot be completed: NOT_FOUND",
+      "retryable" : false,
+      "requestId" : "req_cdeee08b-e325-4872-935c-1e71920e507d"
+    }
+  }
+}
