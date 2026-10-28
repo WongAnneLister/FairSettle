@@ -2,7 +2,7 @@
 name = "fairsettle-agent"
 version = "0.1.0"
 requires-python = ">=3.11,<3.12"
-dependencies = ["httpx==0.28.1", "pydantic==2.12.5"]
+dependencies = ["httpx==0.28.1", "pydantic==2.12.5", "litellm==1.106.5", "openai==2.54.0"]
 
 [dependency-groups]
 dev = ["pytest==9.0.2"]
