@@ -33,7 +33,7 @@ TEST_KEY = "sk-test-" + "k" * 32
 
 def test_tests_cannot_reach_the_network():
     with pytest.raises(AssertionError, match="network access in tests"):
-        socket.create_connection(("example.com", 443))
+        socket.create_connection(("127.0.0.1", 9))
 
 
 def test_litellm_imports_without_fetching():
