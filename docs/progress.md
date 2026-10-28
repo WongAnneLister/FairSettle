@@ -825,3 +825,32 @@ Next
 Pitfalls found
 - In Pydantic strict mode, `model_validate_json` accepts JSON arrays for tuple fields, but `model_validate` with a Python `list` is a `tuple_type` error. Build decisions from JSON, or pass tuples from Python.
 - The PRD's design principles are not in the repository. Keep the PDF where the next planner can read it, or add it to `docs/`.
+
+## 2026-10-29 · session 16 · F21
+
+### State on 2026-10-29
+
+- passing 21/32
+- recently passing: F17 (f871a5d), F18 (11d3710), F19 (bd0e86a), F20 (c0d4876), F21 (15d1ff5)
+- ready next: F22 Propose, pause, resume
+
+Done this session
+- commit e3ada7e: F21 plan. Decided with the user: keep LiteLLM (compared with a vendor SDK); DeepSeek, with `deepseek/deepseek-flash` for development and `deepseek/deepseek-v4-pro` for evaluation and the demo (`FAIRSETTLE_MODEL`), key `DEEPSEEK_API_KEY` from the environment only; Python stays 3.11 (the PRD says 3.12, a recorded difference). Checked while planning, with the network blocked: litellm 1.106.5 resolves with the existing pins; importing it fetches a price map unless `LITELLM_LOCAL_MODEL_COST_MAP=True`; DeepSeek supports `json_object` only, not `json_schema`, and may return empty content; `mock_response` exercises the real litellm path but cannot produce empty content.
+- commit d17dafd: work commit (Codex). `complaint.py`, `gather.py` (two parallel rounds, only `ClientError` caught, PRD scenario 9 escalates on an unsettled payment), `model.py` (verbatim system prompt, evidence document with citable refs, data markers, strict parsing that tolerates only a code fence), `decide.py` (exact `acompletion` arguments, one retry on invalid output, none on provider errors, F20's `evaluate`, a `RunRecord` without complaint text or replies). Pins `litellm==1.106.5`, `openai==2.54.0`. Codex reran the suite with the key unset and a `sandbox-exec` firewall.
+- Review (fresh session): b9976dd makes D1 connect to `127.0.0.1:9` instead of `example.com`, so it no longer depends on DNS; 15d1ff5 records it under Deviations. No design issues.
+- Checked here: with name resolution failing and numeric addresses working (a real outage), the verification command passes 26 and the agent suite 84; the old D1 fails under the same condition.
+- `python3 scripts/features.py verify F21` passed at 15d1ff5 (26 tests); evidence is `docs/evidence/F21.log`, which contains no key. No push.
+
+Not done / left half-way
+- No real DeepSeek call has been made yet. F27 is the first run against the model and measures how often the retry still fails.
+- Production must set `LITELLM_LOCAL_MODEL_COST_MAP=True` too (F24/F29).
+- F19's `ledger-payment-captured.json` finding is still open for F27. F21 reads only `payment_status` and `resolution_status`.
+- Branch `codex/f21` is not merged into main yet.
+
+Next
+- Plan F22 (propose, pause, resume): LangGraph with a Postgres checkpointer, the ledger proposal (`complaint_id` as idempotency key, lowercase-to-contract enum mapping), counting complaints per customer for rule 6, and provisioning the agent's ledger credential (F14 note: it must belong to the payment's application).
+
+Pitfalls found
+- A network guard on `socket.connect` does not cover name resolution. A test that connects to a host name fails with `gaierror` when DNS is down; connect to a literal address.
+- To simulate an outage, break name resolution for host names only. Making `getaddrinfo` fail for numeric addresses too is stricter than any real outage and fails tests for the wrong reason.
+- One pytest warning comes from a third-party Pydantic `ReadOnly` deprecation in litellm's dependency chain; it is not ours.

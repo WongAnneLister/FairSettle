@@ -487,8 +487,13 @@
       "depends_on": [
         "F20"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "15d1ff5daf0604b5f1fa834238abe0f71439ded9",
+        "verified_at": "2026-10-29T00:15:45+09:00",
+        "log": "docs/evidence/F21.log",
+        "log_sha256": "75ba76c50ba1e0bc07d35c5de970e15c5173b51a80f9245a879f85cf156f9792"
+      },
       "started_at": "2026-10-28T23:16:45+09:00"
     },
     {
