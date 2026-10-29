@@ -534,8 +534,13 @@
       "depends_on": [
         "F22"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "865cd24508ef53122ffee75cc4fd2940b92e35e2",
+        "verified_at": "2026-10-30T01:25:02+09:00",
+        "log": "docs/evidence/F23.log",
+        "log_sha256": "67aec8812bc28380fc5713e42f3c3a083cbf218774a0a74d9bdc5a761e5b6dcd"
+      },
       "started_at": "2026-10-30T00:37:27+09:00"
     },
     {

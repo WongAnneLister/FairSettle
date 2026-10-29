@@ -882,3 +882,35 @@ Pitfalls found
 - testcontainers-python 4.15.0's Ryuk fails on Docker Desktop for Mac in two ways: it reads Ryuk's port mapping once with no retry (`Port mapping … port 8080 is not available`), and it mounts the Mac's socket path, which does not exist in Docker Desktop's VM (`mkdir /host_mnt/…/docker.sock: operation not supported`). `TESTCONTAINERS_RYUK_DISABLED=true` plus stopping the container in `finally` fixed both. After a hard kill, remove leftovers with `docker rm -f $(docker ps -aq --filter label=org.testcontainers.lang=python)`.
 - `RECORD_AGENT_FIXTURES=1` overwrites every fixture the selected tests touch. Record a new fixture with `-Dit.test='Class#method'`, then check all shapes without the variable.
 - psycopg connects through libpq, so the agent tests' `socket.socket.connect` guard does not cover the database; the Docker SDK does use Python sockets, so the container must start in a session fixture, before the function-scoped guard.
+
+## 2026-10-30 · session 18 · F23
+
+### State on 2026-10-30
+
+- passing 23/32
+- recently passing: F19 (bd0e86a), F20 (c0d4876), F21 (15d1ff5), F22 (edceee7), F23 (865cd24)
+- ready next: F24 M2: full chain with PayPal
+
+Done this session
+- commit 0ec662b: F23 plan. Decided with the user: refund following lives in the graph (one thread for the whole life cycle, so R13, R15 and R28 in `test_resume.py` change deliberately); Langfuse gets metadata only (the F21 `RunRecord` rule); one recorded `RESERVED` refund fixture, with terminal states built in memory; tracing is required unless `FAIRSETTLE_TRACING=off`. Checked while planning: `langfuse==5.0.4` and `opentelemetry-sdk==1.45.1` resolve with every existing pin; an in-memory exporter makes no connection, but `get_trace_url()` does. Amended three times before the work commit: no `refund_id` column (it would have broken F22's R11), `providerRefundId` / `providerStatus` default to None (the ledger omits null keys), and E16's definition of a root span.
+- commit 77069b3: work commit (Codex). `execution.py` (`refund_outcome`, `refund_resume_value`), `tracing.py` (`Tracing`, `TracingConfig`; trace id `Langfuse.create_trace_id(seed=complaint_id)`, session id = complaint id), graph nodes `approved` and `await_refund`, statuses `refunded` and `refund_failed` (the status check is replaced in one transaction), `Agent.poll` reads `GET /v1/refunds/{id}` after checking `state.next`, `agentRun.traceId` only when tracing is on, `LedgerClient.get_refund`, the recorded `ledger-refund-reserved` fixture and `AgentFixturesHttpIT.recordsApprovedRefund` (ledger test code only). Codex reported 19, 28 and 131 passed, and with Docker stopped 97 passed and 34 Docker errors.
+- Review (fresh session): e88958a makes E6 also reject a `_send` whose method is not a literal and any direct use of `self._http` other than `build_request`, `send` and `base_url`; ab810a9 makes E17 check that `retry_submit` is a root span, as the plan says; 865cd24 records both under Deviations. Review reran 19, 28 and 131 passed, and `AgentFixturesHttpIT` 4 passed without `RECORD_AGENT_FIXTURES`. Also checked: building `Tracing` leaves OpenTelemetry's global tracer provider untouched.
+- `python3 scripts/features.py verify F23` passed at 865cd24 (19 tests); evidence is `docs/evidence/F23.log`. No push.
+
+Not done / left half-way
+- Branch `codex/f23` is not merged into main yet.
+- Open design issues from review, not fixed:
+  - Switching `FAIRSETTLE_TRACING` while a complaint is `submit_retry` changes the retried POST body (`traceId` added or removed); the ledger may answer `IDEMPOTENCY_CONFLICT`, and the complaint escalates as `proposal_refused`. Keep the setting fixed for a deployment, or have the ledger's idempotency comparison ignore `agentRun.traceId`.
+  - `RefundProposal.refund_id` accepts any `[a-z]+_` prefix, while `get_refund` accepts only `ref_`. A different prefix would raise `ValueError` (not `ClientError`) in `poll()`, stopping every pass before later rows.
+  - Small: `finish`'s `"APPROVED": "approved"` mapping can no longer be reached; `approved_thread` in `resume_factory.py` imports `asyncio` inside the function.
+- The contract's `RefundSummary` lists `providerRefundId` and `providerStatus` as required and nullable; the ledger omits them when null (`docs/challenges.md` C-2). The agent accepts both. Making the contract say optional, or the ledger write explicit nulls, is a later contract change.
+- No live Langfuse trace and no real terminal refund yet (F24). A refund that never becomes final keeps the complaint `approved` and is read on every `poll()`.
+
+Next
+- Merge `codex/f23` into main, then plan F24 (full chain with PayPal): the long-running `poll()` process, the agent's compose service and ledger credential (it needs `refunds:read`), a Langfuse server version that works with SDK 5.0.4, and a real sandbox refund to `SUCCEEDED`.
+
+Pitfalls found
+- Langfuse clients are singletons per public key: a second `Langfuse(...)` with the same key reuses the first exporter, even after shutdown. Tests use a new public key for each client.
+- An observation opened with `trace_context` always has a parent: Langfuse 5.0.4 gives it a non-recording parent span that is never exported. Find roots by "no exported parent", not `parent is None`.
+- `Langfuse.get_trace_url()` connects to the server to fetch the project id; never call it in the agent or tests.
+- Maven needs JDK 21; the shell default here is 17. Set `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home` per command.
