@@ -362,6 +362,9 @@ def test_escalations_and_failures_are_traced(postgres_url):
             assert stage.attributes["langfuse.observation.level"] == "WARNING"
             assert stage.attributes["langfuse.observation.status_message"] == "submit_retry"
             assert len(named(items, "retry_submit")) == 1
+            exported_ids = {span.context.span_id for span in items}
+            retry = named(items, "retry_submit")[0]
+            assert retry.parent is None or retry.parent.span_id not in exported_ids
         else:
             stage = named(items, "finish")[0]
             assert metadata(stage, "final") == "refund_failed"
