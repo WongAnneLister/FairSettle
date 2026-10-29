@@ -854,3 +854,31 @@ Pitfalls found
 - A network guard on `socket.connect` does not cover name resolution. A test that connects to a host name fails with `gaierror` when DNS is down; connect to a literal address.
 - To simulate an outage, break name resolution for host names only. Making `getaddrinfo` fail for numeric addresses too is stricter than any real outage and fails tests for the wrong reason.
 - One pytest warning comes from a third-party Pydantic `ReadOnly` deprecation in litellm's dependency chain; it is not ours.
+
+## 2026-10-30 · session 17 · F22
+
+### State on 2026-10-30
+
+- passing 22/32
+- recently passing: F18 (11d3710), F19 (bd0e86a), F20 (c0d4876), F21 (15d1ff5), F22 (edceee7)
+- ready next: F23 Execute and trace
+
+Done this session
+- commit 7b09a4d: F22 plan. Decided with the user: count complaints per customer in the agent's own `agent_complaint` table (F21's `Complaint` unchanged, callers submit `ComplaintInput`); Testcontainers `postgres:16` for tests, which fail without Docker and never skip; the agent's ledger credential from the environment only (seeding is F24's); proposal fixtures recorded from the real ledger; F19's plain `ops_` credential check narrowed to the ops token shape, since a decided proposal contains `OPS_REVIEWER`. Checked while planning: the node that calls `interrupt()` runs again from its first line on resume; `Command(resume=…)` on a thread with no checkpoint silently starts a new run; a node that raised is re-run alone by `ainvoke(None)`; unregistered Pydantic types in state only warn now and will be blocked, so state is JSON only. Amended twice before the work commit, both after Codex stopped: Step 4 records only `AgentFixturesHttpIT#recordsRefundProposals`, because recording the whole class rewrites the five F19 ledger fixtures; Ryuk is disabled in `conftest.py`.
+- commit 316eb8e: work commit (Codex). `proposal.py` (decision → contract request, fixed party order so retries replay), `store.py` (registry, 7-day count, run status), `graph.py` (gather, count, decide, submit, await_review, finish), `agent.py` (`Agent.start` / `poll`, `AgentConfig.from_env`, `open_persistence`, `open_agent`), proposal client methods and models, seven recorded `ledger-proposal-*` fixtures, `AgentFixturesHttpIT.recordsRefundProposals` (ledger test code only). R13 and R23 restart in a separate process; R23 kills it between the POST and the checkpoint and recovers through the ledger's idempotent replay.
+- Review (fresh session): c159d3a makes R11 check that the complaint text is contained in no `agent_complaint` column (it only checked equality); edceee7 records it and three accepted small differences under Deviations. No design issues. Review reported 28/28, agent suite 112/112, `AgentFixturesHttpIT` 3/3.
+- `python3 scripts/features.py verify F22` passed at edceee7 (28 tests); evidence is `docs/evidence/F22.log`, which contains no key. No push.
+
+Not done / left half-way
+- Branch `codex/f22` is not merged into main yet.
+- No long-running process calls `poll()` yet, and the agent has no compose service or ledger credential in the stack (F24).
+- A crash before `submit` leaves the row `running`; `poll` does not resume it (plan, Risks). F24 decides whether startup restarts such threads.
+- One agent process per database: the lock in `Agent` is per process.
+
+Next
+- Merge `codex/f22` into main, then plan F23 (execute and trace): after `approved`, follow `refundId` through `GET /v1/refunds/{id}` (KI-3: an approved proposal whose refund fails still reads `APPROVED`), and Langfuse traces by complaint id, with `agentRun.traceId`.
+
+Pitfalls found
+- testcontainers-python 4.15.0's Ryuk fails on Docker Desktop for Mac in two ways: it reads Ryuk's port mapping once with no retry (`Port mapping … port 8080 is not available`), and it mounts the Mac's socket path, which does not exist in Docker Desktop's VM (`mkdir /host_mnt/…/docker.sock: operation not supported`). `TESTCONTAINERS_RYUK_DISABLED=true` plus stopping the container in `finally` fixed both. After a hard kill, remove leftovers with `docker rm -f $(docker ps -aq --filter label=org.testcontainers.lang=python)`.
+- `RECORD_AGENT_FIXTURES=1` overwrites every fixture the selected tests touch. Record a new fixture with `-Dit.test='Class#method'`, then check all shapes without the variable.
+- psycopg connects through libpq, so the agent tests' `socket.socket.connect` guard does not cover the database; the Docker SDK does use Python sockets, so the container must start in a session fixture, before the function-scoped guard.

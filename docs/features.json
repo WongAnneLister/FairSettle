@@ -511,8 +511,13 @@
         "F18",
         "F21"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "edceee75bf00c063dd38e89a2e3aee300567e649",
+        "verified_at": "2026-10-30T00:06:55+09:00",
+        "log": "docs/evidence/F22.log",
+        "log_sha256": "29f3f291072b5d151ac06575e7cc5fd3ee9e6481b1529857bdc149418b7728e9"
+      },
       "started_at": "2026-10-29T23:03:35+09:00"
     },
     {
