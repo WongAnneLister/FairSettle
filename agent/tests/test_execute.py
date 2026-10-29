@@ -140,12 +140,17 @@ def test_ledger_is_the_only_money_path():
     assert public == {"get_payment", "get_refundable", "create_proposal", "get_proposal", "get_refund"}
     package = Path(__file__).resolve().parents[1] / "fairsettle_agent"
     tree = ast.parse((package / "clients/ledger.py").read_text())
-    writes = []
+    writes, http_uses = [], set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "_send":
-            if node.args and isinstance(node.args[0], ast.Constant) and node.args[0].value != "GET":
+            assert node.args and isinstance(node.args[0], ast.Constant), ast.unparse(node)
+            assert "method" not in {keyword.arg for keyword in node.keywords}, ast.unparse(node)
+            if node.args[0].value != "GET":
                 writes.append((node.args[0].value, node.args[1].value))
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Attribute) and node.value.attr == "_http":
+            http_uses.add(node.attr)
     assert writes == [("POST", "/v1/refund-proposals")]
+    assert http_uses <= {"build_request", "send", "base_url"}
     for path in package.rglob("*.py"):
         assert "paypal" not in path.read_text().lower(), path
 
