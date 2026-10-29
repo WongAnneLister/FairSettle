@@ -215,7 +215,7 @@ def test_start_proposes_and_pauses_in_postgres(database_url):
             assert conn.execute("SELECT count(*) FROM checkpoints WHERE thread_id = %s", (COMPLAINT_ID,)).fetchone()[0] > 0
         row = read_row(database_url)
         assert set(row) == {"complaint_id", "order_id", "customer_id", "received_at", "status", "proposal_id", "submit_attempts", "updated_at"}
-        assert make_input().text not in [str(value) for value in row.values()]
+        assert all(make_input().text not in str(value) for value in row.values())
     asyncio.run(run())
 
 
