@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from .clients.models import AgentRunRef, ProposalRequest, ProposalShare, RefundProposal
+from .clients.models import AgentRunRef, ProposalRequest, ProposalShare, RefundProposal, Refund
 from .decision import Party
 from .evidence import Evidence
 from .policy import PolicyVerdict
@@ -9,13 +9,14 @@ from .policy import PolicyVerdict
 class ProposalLedger(Protocol):
     async def create_proposal(self, request: ProposalRequest) -> RefundProposal: ...
     async def get_proposal(self, proposal_id: str) -> RefundProposal: ...
+    async def get_refund(self, refund_id: str) -> Refund: ...
 
 
 PARTY_ORDER: tuple[Party, ...] = ("restaurant", "driver", "platform")
 
 
 def proposal_request(
-    verdict: PolicyVerdict, evidence: Evidence, complaint_id: str, thread_id: str,
+    verdict: PolicyVerdict, evidence: Evidence, complaint_id: str, thread_id: str, *, trace_id: str | None = None,
 ) -> ProposalRequest:
     if verdict.outcome != "propose":
         raise ValueError("only a propose verdict can become a proposal")
@@ -27,5 +28,5 @@ def proposal_request(
         currency=evidence.payment.currency, reason_code=decision.reason_code.upper(),
         liability=tuple(ProposalShare(party=party.upper(), basis_points=shares[party]) for party in PARTY_ORDER),
         explanation=decision.explanation, evidence_refs=decision.evidence_refs,
-        agent_run=AgentRunRef(thread_id=thread_id),
+        agent_run=AgentRunRef(thread_id=thread_id, trace_id=trace_id),
     )

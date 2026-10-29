@@ -1,0 +1,36 @@
+{
+  "name" : "ledger-refund-reserved",
+  "source" : "ledger/src/test/java/com/paymentsledger/payment/AgentFixturesHttpIT.java",
+  "request" : {
+    "method" : "GET",
+    "path" : "/v1/refunds/ref_01M645049WGNG6EDA3DCRDJ914",
+    "operationName" : null,
+    "variables" : null
+  },
+  "response" : {
+    "status" : 200,
+    "body" : {
+      "id" : "ref_01M645049WGNG6EDA3DCRDJ914",
+      "paymentId" : "pay_01M64503YF25W32YCHE44N717A",
+      "amountMinor" : 60,
+      "currency" : "USD",
+      "refundStatus" : "RESERVED",
+      "resolutionStatus" : "KNOWN",
+      "reason" : "REQUESTED_BY_CUSTOMER",
+      "controlState" : "NORMAL",
+      "reservation" : {
+        "capturedMinor" : 100,
+        "refundedMinor" : 0,
+        "reservedMinor" : 60,
+        "availableMinor" : 40
+      },
+      "financialStatus" : "NOT_APPLICABLE",
+      "evidence" : {
+        "actualFeeRefundMinor" : 0,
+        "postedJournalIds" : [ ]
+      },
+      "createdAt" : "2026-10-29T15:38:31.085848Z",
+      "updatedAt" : "2026-10-29T15:38:31.085848Z"
+    }
+  }
+}

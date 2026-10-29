@@ -2,10 +2,11 @@ import httpx
 from pydantic import TypeAdapter, ValidationError
 
 from .errors import MalformedResponse, NotFound, ServiceError, Unauthorized, Unavailable
-from .models import Payment, PaymentId, ProposalId, ProposalRequest, RefundableAmount, RefundProposal
+from .models import Payment, PaymentId, ProposalId, ProposalRequest, RefundableAmount, RefundProposal, Refund, RefundId
 
 _PAYMENT_ID = TypeAdapter(PaymentId)
 _PROPOSAL_ID = TypeAdapter(ProposalId)
+_REFUND_ID = TypeAdapter(RefundId)
 _ERROR_CODES = {
     "VALIDATION_ERROR", "IDEMPOTENCY_KEY_REQUIRED", "UNAUTHORIZED", "FORBIDDEN",
     "NOT_FOUND", "IDEMPOTENCY_CONFLICT", "REFUND_BLOCKED", "PROPOSAL_EXISTS",
@@ -49,6 +50,13 @@ class LedgerClient:
         except ValidationError:
             raise ValueError("proposal_id must be a valid proposal id") from None
         return await self._get(f"/v1/refund-proposals/{proposal_id}", RefundProposal)
+
+    async def get_refund(self, refund_id: str) -> Refund:
+        try:
+            _REFUND_ID.validate_python(refund_id)
+        except ValidationError:
+            raise ValueError("refund_id must be a valid refund id") from None
+        return await self._get(f"/v1/refunds/{refund_id}", Refund)
 
     @staticmethod
     def _validate_id(payment_id: str) -> None:

@@ -192,6 +192,7 @@ class ProposalShare(Outgoing):
 
 class AgentRunRef(Outgoing):
     thread_id: Annotated[str, StringConstraints(min_length=1, max_length=128)]
+    trace_id: Annotated[str, StringConstraints(min_length=1, max_length=128)] | None = None
 
 
 class ProposalRequest(Outgoing):
@@ -211,7 +212,7 @@ class ProposalRequest(Outgoing):
     agent_run: AgentRunRef
 
     def body(self) -> dict:
-        return self.model_dump(mode="json", by_alias=True)
+        return self.model_dump(mode="json", by_alias=True, exclude_none=True)
 
 
 class ProposalStatus(StrEnum):
@@ -250,3 +251,31 @@ class RefundProposal(Wire):
         if not valid:
             raise ValueError("proposal review fields do not match its status")
         return self
+
+
+RefundId = Annotated[str, StringConstraints(pattern=r"^ref_[0-9A-HJKMNP-TV-Z]{26}$")]
+
+
+class RefundStatus(StrEnum):
+    RESERVED = "RESERVED"
+    SUBMITTED = "SUBMITTED"
+    PENDING = "PENDING"
+    REQUIRES_ACTION = "REQUIRES_ACTION"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
+    CANCELED = "CANCELED"
+
+
+class Refund(Wire):
+    id: RefundId
+    payment_id: PaymentId
+    amount_minor: Cents
+    currency: Currency
+    refund_status: RefundStatus
+    resolution_status: ResolutionStatus
+    financial_status: FinancialStatus
+    provider_refund_id: str | None = None
+    provider_status: str | None = None
+    control_state: RefundControlState
+    created_at: AwareDatetime
+    updated_at: AwareDatetime

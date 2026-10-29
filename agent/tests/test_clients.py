@@ -37,7 +37,7 @@ EXPECTED_NAMES = {
     "ledger-refundable-partial", "ledger-payment-not-found", "ledger-unauthorized",
     "ledger-proposal-created", "ledger-proposal-replayed", "ledger-proposal-conflict",
     "ledger-proposal-limit", "ledger-proposal-pending", "ledger-proposal-approved",
-    "ledger-proposal-rejected",
+    "ledger-proposal-rejected", "ledger-refund-reserved",
 }
 OPS_TOKEN = re.compile(r"ops_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.")
 PRODUCERS = {

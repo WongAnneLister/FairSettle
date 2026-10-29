@@ -175,6 +175,7 @@ Low in the sandbox: PayPal refunds of a completed capture rarely fail. It is mor
 ### Workarounds without code
 
 - Readers follow `refundId` to `GET /v1/refunds/{id}` and use its `refundStatus`. The agent does this anyway (F22 / F23).
+  Since F23 the agent follows `refundId` after approval and ends the complaint as `refund_failed` when the refund is `FAILED` or `CANCELED`, or its resolution is `CONFLICT`. The ledger's own statuses are unchanged.
 - A person who sees a failed refund for an approved proposal decides by hand: a manual refund, or a new complaint and proposal.
 
 ### Proposed fix

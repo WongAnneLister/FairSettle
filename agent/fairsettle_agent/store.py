@@ -32,12 +32,19 @@ class ComplaintStore:
                     received_at timestamptz NOT NULL,
                     status text NOT NULL CHECK (status IN (
                         'running', 'submitting', 'submit_retry', 'awaiting_review',
-                        'approved', 'rejected', 'declined', 'escalated')),
+                        'approved', 'rejected', 'declined', 'escalated', 'refunded', 'refund_failed')),
                     proposal_id text,
                     submit_attempts integer NOT NULL DEFAULT 0 CHECK (submit_attempts >= 0),
                     updated_at timestamptz NOT NULL
                 )
             """)
+            async with conn.transaction():
+                await conn.execute("ALTER TABLE agent_complaint DROP CONSTRAINT IF EXISTS agent_complaint_status_check")
+                await conn.execute("""
+                    ALTER TABLE agent_complaint ADD CONSTRAINT agent_complaint_status_check CHECK (status IN (
+                        'running', 'submitting', 'submit_retry', 'awaiting_review', 'approved',
+                        'rejected', 'declined', 'escalated', 'refunded', 'refund_failed'))
+                """)
             await conn.execute("CREATE INDEX IF NOT EXISTS agent_complaint_customer ON agent_complaint (customer_id, received_at)")
             await conn.execute("CREATE INDEX IF NOT EXISTS agent_complaint_status ON agent_complaint (status)")
 
@@ -100,6 +107,9 @@ class ComplaintStore:
     async def finish(self, complaint_id: str, status: str) -> None:
         await self.set_status(complaint_id, status)
 
+    async def mark_approved(self, complaint_id: str) -> None:
+        await self.set_status(complaint_id, "approved")
+
     async def get(self, complaint_id: str) -> ComplaintRow | None:
         async with self.pool.connection() as conn:
             cursor = await conn.execute(
@@ -112,6 +122,6 @@ class ComplaintStore:
         async with self.pool.connection() as conn:
             cursor = await conn.execute(
                 "SELECT " + _COLUMNS + " FROM agent_complaint "
-                "WHERE status IN ('submitting', 'submit_retry', 'awaiting_review') ORDER BY received_at, complaint_id",
+                "WHERE status IN ('submitting', 'submit_retry', 'awaiting_review', 'approved') ORDER BY received_at, complaint_id",
             )
             return [ComplaintRow(**row) for row in await cursor.fetchall()]

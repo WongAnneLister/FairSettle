@@ -310,6 +310,35 @@ class AgentFixturesHttpIT {
         fixture("ledger-proposal-approved", path + "/" + proposal, approved);
     }
 
+    @Test
+    void recordsApprovedRefund() throws IOException {
+        String payment = refundBody(1).path("paymentId").asText();
+        var created = send(
+                1,
+                "/v1/refund-proposals",
+                HttpMethod.POST,
+                proposalBody(payment, "complaint-fixture-refund", 60),
+                "refund-proposal:complaint-fixture-refund");
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String proposal = created.getBody().path("id").asText();
+        var approved = sendOps(
+                2,
+                "/ops/refund-proposals/" + proposal + "/decision",
+                json.createObjectNode().put("action", "APPROVE"),
+                "review-approve-fixture-refund");
+        assertThat(approved.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(approved.getBody().path("refundId").isNull()).isFalse();
+        String refund = approved.getBody().path("refundId").asText();
+        assertThat(refund).startsWith("ref_");
+        String path = "/v1/refunds/" + refund;
+        var response = send(1, path, HttpMethod.GET, null, null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().path("refundStatus").asText()).isEqualTo("RESERVED");
+        assertThat(response.getBody().path("amountMinor").asLong()).isEqualTo(60);
+        assertThat(response.getBody().path("paymentId").asText()).isEqualTo(payment);
+        fixture("ledger-refund-reserved", "GET", path, response);
+    }
+
     private void fixture(String name, String path, ResponseEntity<JsonNode> response) throws IOException {
         fixture(name, "GET", path, response);
     }

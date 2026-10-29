@@ -246,7 +246,7 @@ def test_restart_then_approval_resumes_without_resubmitting(database_url, tmp_pa
             assert ledger.calls == [("get_proposal", PROPOSAL_ID)]
             assert not dispatch.calls and not complete.calls
             state = await agent.state(COMPLAINT_ID)
-            assert state.next == ()
+            assert state.next == ("await_refund",)
             assert state.values["review"] == {"status": "APPROVED", "refund_id": REFUND_ID, "rejection_reason": None, "reviewed_at": NOW.isoformat()}
             assert read_row(database_url)["status"] == "approved"
     asyncio.run(run())
@@ -266,7 +266,7 @@ def test_restart_then_rejection_resumes_to_rejected(database_url, tmp_path):
     asyncio.run(run())
 
 
-def test_poll_after_finish_does_nothing(database_url, tmp_path):
+def test_poll_after_approval_only_reads_the_refund(database_url, tmp_path):
     assert run_child("pause", database_url, tmp_path / "calls.json").returncode == 0
     ledger = FakeProposalLedger(review=make_proposal(status="APPROVED"))
     async def run():
@@ -274,7 +274,7 @@ def test_poll_after_finish_does_nothing(database_url, tmp_path):
             assert await agent.poll() == [expected_status("approved")]
             ledger.calls.clear()
             assert await agent.poll() == []
-            assert ledger.calls == []
+            assert ledger.calls == [("get_refund", REFUND_ID)]
     asyncio.run(run())
 
 
@@ -459,7 +459,7 @@ def test_config_from_env_and_open_agent(database_url):
     for missing in env:
         with pytest.raises(ValueError, match=missing + " is required"):
             AgentConfig.from_env({key: value for key, value in env.items() if key != missing})
-    config = AgentConfig.from_env(env)
+    config = AgentConfig.from_env({**env, "FAIRSETTLE_TRACING": "off"})
     representation = repr(config)
     assert "http://dispatch.invalid" in representation and "http://ledger.invalid" in representation
     assert "<set>" in representation
