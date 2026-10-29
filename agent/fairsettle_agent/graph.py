@@ -136,6 +136,7 @@ def build_graph(deps: GraphDeps) -> StateGraph:
                     "outcome": outcome.outcome, "decision": outcome.decision.decision,
                     "amount_cents": outcome.decision.amount_cents, "reason_code": outcome.decision.reason_code,
                     "violations": [str(v.rule) for v in outcome.violations],
+                    "evidence_refs": list(outcome.decision.evidence_refs),
                 })
             return result
 

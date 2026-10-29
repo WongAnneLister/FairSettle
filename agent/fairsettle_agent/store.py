@@ -125,3 +125,10 @@ class ComplaintStore:
                 "WHERE status IN ('submitting', 'submit_retry', 'awaiting_review', 'approved') ORDER BY received_at, complaint_id",
             )
             return [ComplaintRow(**row) for row in await cursor.fetchall()]
+
+    async def running(self) -> list[str]:
+        async with self.pool.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT complaint_id FROM agent_complaint WHERE status = 'running' ORDER BY received_at, complaint_id",
+            )
+            return [row["complaint_id"] for row in await cursor.fetchall()]

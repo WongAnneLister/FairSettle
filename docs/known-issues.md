@@ -198,3 +198,40 @@ Both are contract changes. They start in `contracts/ledger-openapi.yaml`, then t
 - `docs/plans/F18.md`: decision 7, "Review fixes".
 - `docs/plans/F17.md`: decision 5, risk "Failed refunds stay `PENDING`".
 - KI-1: a refund whose request is lost stays `UNKNOWN`.
+
+## KI-4 · Switching tracing during a submit retry changes the proposal body
+
+Status: **deferred** (2026-10-30, F24). Area: `agent`.
+
+### What happens
+
+Changing `FAIRSETTLE_TRACING` while a complaint is `submit_retry` makes the retried `POST /v1/refund-proposals` gain or lose `agentRun.traceId`. The ledger may answer `409 IDEMPOTENCY_CONFLICT`, and the complaint escalates as `proposal_refused`.
+
+### Observed
+
+Found in the F23 review, not in a run.
+
+### Impact
+
+No money moves. The complaint goes to a person.
+
+### Likelihood
+
+Only when a deployment changes `FAIRSETTLE_TRACING` while a complaint is `submit_retry`. The live overlay never sets it.
+
+### Workarounds without code
+
+Keep `FAIRSETTLE_TRACING` fixed per deployment.
+
+### Proposed fix
+
+Store whether tracing was on in the checkpoint at the first submit and reuse it, or have the ledger's idempotency comparison ignore `agentRun.traceId`. The latter is a contract change.
+
+### Revisit when
+
+F29 configures deployment settings.
+
+### Related
+
+- The F23 entry in `docs/progress.md`.
+- `docs/plans/F23.md`: decision 10.

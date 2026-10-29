@@ -221,6 +221,9 @@ class ProposalStatus(StrEnum):
     REJECTED = "REJECTED"
 
 
+RefundId = Annotated[str, StringConstraints(pattern=r"^ref_[0-9A-HJKMNP-TV-Z]{26}$")]
+
+
 class RefundProposal(Wire):
     id: ProposalId
     complaint_id: str
@@ -234,7 +237,7 @@ class RefundProposal(Wire):
     created_at: AwareDatetime
     reviewed_at: AwareDatetime | None
     rejection_reason: str | None
-    refund_id: ResourceId | None
+    refund_id: RefundId | None
 
     @model_validator(mode="after")
     def validate_review(self) -> Self:
@@ -252,8 +255,6 @@ class RefundProposal(Wire):
             raise ValueError("proposal review fields do not match its status")
         return self
 
-
-RefundId = Annotated[str, StringConstraints(pattern=r"^ref_[0-9A-HJKMNP-TV-Z]{26}$")]
 
 
 class RefundStatus(StrEnum):

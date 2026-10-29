@@ -1,0 +1,271 @@
+# Live M2 overlay; always layer it on docker-compose.yml.
+# Start: docker compose --env-file .env.live -f docker-compose.yml -f docker-compose.live.yml up -d --build --wait
+# Every secret comes from .env.live through --env-file. See docs/m2-live-run.md.
+x-langfuse-env: &langfuse-env
+  NEXTAUTH_URL: http://localhost:3000
+  NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?LANGFUSE_NEXTAUTH_SECRET is required in .env.live}
+  SALT: ${LANGFUSE_SALT:?LANGFUSE_SALT is required in .env.live}
+  ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:?LANGFUSE_ENCRYPTION_KEY is required in .env.live}
+  TELEMETRY_ENABLED: "false"
+  DATABASE_URL: postgresql://langfuse:langfuse@langfuse-postgres:5432/langfuse
+  CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+  CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+  CLICKHOUSE_USER: clickhouse
+  CLICKHOUSE_PASSWORD: clickhouse
+  CLICKHOUSE_CLUSTER_ENABLED: "false"
+  REDIS_CONNECTION_STRING: redis://langfuse-redis:6379/0
+  LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_EVENT_UPLOAD_REGION: us-east-1
+  LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-s3:8333
+  LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: fairsettle-local
+  LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: fairsettle-local
+  LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+  LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_MEDIA_UPLOAD_REGION: us-east-1
+  LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://langfuse-s3:8333
+  LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: fairsettle-local
+  LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: fairsettle-local
+  LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+
+services:
+  ledger-postgres:
+    volumes:
+      - fairsettle-live-ledger-postgres:/var/lib/postgresql/data
+  dispatch-postgres:
+    volumes:
+      - fairsettle-live-dispatch-postgres:/var/lib/postgresql/data
+  kafka:
+    volumes:
+      - fairsettle-live-kafka:/var/lib/kafka/data
+  ledger-api:
+    command: ["--spring.profiles.active=api,local"]
+    environment:
+      PAYPAL_ENABLED: "true"
+      PAYPAL_BASE_URL: https://api-m.sandbox.paypal.com
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:?PAYPAL_CLIENT_ID is required in .env.live}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:?PAYPAL_CLIENT_SECRET is required in .env.live}
+      PAYPAL_ORGANIZATION_ID: 10000000-0000-0000-0000-000000000001
+      PAYPAL_ENVIRONMENT_ID: 10000000-0000-0000-0000-000000000011
+      PAYPAL_PROVIDER_ACCOUNT_ID: 10000000-0000-0000-0000-000000000021
+      LOCAL_FIXTURES_ENABLED: "true"
+      LOCAL_APP_SECRET: ${LOCAL_APP_SECRET:?LOCAL_APP_SECRET is required in .env.live}
+      LOCAL_OPS_SECRET: ${LOCAL_OPS_SECRET:?LOCAL_OPS_SECRET is required in .env.live}
+      LOCAL_AGENT_SECRET: ${LOCAL_AGENT_SECRET:?LOCAL_AGENT_SECRET is required in .env.live}
+  ledger-worker:
+    environment:
+      PAYPAL_ENABLED: "true"
+      PAYPAL_BASE_URL: https://api-m.sandbox.paypal.com
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:?PAYPAL_CLIENT_ID is required in .env.live}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:?PAYPAL_CLIENT_SECRET is required in .env.live}
+      PAYPAL_ORGANIZATION_ID: 10000000-0000-0000-0000-000000000001
+      PAYPAL_ENVIRONMENT_ID: 10000000-0000-0000-0000-000000000011
+      PAYPAL_PROVIDER_ACCOUNT_ID: 10000000-0000-0000-0000-000000000021
+      PAYMENT_MESSAGING_ENABLED: "true"
+      MERCHANT_NOTIFICATION_ALLOWED_HOSTS: ${PUBLIC_HOST:?PUBLIC_HOST is required in .env.live}
+      MERCHANT_NOTIFICATION_KEY_DISPATCH: ${LEDGER_NOTIFICATION_SECRET:?LEDGER_NOTIFICATION_SECRET is required in .env.live}
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      ledger-notification-target:
+        condition: service_completed_successfully
+  dispatch:
+    environment:
+      LEDGER_CHECKOUT: enabled
+      LEDGER_BASE_URL: http://ledger-api:8080
+      LEDGER_APP_TOKEN: app_10000000-0000-0000-0000-000000000041.${LOCAL_APP_SECRET:?LOCAL_APP_SECRET is required in .env.live}
+      LEDGER_CHECKOUT_SUCCESS_URL: https://${PUBLIC_HOST:?PUBLIC_HOST is required in .env.live}/checkout/success
+      LEDGER_CHECKOUT_CANCEL_URL: https://${PUBLIC_HOST:?PUBLIC_HOST is required in .env.live}/checkout/cancel
+      LEDGER_NOTIFICATION_SECRET: ${LEDGER_NOTIFICATION_SECRET:?LEDGER_NOTIFICATION_SECRET is required in .env.live}
+      AGENT_SERVICE_TOKEN: ${AGENT_SERVICE_TOKEN:?AGENT_SERVICE_TOKEN is required in .env.live}
+    depends_on:
+      ledger-api:
+        condition: service_healthy
+  kafka-init:
+    image: apache/kafka:3.9.0
+    restart: "no"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: ["/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "kafka:9092", "--create", "--if-not-exists", "--topic", "payment-notifications-v1", "--partitions", "3", "--replication-factor", "1"]
+  ledger-notification-target:
+    image: postgres:16
+    restart: "no"
+    environment:
+      PGPASSWORD: payments_migrator_pw
+    depends_on:
+      ledger-api:
+        condition: service_healthy
+    command:
+      - psql
+      - -h
+      - ledger-postgres
+      - -U
+      - payments_migrator
+      - -d
+      - payments_ledger
+      - -v
+      - ON_ERROR_STOP=1
+      - -c
+      - "INSERT INTO platform.merchant_notification_target(organization_id,environment_id,application_id,url,key_ref,version,enabled) VALUES ('10000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000011','10000000-0000-0000-0000-000000000031','https://${PUBLIC_HOST:?PUBLIC_HOST is required in .env.live}/webhooks/ledger','dispatch',1,true) ON CONFLICT (organization_id,environment_id,application_id) DO UPDATE SET url=EXCLUDED.url, enabled=true, version=platform.merchant_notification_target.version+1 WHERE platform.merchant_notification_target.url IS DISTINCT FROM EXCLUDED.url OR NOT platform.merchant_notification_target.enabled"
+  agent-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: agent
+      POSTGRES_PASSWORD: agent
+      POSTGRES_DB: fairsettle_agent
+    volumes:
+      - fairsettle-live-agent-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent -d fairsettle_agent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  agent:
+    build: ./agent
+    image: fairsettle-agent:local
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      FAIRSETTLE_DATABASE_URL: postgresql://agent:agent@agent-postgres:5432/fairsettle_agent
+      DISPATCH_BASE_URL: http://dispatch:4000
+      AGENT_SERVICE_TOKEN: ${AGENT_SERVICE_TOKEN:?AGENT_SERVICE_TOKEN is required in .env.live}
+      LEDGER_BASE_URL: http://ledger-api:8080
+      LEDGER_APP_TOKEN: app_10000000-0000-0000-0000-000000000042.${LOCAL_AGENT_SECRET:?LOCAL_AGENT_SECRET is required in .env.live}
+      FAIRSETTLE_MODEL: deepseek/deepseek-v4-pro
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY is required in .env.live}
+      LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:?LANGFUSE_PUBLIC_KEY is required in .env.live}
+      LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY:?LANGFUSE_SECRET_KEY is required in .env.live}
+      LANGFUSE_BASE_URL: http://langfuse-web:3000
+      LITELLM_LOCAL_MODEL_COST_MAP: "True"
+      FAIRSETTLE_HTTP_HOST: 0.0.0.0
+      FAIRSETTLE_POLL_SECONDS: "5"
+    depends_on:
+      agent-postgres:
+        condition: service_healthy
+      ledger-api:
+        condition: service_healthy
+      dispatch:
+        condition: service_healthy
+      langfuse-web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+  langfuse-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    volumes:
+      - fairsettle-live-langfuse-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  langfuse-redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  langfuse-clickhouse:
+    image: clickhouse/clickhouse-server:25.12
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+    volumes:
+      - fairsettle-live-langfuse-clickhouse:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  langfuse-s3:
+    image: chrislusf/seaweedfs:4.48
+    command: ["server", "-dir=/data", "-master.volumeSizeLimitMB=256", "-volume.max=20", "-s3", "-s3.port=8333"]
+    volumes:
+      - fairsettle-live-langfuse-s3:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  langfuse-s3-init:
+    image: chrislusf/seaweedfs:4.48
+    restart: "no"
+    depends_on:
+      langfuse-s3:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c", "i=0; until wget -q -O - http://langfuse-s3:9333/cluster/status | grep -q '\"IsLeader\":true'; do i=$$((i+1)); [ $$i -gt 60 ] && exit 1; sleep 2; done; echo 's3.bucket.create -name langfuse' | weed shell -master=langfuse-s3:9333 || true"]
+  langfuse-worker:
+    image: langfuse/langfuse-worker:4.58.0
+    environment:
+      <<: *langfuse-env
+      NODE_OPTIONS: --max-old-space-size=1024
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-s3-init:
+        condition: service_completed_successfully
+  langfuse-web:
+    image: langfuse/langfuse:4.58.0
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      <<: *langfuse-env
+      HOSTNAME: 0.0.0.0
+      NODE_OPTIONS: --max-old-space-size=1536
+      LANGFUSE_INIT_ORG_ID: fairsettle
+      LANGFUSE_INIT_ORG_NAME: FairSettle
+      LANGFUSE_INIT_PROJECT_ID: fairsettle-local
+      LANGFUSE_INIT_PROJECT_NAME: fairsettle-local
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:?LANGFUSE_PUBLIC_KEY is required in .env.live}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY:?LANGFUSE_SECRET_KEY is required in .env.live}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_ADMIN_EMAIL:?LANGFUSE_ADMIN_EMAIL is required in .env.live}
+      LANGFUSE_INIT_USER_NAME: admin
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_ADMIN_PASSWORD:?LANGFUSE_ADMIN_PASSWORD is required in .env.live}
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+      langfuse-redis:
+        condition: service_healthy
+      langfuse-clickhouse:
+        condition: service_healthy
+      langfuse-s3-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/api/public/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+volumes:
+  fairsettle-live-ledger-postgres:
+    name: fairsettle-live-ledger-postgres
+  fairsettle-live-dispatch-postgres:
+    name: fairsettle-live-dispatch-postgres
+  fairsettle-live-kafka:
+    name: fairsettle-live-kafka
+  fairsettle-live-agent-postgres:
+    name: fairsettle-live-agent-postgres
+  fairsettle-live-langfuse-postgres:
+    name: fairsettle-live-langfuse-postgres
+  fairsettle-live-langfuse-clickhouse:
+    name: fairsettle-live-langfuse-clickhouse
+  fairsettle-live-langfuse-s3:
+    name: fairsettle-live-langfuse-s3

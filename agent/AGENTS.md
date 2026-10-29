@@ -6,6 +6,7 @@ The agent proposes refund amounts and liability splits for delivery marketplaces
 
 - Setup: `uv sync --python 3.11`, then `source .venv/bin/activate`.
 - Tests: `python -m pytest -q`.
+- Run: `python -m fairsettle_agent` serves `POST /v1/complaints`, `GET /v1/complaints/{id}` and `GET /health` on port 8000 and polls every `FAIRSETTLE_POLL_SECONDS` (default 5) in the same process; `FAIRSETTLE_HTTP_HOST` defaults to `127.0.0.1` (F24). Image: `agent/Dockerfile`; the live stack runs it (`docs/m2-live-run.md`).
 - Tests that use Postgres (`tests/test_resume.py`) start `postgres:16` with Testcontainers and need Docker running; without Docker they fail, they never skip (F22). Ryuk is disabled in `tests/conftest.py` because it fails on Docker Desktop for Mac; after a hard kill, remove leftovers with `docker rm -f $(docker ps -aq --filter label=org.testcontainers.lang=python)`. Runtime: `FAIRSETTLE_DATABASE_URL`, `DISPATCH_BASE_URL`, `AGENT_SERVICE_TOKEN`, `LEDGER_BASE_URL`, `LEDGER_APP_TOKEN` from the environment (F22). The ledger token must be a credential of the application that created the payment (seeded in F24).
 - Model: `FAIRSETTLE_MODEL` (default `deepseek/deepseek-flash`; evaluation and demo `deepseek/deepseek-v4-pro`) and `DEEPSEEK_API_KEY`, both from the environment, never committed (F21). Tests never call a model: they use LiteLLM `mock_response` or fake completions.
 - Tracing: `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL` are required unless `FAIRSETTLE_TRACING=off` (F23). Tests never reach Langfuse: they inject an in-memory span exporter, with a new public key for each client, because Langfuse clients are singletons per public key.
@@ -25,6 +26,8 @@ The agent proposes refund amounts and liability splits for delivery marketplaces
 - `fairsettle_agent/graph.py`: the LangGraph graph (F22).
 - `fairsettle_agent/agent.py`: `Agent.start` / `poll`, config, Postgres persistence (F22).
 - `fairsettle_agent/execution.py`: refund outcome after approval (F23).
+- `fairsettle_agent/service.py`: HTTP API and poll loop (F24).
+- `fairsettle_agent/__main__.py`: entry point (F24).
 - `fairsettle_agent/tracing.py`: Langfuse traces keyed by complaint id (F23).
 - `../contracts/dispatch-agent-operations.graphql` and `../contracts/ledger-openapi.yaml`: what the clients send.
 - `../contracts/fixtures/agent/`: recorded HTTP fixtures.
@@ -42,3 +45,7 @@ The agent proposes refund amounts and liability splits for delivery marketplaces
 - Langfuse gets metadata only: no complaint text, model reply, explanation, evidence, rejection reason or customer id.
 - Never call `Langfuse.get_trace_url`; it connects to the server.
 - After approval the agent only reads the refund; the ledger executes it.
+
+- Exactly one agent process per database: the lock that keeps `start` and `poll` apart is per process (F22). Never run a second replica.
+- Keep `FAIRSETTLE_TRACING` fixed for a deployment; switching it while a complaint is `submit_retry` changes the retried body (KI-4).
+- Rows left `running` by a crashed process are logged at startup and not resumed (F24).

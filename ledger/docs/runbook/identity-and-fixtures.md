@@ -62,3 +62,5 @@ git diff --check
 ## PayPal fixture mode (F12)
 
 With `PAYPAL_ENABLED=true`, local fixtures provision a `PAYPAL` provider account bound to the client id, an ingestion policy and seven USD ledger accounts, including the two partner accounts required by revenue share. The configured organization, environment and provider account ids must be the fixture ids `10000000-0000-0000-0000-000000000001`, `10000000-0000-0000-0000-000000000011` and `10000000-0000-0000-0000-000000000021`. An existing `FAKE` database is refused; fixtures never overwrite its provider binding. See the [PayPal sandbox run](paypal-sandbox-run.md) for setup and manual verification.
+
+The optional `LOCAL_AGENT_SECRET` provisions credential `10000000-0000-0000-0000-000000000042` of application `demo` with `payments:read`, `refunds:read`, `refund-proposals:read` and `refund-proposals:write`. It must differ from the other two fixture secrets. An existing fixture database gains it once; provisioning never rotates it (F24).

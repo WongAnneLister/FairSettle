@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Refund proposals · Payments Ledger</title><link rel="stylesheet" href="/ops-console.css"><script type="module" src="/refund-proposals.mjs"></script></head>
+<body>
+<header class="topbar"><h1>Refund proposals</h1><a href="/ops-console.html">Operations console</a></header>
+<main>
+<form id="identity-form"><label>Ops credential<input id="credential" type="password" autocomplete="off" spellcheck="false" placeholder="ops_…"></label><button type="submit">Sign in</button></form>
+<p id="identity"></p><p id="notice" role="status" aria-live="polite"></p>
+<label>Proposal status<select id="status-filter"><option value="PENDING_REVIEW">Pending review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select></label>
+<button id="refresh" type="button">Refresh</button><button id="retry" type="button" hidden>Retry pending decision</button>
+<section id="proposals" aria-label="Proposals"></section>
+</main>
+</body></html>

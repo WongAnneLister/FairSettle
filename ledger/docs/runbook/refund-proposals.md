@@ -52,3 +52,21 @@ curl -i http://localhost:8080/ops/refund-proposals/<PROPOSAL_ID>/decision \
 
 Keep the returned `refundId` and poll the refund and proposal resources. A successful decision
 returns a pending allocation with an explicit `journalId: null` until posting completes.
+
+## Agent credential (F24)
+
+Set the optional `LOCAL_AGENT_SECRET` to provision credential
+`10000000-0000-0000-0000-000000000042`, with key id `agent`, for the same `demo`
+application as dispatch. Its scopes are `payments:read`, `refunds:read`,
+`refund-proposals:read` and `refund-proposals:write`. It has no payment or refund
+write scope. The secret must differ from the app and ops secrets. An existing fixture
+database gains the credential once; provisioning never rotates it.
+
+## Review page (F24)
+
+Open `/refund-proposals.html` and sign in with
+`ops_10000000-0000-0000-0000-000000000062.<LOCAL_OPS_SECRET>`. Credential 61 can only view.
+Review the amount, shares, explanation and evidence references, then approve exactly as
+submitted or reject with a reason. A pending retry keeps the same body and idempotency
+key after a lost response. The page shows the trace id as text; the live-run script prints
+its Langfuse URL.

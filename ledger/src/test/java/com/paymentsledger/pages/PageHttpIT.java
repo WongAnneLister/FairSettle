@@ -152,6 +152,26 @@ class PageHttpIT {
     }
 
     @Test
+    void refundProposalReviewPageIsServedWithoutSecrets() {
+        var page = http.getForEntity("/refund-proposals.html", String.class);
+        assertThat(page.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(page.getBody())
+                .contains(
+                        "Refund proposals",
+                        "aria-live=\"polite\"",
+                        "type=\"module\"",
+                        "/refund-proposals.mjs",
+                        "<label")
+                .doesNotContain(SECRET, HASH);
+        for (String asset : List.of("/refund-proposals.mjs", "/ui/proposals.mjs"))
+            assertThat(http.getForEntity(asset, String.class).getStatusCode())
+                    .as(asset)
+                    .isEqualTo(HttpStatus.OK);
+        assertThat(http.getForEntity("/ops-console.html", String.class).getBody())
+                .contains("href=\"/refund-proposals.html\"");
+    }
+
+    @Test
     void existingEntryUsesSeparateReturnPage() {
         var page = http.getForEntity("/payment-test.html", String.class);
         assertThat(page.getStatusCode()).isEqualTo(HttpStatus.OK);

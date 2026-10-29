@@ -179,6 +179,9 @@ class Agent:
                     changed.append(after)
             return changed
 
+    async def running(self) -> list[str]:
+        return await self._store.running()
+
     async def status(self, complaint_id: str) -> RunStatus | None:
         row = await self._store.get(complaint_id)
         if row is None:

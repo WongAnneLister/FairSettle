@@ -598,6 +598,95 @@ class IdentityIT {
         assertThat(fixtureTableCounts()).isEqualTo(counts);
     }
 
+    @Test
+    void agentFixtureCredentialReadsWithinTheDemoApplication() {
+        write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        String secret = "d".repeat(43);
+        var fixture = initializer(fixtureEnvironment(false).withProperty("platform.fixtures.agent-secret", secret));
+        fixture.afterPropertiesSet();
+        var counts = fixtureTableCounts();
+        fixture.afterPropertiesSet();
+        assertThat(LocalFixtureInitializer.AGENT_CREDENTIAL).isEqualTo(fixtureId(42));
+        var row = jdbc.queryForMap("""
+                SELECT key_id,application_id,provider_account_id,granted_scopes::text AS scopes,secret_hash
+                FROM platform.application_credential WHERE id=?""", fixtureId(42));
+        assertThat(row)
+                .containsEntry("key_id", "agent")
+                .containsEntry("application_id", fixtureId(31))
+                .containsEntry("provider_account_id", fixtureId(21))
+                .containsEntry("scopes", "{payments:read,refunds:read,refund-proposals:read,refund-proposals:write}");
+        assertThat((String) row.get("secret_hash")).startsWith("$2").doesNotContain(secret);
+        assertThat(jdbc.queryForList(
+                        "SELECT currency FROM platform.credential_currency WHERE credential_id=?",
+                        String.class,
+                        fixtureId(42)))
+                .containsExactly("USD");
+        var response = get("/v1/identity", "Bearer app_" + fixtureId(42) + "." + secret);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody())
+                .contains("\"applicationId\":\"10000000-0000-0000-0000-000000000031\"", "refund-proposals:write")
+                .doesNotContain("payments:write", "refunds:write");
+        var app = get("/v1/identity", "Bearer app_" + LocalFixtureInitializer.APP_CREDENTIAL + "." + SECRET);
+        assertThat(response.getBody()).contains("\"allowedProviderAccountId\":\"" + fixtureId(21) + "\"");
+        assertThat(app.getBody()).contains("\"allowedProviderAccountId\":\"" + row.get("provider_account_id") + "\"");
+        assertThat(fixtureTableCounts()).isEqualTo(counts);
+    }
+
+    @Test
+    void agentFixtureSecretIsOptionalAndValidated() {
+        write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        initializer(fixtureEnvironment(false)).afterPropertiesSet();
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM platform.application_credential WHERE id=?", Long.class, fixtureId(42)))
+                .isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM platform.application_credential", Long.class))
+                .isEqualTo(1L);
+        for (String secret : java.util.List.of("short", SECRET)) {
+            write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+            var fixture = initializer(fixtureEnvironment(false).withProperty("platform.fixtures.agent-secret", secret));
+            assertThatThrownBy(fixture::afterPropertiesSet)
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage(
+                            secret.equals(SECRET)
+                                    ? "Agent fixture secret must differ from the application and ops secrets"
+                                    : "The agent fixture secret must be a random 43-character secret");
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM platform.organization", Long.class))
+                    .isZero();
+        }
+    }
+
+    @Test
+    void existingFixturesGainAgentCredentialOnce() {
+        write(() -> jdbc.execute("TRUNCATE platform.organization, platform.currency_config CASCADE"));
+        initializer(fixtureEnvironment(false)).afterPropertiesSet();
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM platform.application_credential WHERE id=?", Long.class, fixtureId(42)))
+                .isZero();
+        var fixture =
+                initializer(fixtureEnvironment(false).withProperty("platform.fixtures.agent-secret", "d".repeat(43)));
+        fixture.afterPropertiesSet();
+        var counts = fixtureTableCounts();
+        String hash = jdbc.queryForObject(
+                "SELECT md5(to_jsonb(c)::text) FROM platform.application_credential c WHERE id=?",
+                String.class,
+                fixtureId(42));
+        fixture.afterPropertiesSet();
+        assertThat(fixtureTableCounts()).isEqualTo(counts);
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM platform.application_credential WHERE id=?", Long.class, fixtureId(42)))
+                .isEqualTo(1L);
+        var changed =
+                initializer(fixtureEnvironment(false).withProperty("platform.fixtures.agent-secret", "e".repeat(43)));
+        assertThatThrownBy(changed::afterPropertiesSet)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Existing fixture credentials differ; provisioning never rotates or overwrites them");
+        assertThat(jdbc.queryForObject(
+                        "SELECT md5(to_jsonb(c)::text) FROM platform.application_credential c WHERE id=?",
+                        String.class,
+                        fixtureId(42)))
+                .isEqualTo(hash);
+    }
+
     private java.util.Map<String, Long> fixtureTableCounts() {
         var counts = new java.util.LinkedHashMap<String, Long>();
         for (String table : jdbc.queryForList(

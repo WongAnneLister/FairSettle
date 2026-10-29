@@ -95,6 +95,7 @@ platform:
     enabled: ${LOCAL_FIXTURES_ENABLED:false}
     app-secret: ${LOCAL_APP_SECRET:}
     ops-secret: ${LOCAL_OPS_SECRET:}
+    agent-secret: ${LOCAL_AGENT_SECRET:}
 
 management:
   endpoints:

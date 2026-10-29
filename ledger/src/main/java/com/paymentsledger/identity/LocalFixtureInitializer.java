@@ -22,6 +22,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @ConditionalOnProperty(name = "platform.fixtures.enabled", havingValue = "true")
 public class LocalFixtureInitializer implements InitializingBean {
     public static final UUID APP_CREDENTIAL = id(41), OPS_CREDENTIAL = id(61), PRICE = id(81);
+    public static final UUID AGENT_CREDENTIAL = id(42);
     public static final UUID OPS_REVIEWER_CREDENTIAL = id(62);
     public static final UUID DISPATCH_ORDER_PRICE = id(82);
     private static final List<String> PROVIDER_ACCOUNTS = List.of("PSP_FUNDS", "PSP_FEE_EXPENSE", "SUSPENSE");
@@ -81,6 +82,20 @@ public class LocalFixtureInitializer implements InitializingBean {
         }
         if (app.secret().equals(ops.secret()))
             throw new IllegalStateException("Application and ops fixture secrets must differ");
+        String agentSecret = environment.getProperty("platform.fixtures.agent-secret", "");
+        CredentialTokens.Parsed agent;
+        if (agentSecret.isBlank()) {
+            agent = null;
+        } else {
+            try {
+                agent = tokens.parse("app_" + AGENT_CREDENTIAL + "." + agentSecret, "app_");
+            } catch (RuntimeException ex) {
+                throw new IllegalStateException("The agent fixture secret must be a random 43-character secret");
+            }
+            if (agent.secret().equals(app.secret()) || agent.secret().equals(ops.secret()))
+                throw new IllegalStateException(
+                        "Agent fixture secret must differ from the application and ops secrets");
+        }
         var source = flyway.getConfiguration().getDataSource();
         var jdbc = new JdbcTemplate(source);
         new TransactionTemplate(new DataSourceTransactionManager(source)).executeWithoutResult(status -> {
@@ -105,6 +120,7 @@ public class LocalFixtureInitializer implements InitializingBean {
                 var end = Timestamp.from(clock.instant().plus(365, ChronoUnit.DAYS));
                 provisionProposalReview(jdbc, ops, start, end);
                 provisionDispatchOrderPrice(jdbc);
+                if (agent != null) provisionAgentCredential(jdbc, agent, start, end);
                 return;
             }
             jdbc.update("INSERT INTO platform.organization(id,code) VALUES (?,'local-fixture')", id(1));
@@ -152,6 +168,7 @@ public class LocalFixtureInitializer implements InitializingBean {
                         currency,amount_minor,share_policy_id)
                     VALUES (?,?,?,'demo-product',1,'USD',10000,?)""", PRICE, id(1), id(11), id(71));
             provisionDispatchOrderPrice(jdbc);
+            if (agent != null) provisionAgentCredential(jdbc, agent, start, end);
             if (provider.paypal()) {
                 jdbc.update("""
                         INSERT INTO platform.ingestion_policy
@@ -170,6 +187,21 @@ public class LocalFixtureInitializer implements InitializingBean {
                             """, id(1), id(11), purpose);
             }
         });
+    }
+
+    private void provisionAgentCredential(
+            JdbcTemplate jdbc, CredentialTokens.Parsed agent, Timestamp start, Timestamp end) {
+        int inserted =
+                jdbc.update("""
+                INSERT INTO platform.application_credential(id,key_id,organization_id,environment_id,application_id,provider_account_id,secret_hash,not_before,expires_at,granted_scopes)
+                VALUES (?,'agent',?,?,?,?,?,?,?,ARRAY['payments:read','refunds:read','refund-proposals:read','refund-proposals:write'])
+                ON CONFLICT (id) DO NOTHING
+                """, AGENT_CREDENTIAL, id(1), id(11), id(31), id(21), tokens.hash(agent), start, end);
+        if (inserted == 0) verifyExisting(jdbc, "application_credential", agent);
+        jdbc.update("""
+                INSERT INTO platform.credential_currency(credential_id,organization_id,environment_id,currency)
+                VALUES (?,?,?,'USD') ON CONFLICT (credential_id,currency) DO NOTHING
+                """, AGENT_CREDENTIAL, id(1), id(11));
     }
 
     private void provisionProposalReview(
