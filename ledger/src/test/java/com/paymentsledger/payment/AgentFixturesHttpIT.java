@@ -206,12 +206,121 @@ class AgentFixturesHttpIT {
         fixture("ledger-unauthorized", path, unauthorized);
     }
 
+    ResponseEntity<JsonNode> sendOps(int credential, String path, JsonNode body, String key) {
+        var headers = new HttpHeaders();
+        headers.set("Authorization", "OpsBearer ops_" + id(60 + credential) + "." + SECRET);
+        headers.set("Idempotency-Key", key);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return http.exchange(path, HttpMethod.POST, new HttpEntity<>(body, headers), JsonNode.class);
+    }
+
+    ObjectNode proposalBody(String payment, String complaint, long amount) {
+        var b = json.createObjectNode()
+                .put("complaintId", complaint)
+                .put("orderRef", "1")
+                .put("paymentId", payment)
+                .put("decision", "PARTIAL_REFUND")
+                .put("amountMinor", amount)
+                .put("currency", "USD")
+                .put("reasonCode", "MISSING_ITEM");
+        var lines = b.putArray("liability");
+        lines.addObject().put("party", "RESTAURANT").put("basisPoints", 10000);
+        lines.addObject().put("party", "DRIVER").put("basisPoints", 0);
+        lines.addObject().put("party", "PLATFORM").put("basisPoints", 0);
+        b.put("explanation", "The drink on order line 11 was not delivered.");
+        b.putArray("evidenceRefs").add("order:1").add("order-item:11");
+        b.putObject("agentRun").put("threadId", complaint);
+        return b;
+    }
+
+    @Test
+    void recordsRefundProposals() throws IOException {
+        String payment = refundBody(1).path("paymentId").asText();
+        String path = "/v1/refund-proposals";
+        String key = "refund-proposal:complaint-fixture-001";
+        var request = proposalBody(payment, "complaint-fixture-001", 60);
+        var created = send(1, path, HttpMethod.POST, request, key);
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(created.getBody().path("status").asText()).isEqualTo("PENDING_REVIEW");
+        String proposal = created.getBody().path("id").asText();
+        assertThat(proposal).startsWith("prop_");
+        fixture("ledger-proposal-created", "POST", path, created);
+
+        var replayed = send(1, path, HttpMethod.POST, request, key);
+        assertThat(replayed.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(replayed.getHeaders().getFirst("Idempotent-Replay")).isEqualTo("true");
+        assertThat(replayed.getBody().path("id").asText()).isEqualTo(proposal);
+        fixture("ledger-proposal-replayed", "POST", path, replayed);
+
+        var conflict = send(1, path, HttpMethod.POST, proposalBody(payment, "complaint-fixture-001", 50), key);
+        assertThat(conflict.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(conflict.getBody().path("code").asText()).isEqualTo("IDEMPOTENCY_CONFLICT");
+        fixture("ledger-proposal-conflict", "POST", path, conflict);
+
+        var limit = send(
+                1,
+                path,
+                HttpMethod.POST,
+                proposalBody(payment, "complaint-fixture-003", 1000),
+                "refund-proposal:complaint-fixture-003");
+        assertThat(limit.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(limit.getBody().path("code").asText()).isEqualTo("REFUND_LIMIT_EXCEEDED");
+        fixture("ledger-proposal-limit", "POST", path, limit);
+
+        var pending = send(1, path + "/" + proposal, HttpMethod.GET, null, null);
+        assertThat(pending.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(pending.getBody().path("status").asText()).isEqualTo("PENDING_REVIEW");
+        assertThat(pending.getBody().path("refundId").isNull()).isTrue();
+        fixture("ledger-proposal-pending", path + "/" + proposal, pending);
+
+        var second = send(
+                1,
+                path,
+                HttpMethod.POST,
+                proposalBody(payment, "complaint-fixture-002", 40),
+                "refund-proposal:complaint-fixture-002");
+        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String secondId = second.getBody().path("id").asText();
+        String rejection = "Photo shows the drink was delivered.";
+        var rejectedReview = sendOps(
+                2,
+                "/ops/refund-proposals/" + secondId + "/decision",
+                json.createObjectNode().put("action", "REJECT").put("reason", rejection),
+                "review-reject-fixture-002");
+        assertThat(rejectedReview.getStatusCode()).isEqualTo(HttpStatus.OK);
+        var rejected = send(1, path + "/" + secondId, HttpMethod.GET, null, null);
+        assertThat(rejected.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(rejected.getBody().path("status").asText()).isEqualTo("REJECTED");
+        assertThat(rejected.getBody().path("rejectionReason").asText()).isEqualTo(rejection);
+        assertThat(rejected.getBody().path("refundId").isNull()).isTrue();
+        fixture("ledger-proposal-rejected", path + "/" + secondId, rejected);
+
+        var approvedReview = sendOps(
+                2,
+                "/ops/refund-proposals/" + proposal + "/decision",
+                json.createObjectNode().put("action", "APPROVE"),
+                "review-approve-fixture-001");
+        assertThat(approvedReview.getStatusCode()).isEqualTo(HttpStatus.OK);
+        var approved = send(1, path + "/" + proposal, HttpMethod.GET, null, null);
+        assertThat(approved.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(approved.getBody().path("status").asText()).isEqualTo("APPROVED");
+        assertThat(approved.getBody().path("refundId").isNull()).isFalse();
+        assertThat(approved.getBody().path("allocation").isNull()).isFalse();
+        assertThat(approved.getBody().path("reviewer").path("role").asText()).isEqualTo("OPS_REVIEWER");
+        fixture("ledger-proposal-approved", path + "/" + proposal, approved);
+    }
+
     private void fixture(String name, String path, ResponseEntity<JsonNode> response) throws IOException {
+        fixture(name, "GET", path, response);
+    }
+
+    private void fixture(String name, String method, String path, ResponseEntity<JsonNode> response)
+            throws IOException {
         var live = json.createObjectNode()
                 .put("name", name)
                 .put("source", "ledger/src/test/java/com/paymentsledger/payment/AgentFixturesHttpIT.java");
         live.putObject("request")
-                .put("method", "GET")
+                .put("method", method)
                 .put("path", path)
                 .putNull("operationName")
                 .putNull("variables");

@@ -3,6 +3,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 import re
+import uuid
 
 import httpx
 import pytest
@@ -34,7 +35,11 @@ EXPECTED_NAMES = {
     "dispatch-order-not-found", "dispatch-unauthorized",
     "ledger-payment-captured", "ledger-refundable-full",
     "ledger-refundable-partial", "ledger-payment-not-found", "ledger-unauthorized",
+    "ledger-proposal-created", "ledger-proposal-replayed", "ledger-proposal-conflict",
+    "ledger-proposal-limit", "ledger-proposal-pending", "ledger-proposal-approved",
+    "ledger-proposal-rejected",
 }
+OPS_TOKEN = re.compile(r"ops_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.")
 PRODUCERS = {
     "dispatch/test/agent-fixtures.e2e-spec.ts",
     "ledger/src/test/java/com/paymentsledger/payment/AgentFixturesHttpIT.java",
@@ -79,9 +84,11 @@ def test_every_fixture_is_well_formed(fixture_names):
 
 def test_fixtures_contain_no_credentials(fixture_names):
     prohibited = ("s" * 40, "b" * 43, "x-service-token", "authorization", "bearer ",
-                  "app_", "ops_", "@", TOKEN.lower(), APP_TOKEN.lower())
+                  "app_", "@", TOKEN.lower(), APP_TOKEN.lower())
+    assert OPS_TOKEN.search(("OpsBearer ops_" + str(uuid.UUID(int=1)) + "." + "b" * 43).lower())
     for name in fixture_names:
         contents = (FIXTURES_DIR / f"{name}.json").read_text().lower()
+        assert not OPS_TOKEN.search(contents), f"Forbidden content in {name}"
         for secret in prohibited:
             assert secret not in contents, f"Forbidden content in {name}"
 

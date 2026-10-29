@@ -2,9 +2,10 @@ import httpx
 from pydantic import TypeAdapter, ValidationError
 
 from .errors import MalformedResponse, NotFound, ServiceError, Unauthorized, Unavailable
-from .models import Payment, PaymentId, RefundableAmount
+from .models import Payment, PaymentId, ProposalId, ProposalRequest, RefundableAmount, RefundProposal
 
 _PAYMENT_ID = TypeAdapter(PaymentId)
+_PROPOSAL_ID = TypeAdapter(ProposalId)
 _ERROR_CODES = {
     "VALIDATION_ERROR", "IDEMPOTENCY_KEY_REQUIRED", "UNAUTHORIZED", "FORBIDDEN",
     "NOT_FOUND", "IDEMPOTENCY_CONFLICT", "REFUND_BLOCKED", "PROPOSAL_EXISTS",
@@ -12,6 +13,10 @@ _ERROR_CODES = {
     "RATE_LIMITED", "INTERNAL_ERROR", "SERVICE_UNAVAILABLE", "ORDER_INTENT_CONFLICT",
     "AMOUNT_MISMATCH", "CURRENCY_NOT_ENABLED", "PROVIDER_UNKNOWN_RESULT",
 }
+
+
+def proposal_idempotency_key(complaint_id: str) -> str:
+    return "refund-proposal:" + complaint_id
 
 
 class LedgerClient:
@@ -32,6 +37,19 @@ class LedgerClient:
         self._validate_id(payment_id)
         return await self._get(f"/v1/payments/{payment_id}/refundable", RefundableAmount)
 
+    async def create_proposal(self, request: ProposalRequest) -> RefundProposal:
+        return await self._send(
+            "POST", "/v1/refund-proposals", RefundProposal, json=request.body(),
+            headers={"Idempotency-Key": proposal_idempotency_key(request.complaint_id)},
+        )
+
+    async def get_proposal(self, proposal_id: str) -> RefundProposal:
+        try:
+            _PROPOSAL_ID.validate_python(proposal_id)
+        except ValidationError:
+            raise ValueError("proposal_id must be a valid proposal id") from None
+        return await self._get(f"/v1/refund-proposals/{proposal_id}", RefundProposal)
+
     @staticmethod
     def _validate_id(payment_id: str) -> None:
         try:
@@ -39,16 +57,20 @@ class LedgerClient:
         except ValidationError:
             raise ValueError("payment_id must be a valid payment resource id") from None
 
-    async def _get(self, path: str, model: type[Payment] | type[RefundableAmount]):
+    async def _get(self, path: str, model):
+        return await self._send("GET", path, model)
+
+    async def _send(self, method, path, model, *, json=None, headers=None):
         request = self._http.build_request(
-            "GET", path, headers={"Authorization": f"Bearer {self._app_token}"},
+            method, path, json=json,
+            headers={**(headers or {}), "Authorization": f"Bearer {self._app_token}"},
         )
         request.headers.pop("X-Service-Token", None)
         try:
             response = await self._http.send(request, auth=None)
         except httpx.TransportError as exc:
             raise Unavailable("ledger", "Transport unavailable") from exc
-        if response.status_code == 200:
+        if response.status_code == 200 or (method == "POST" and response.status_code == 201):
             try:
                 body = response.json()
             except ValueError as exc:

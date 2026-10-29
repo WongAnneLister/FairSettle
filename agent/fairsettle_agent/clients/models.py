@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import (
     AwareDatetime, BaseModel, ConfigDict, Field, StrictInt,
@@ -172,4 +172,81 @@ class RefundableAmount(Wire):
         )
         if self.refundable_minor != expected:
             raise ValueError("refundableMinor does not follow the contract formula")
+        return self
+
+
+ProposalId = Annotated[str, StringConstraints(pattern=r"^prop_[0-9A-HJKMNP-TV-Z]{26}$")]
+ResourceId = Annotated[str, StringConstraints(pattern=r"^[a-z]+_[0-9A-HJKMNP-TV-Z]{26}$")]
+
+
+class Outgoing(BaseModel):
+    model_config = ConfigDict(
+        frozen=True, strict=True, extra="forbid", alias_generator=to_camel, populate_by_name=True,
+    )
+
+
+class ProposalShare(Outgoing):
+    party: Literal["RESTAURANT", "DRIVER", "PLATFORM"]
+    basis_points: Annotated[StrictInt, Field(ge=0, le=10000)]
+
+
+class AgentRunRef(Outgoing):
+    thread_id: Annotated[str, StringConstraints(min_length=1, max_length=128)]
+
+
+class ProposalRequest(Outgoing):
+    complaint_id: Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9._:-]{1,128}$")]
+    order_ref: Annotated[str, StringConstraints(min_length=1, max_length=64)]
+    payment_id: PaymentId
+    decision: Literal["FULL_REFUND", "PARTIAL_REFUND"]
+    amount_minor: Annotated[StrictInt, Field(ge=1)]
+    currency: Currency
+    reason_code: Literal["LATE_DELIVERY", "MISSING_ITEM", "WRONG_ITEM", "QUALITY", "DELIVERY_FAILED", "OTHER"]
+    liability: tuple[ProposalShare, ProposalShare, ProposalShare]
+    explanation: Annotated[str, StringConstraints(min_length=1, max_length=2000)]
+    evidence_refs: Annotated[
+        tuple[Annotated[str, StringConstraints(min_length=1, max_length=128)], ...],
+        Field(min_length=1, max_length=50),
+    ]
+    agent_run: AgentRunRef
+
+    def body(self) -> dict:
+        return self.model_dump(mode="json", by_alias=True)
+
+
+class ProposalStatus(StrEnum):
+    PENDING_REVIEW = "PENDING_REVIEW"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
+class RefundProposal(Wire):
+    id: ProposalId
+    complaint_id: str
+    order_ref: str
+    payment_id: PaymentId
+    decision: str
+    amount_minor: Cents
+    currency: Currency
+    reason_code: str
+    status: ProposalStatus
+    created_at: AwareDatetime
+    reviewed_at: AwareDatetime | None
+    rejection_reason: str | None
+    refund_id: ResourceId | None
+
+    @model_validator(mode="after")
+    def validate_review(self) -> Self:
+        valid = (
+            self.status == ProposalStatus.PENDING_REVIEW
+            and self.reviewed_at is None and self.rejection_reason is None and self.refund_id is None
+        ) or (
+            self.status == ProposalStatus.APPROVED
+            and self.reviewed_at is not None and bool(self.refund_id) and self.rejection_reason is None
+        ) or (
+            self.status == ProposalStatus.REJECTED
+            and self.reviewed_at is not None and bool(self.rejection_reason) and self.refund_id is None
+        )
+        if not valid:
+            raise ValueError("proposal review fields do not match its status")
         return self

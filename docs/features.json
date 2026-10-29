@@ -511,8 +511,9 @@
         "F18",
         "F21"
       ],
-      "state": "not_started",
-      "evidence": null
+      "state": "active",
+      "evidence": null,
+      "started_at": "2026-10-29T23:03:35+09:00"
     },
     {
       "id": "F23",

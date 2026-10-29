@@ -1,0 +1,19 @@
+{
+  "name" : "ledger-proposal-conflict",
+  "source" : "ledger/src/test/java/com/paymentsledger/payment/AgentFixturesHttpIT.java",
+  "request" : {
+    "method" : "POST",
+    "path" : "/v1/refund-proposals",
+    "operationName" : null,
+    "variables" : null
+  },
+  "response" : {
+    "status" : 409,
+    "body" : {
+      "code" : "IDEMPOTENCY_CONFLICT",
+      "message" : "Refund proposal request could not be completed",
+      "retryable" : false,
+      "requestId" : "req_d9115fcf-0a61-4c19-93a9-1d4f55ad2b58"
+    }
+  }
+}

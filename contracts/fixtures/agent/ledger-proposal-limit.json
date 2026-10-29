@@ -1,0 +1,19 @@
+{
+  "name" : "ledger-proposal-limit",
+  "source" : "ledger/src/test/java/com/paymentsledger/payment/AgentFixturesHttpIT.java",
+  "request" : {
+    "method" : "POST",
+    "path" : "/v1/refund-proposals",
+    "operationName" : null,
+    "variables" : null
+  },
+  "response" : {
+    "status" : 422,
+    "body" : {
+      "code" : "REFUND_LIMIT_EXCEEDED",
+      "message" : "Refund exceeds the available amount",
+      "retryable" : false,
+      "requestId" : "req_56e6687b-5031-4568-9b4b-4e35c616c4af"
+    }
+  }
+}

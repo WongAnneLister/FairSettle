@@ -32,3 +32,5 @@ npx --yes @redocly/cli lint contracts/ledger-openapi.yaml
   ```
 
   Without `RECORD_AGENT_FIXTURES`, these same tests check the committed response shapes.
+
+  The `ledger-proposal-*` fixtures record proposal creation, replay, conflict, the refund limit, and a pending, approved and rejected proposal (F22).

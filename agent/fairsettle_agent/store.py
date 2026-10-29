@@ -1,0 +1,117 @@
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+
+from psycopg_pool import AsyncConnectionPool
+
+
+@dataclass(frozen=True)
+class ComplaintRow:
+    complaint_id: str
+    order_id: int
+    customer_id: int | None
+    received_at: datetime
+    status: str
+    proposal_id: str | None
+    submit_attempts: int
+
+
+_COLUMNS = "complaint_id, order_id, customer_id, received_at, status, proposal_id, submit_attempts"
+
+
+class ComplaintStore:
+    def __init__(self, pool: AsyncConnectionPool) -> None:
+        self.pool = pool
+
+    async def setup(self) -> None:
+        async with self.pool.connection() as conn:
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS agent_complaint (
+                    complaint_id text PRIMARY KEY,
+                    order_id bigint NOT NULL,
+                    customer_id bigint,
+                    received_at timestamptz NOT NULL,
+                    status text NOT NULL CHECK (status IN (
+                        'running', 'submitting', 'submit_retry', 'awaiting_review',
+                        'approved', 'rejected', 'declined', 'escalated')),
+                    proposal_id text,
+                    submit_attempts integer NOT NULL DEFAULT 0 CHECK (submit_attempts >= 0),
+                    updated_at timestamptz NOT NULL
+                )
+            """)
+            await conn.execute("CREATE INDEX IF NOT EXISTS agent_complaint_customer ON agent_complaint (customer_id, received_at)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS agent_complaint_status ON agent_complaint (status)")
+
+    @staticmethod
+    def _aware(received_at: datetime) -> None:
+        if received_at.tzinfo is None or received_at.utcoffset() is None:
+            raise ValueError("received_at must be timezone-aware")
+
+    async def register(self, complaint_id: str, order_id: int, received_at: datetime) -> bool:
+        self._aware(received_at)
+        async with self.pool.connection() as conn:
+            cursor = await conn.execute("""
+                INSERT INTO agent_complaint (complaint_id, order_id, received_at, status, submit_attempts, updated_at)
+                VALUES (%s, %s, %s, 'running', 0, now())
+                ON CONFLICT (complaint_id) DO NOTHING
+            """, (complaint_id, order_id, received_at))
+            return cursor.rowcount == 1
+
+    async def _update(self, query: str, parameters: tuple, complaint_id: str):
+        async with self.pool.connection() as conn:
+            cursor = await conn.execute(query, parameters)
+            if cursor.rowcount == 0:
+                raise LookupError(complaint_id)
+            return await cursor.fetchone() if cursor.description is not None else None
+
+    async def record_customer(self, complaint_id: str, customer_id: int) -> None:
+        await self._update(
+            "UPDATE agent_complaint SET customer_id = %s, updated_at = now() WHERE complaint_id = %s",
+            (customer_id, complaint_id), complaint_id,
+        )
+
+    async def count_prior(self, customer_id: int, complaint_id: str, received_at: datetime) -> int:
+        self._aware(received_at)
+        async with self.pool.connection() as conn:
+            cursor = await conn.execute("""
+                SELECT count(*) AS n FROM agent_complaint
+                WHERE customer_id = %s AND complaint_id <> %s AND received_at >= %s AND received_at < %s
+            """, (customer_id, complaint_id, received_at - timedelta(days=7), received_at))
+            return (await cursor.fetchone())["n"]
+
+    async def begin_submit(self, complaint_id: str) -> int:
+        row = await self._update("""
+            UPDATE agent_complaint SET status = 'submitting', submit_attempts = submit_attempts + 1,
+                updated_at = now() WHERE complaint_id = %s RETURNING submit_attempts
+        """, (complaint_id,), complaint_id)
+        return row["submit_attempts"]
+
+    async def set_status(self, complaint_id: str, status: str) -> None:
+        await self._update(
+            "UPDATE agent_complaint SET status = %s, updated_at = now() WHERE complaint_id = %s",
+            (status, complaint_id), complaint_id,
+        )
+
+    async def mark_awaiting(self, complaint_id: str, proposal_id: str) -> None:
+        await self._update("""
+            UPDATE agent_complaint SET status = 'awaiting_review', proposal_id = %s, updated_at = now()
+            WHERE complaint_id = %s
+        """, (proposal_id, complaint_id), complaint_id)
+
+    async def finish(self, complaint_id: str, status: str) -> None:
+        await self.set_status(complaint_id, status)
+
+    async def get(self, complaint_id: str) -> ComplaintRow | None:
+        async with self.pool.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT " + _COLUMNS + " FROM agent_complaint WHERE complaint_id = %s", (complaint_id,),
+            )
+            row = await cursor.fetchone()
+            return None if row is None else ComplaintRow(**row)
+
+    async def resumable(self) -> list[ComplaintRow]:
+        async with self.pool.connection() as conn:
+            cursor = await conn.execute(
+                "SELECT " + _COLUMNS + " FROM agent_complaint "
+                "WHERE status IN ('submitting', 'submit_retry', 'awaiting_review') ORDER BY received_at, complaint_id",
+            )
+            return [ComplaintRow(**row) for row in await cursor.fetchall()]

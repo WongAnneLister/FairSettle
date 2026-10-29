@@ -1,0 +1,48 @@
+{
+  "name" : "ledger-proposal-rejected",
+  "source" : "ledger/src/test/java/com/paymentsledger/payment/AgentFixturesHttpIT.java",
+  "request" : {
+    "method" : "GET",
+    "path" : "/v1/refund-proposals/prop_01M63ZP55ES7JBCSA18JBTYZ7Q",
+    "operationName" : null,
+    "variables" : null
+  },
+  "response" : {
+    "status" : 200,
+    "body" : {
+      "complaintId" : "complaint-fixture-002",
+      "orderRef" : "1",
+      "paymentId" : "pay_01M63ZP4DM7SFCQ18ZCAC0NDGY",
+      "decision" : "PARTIAL_REFUND",
+      "amountMinor" : 40,
+      "currency" : "USD",
+      "reasonCode" : "MISSING_ITEM",
+      "liability" : [ {
+        "party" : "RESTAURANT",
+        "basisPoints" : 10000
+      }, {
+        "party" : "DRIVER",
+        "basisPoints" : 0
+      }, {
+        "party" : "PLATFORM",
+        "basisPoints" : 0
+      } ],
+      "explanation" : "The drink on order line 11 was not delivered.",
+      "evidenceRefs" : [ "order:1", "order-item:11" ],
+      "agentRun" : {
+        "threadId" : "complaint-fixture-002"
+      },
+      "id" : "prop_01M63ZP55ES7JBCSA18JBTYZ7Q",
+      "status" : "REJECTED",
+      "createdAt" : "2026-10-29T14:05:41.412683Z",
+      "reviewedAt" : "2026-10-29T14:05:41.512618Z",
+      "reviewer" : {
+        "subject" : "reviewer",
+        "role" : "OPS_REVIEWER"
+      },
+      "rejectionReason" : "Photo shows the drink was delivered.",
+      "refundId" : null,
+      "allocation" : null
+    }
+  }
+}
