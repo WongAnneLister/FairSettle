@@ -637,7 +637,8 @@
         ]
       },
       "depends_on": [
-        "F24"
+        "F24",
+        "F33"
       ],
       "state": "not_started",
       "evidence": null
@@ -720,6 +721,26 @@
       "depends_on": [
         "F30",
         "F31"
+      ],
+      "state": "not_started",
+      "evidence": null
+    },
+    {
+      "id": "F33",
+      "title": "Storefront pays through PayPal",
+      "service": "dispatch",
+      "milestone": "M3",
+      "priority": "P0",
+      "behavior": "The dispatch storefront (dispatch/frontend) sends the customer from checkout to the order's PayPal sandbox checkout, triggers the ledger's payment read when the customer returns, and shows the order's payment status; it runs in the live compose overlay on port 3001.",
+      "verification": {
+        "kind": "manual",
+        "steps": [
+          "Place an order in the storefront at http://localhost:3001 and approve it on the PayPal sandbox page",
+          "Back in the storefront, the order page shows the order as paid without a reload error, and the payment appears in the ledger console"
+        ]
+      },
+      "depends_on": [
+        "F24"
       ],
       "state": "not_started",
       "evidence": null
