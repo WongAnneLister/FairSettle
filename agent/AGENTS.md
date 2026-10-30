@@ -45,7 +45,6 @@ The agent proposes refund amounts and liability splits for delivery marketplaces
 - Langfuse gets metadata only: no complaint text, model reply, explanation, evidence, rejection reason or customer id.
 - Never call `Langfuse.get_trace_url`; it connects to the server.
 - After approval the agent only reads the refund; the ledger executes it.
-
 - Exactly one agent process per database: the lock that keeps `start` and `poll` apart is per process (F22). Never run a second replica.
 - Keep `FAIRSETTLE_TRACING` fixed for a deployment; switching it while a complaint is `submit_retry` changes the retried body (KI-4).
 - Rows left `running` by a crashed process are logged at startup and not resumed (F24).
