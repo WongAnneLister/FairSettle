@@ -256,7 +256,6 @@ class RefundProposal(Wire):
         return self
 
 
-
 class RefundStatus(StrEnum):
     RESERVED = "RESERVED"
     SUBMITTED = "SUBMITTED"
