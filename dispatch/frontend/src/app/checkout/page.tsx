@@ -16,6 +16,7 @@ import { useCart } from '@/lib/cart-context';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
 import { formatCents } from '@/lib/currency';
+import { orderItemsFromCart } from '@/lib/order-items';
 import { CREATE_ORDER_MUTATION } from '@/lib/graphql/mutations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,13 +55,7 @@ export default function CheckoutPage() {
     }
 
     try {
-      const formattedItems = items.map((item) => ({
-        dishId: item.dish.id,
-        options: item.options.map((opt) => ({
-          name: opt.name,
-          choice: opt.choice || undefined,
-        })),
-      }));
+      const formattedItems = orderItemsFromCart(items);
 
       const res = await createOrder({
         variables: {
