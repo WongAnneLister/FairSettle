@@ -64,12 +64,13 @@ export function OrderPaymentCard({ order, isCustomer, autoPay, canceled, onRefre
     }
   }, [isCustomer, view?.canRefresh, order.id, refreshOrderPayment, onRefreshed, error]);
 
+  // On a fresh load the order can arrive before the signed-in user: wait until the customer can refresh.
   useEffect(() => {
-    if (!autoPay && !mountRefreshed.current) {
+    if (!autoPay && isCustomer && view?.canRefresh && !mountRefreshed.current) {
       mountRefreshed.current = true;
       void refresh();
     }
-  }, [autoPay, refresh]);
+  }, [autoPay, isCustomer, view?.canRefresh, refresh]);
 
   useEffect(() => {
     const onVisibilityChange = () => {
