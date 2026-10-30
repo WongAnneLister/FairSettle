@@ -271,3 +271,100 @@ Before F29 makes dispatch public.
 ### Related
 
 - `docs/plans/F33.md`: decision 6.
+
+## KI-6 · A settled payment's recovery never finishes and later escalates as UNKNOWN
+
+Status: **open**, a bug; fix before F29 (2026-10-31). Area: `ledger` (payment recovery).
+
+### What happens
+
+Two defects combine.
+
+1. **The `CREATE_CHECKOUT` recovery task never finishes once the payment is paid.** `OperationLeaseRules.paymentTaskDone` ends a task only when it is acknowledged, when the payment is canceled with certainty, when its cancel is resolved, or when it is a `CAPTURE_ORDER` that resolved a `SUCCEEDED`/`KNOWN` payment (added in F06). There is no rule for a `CREATE_CHECKOUT` whose payment is settled. So after a successful PayPal payment the create task stays `WAITING`, and recovery queries PayPal again about every two minutes, indefinitely. The code path is shared with Stripe, so a Stripe checkout behaves the same; this was found by reading the code and was never observed on Stripe.
+2. **A failed provider read downgrades a settled payment to `UNKNOWN`.** On a transport failure (`TIMEOUT_UNKNOWN`, `NO_RESPONSE`), `ProviderQueryService.queryOrder` returns facts with `complete=false`. `PaymentEvidenceRules.decide` then sets `resolution_status` to `UNKNOWN` without checking whether the payment was already settled with certainty (`SUCCEEDED`/`KNOWN`/`POSTED`), and `unresolved_since` starts. If no query succeeds within the unresolved-age limit (1 hour in the live stack), the next recovery attempt escalates the operation with `UNRESOLVED_AGE_LIMIT`. Escalated operations are excluded from recovery (`due` and L2 `stranded`), so the payment stays `UNKNOWN` for good. Once it is `UNKNOWN`, L2 also wakes the payment's other tasks (the finished capture task), which then fail or age out the same way.
+
+Defect 1 makes defect 2 almost certain: a settled payment that is polled forever will eventually meet one failed poll. Defect 2 can also happen on its own, because every merchant `GET /v1/payments/{id}` (`PaymentExecutor.refresh`) queries PayPal whatever the payment's state.
+
+### Observed
+
+Live PayPal sandbox stack, 2026-10-30, read-only queries of `platform.payment`, `platform.recovery_task`, `platform.provider_operation` and `platform.provider_observation`:
+
+| PayPal order | Payment | `CREATE_CHECKOUT` | `CAPTURE_ORDER` |
+| --- | --- | --- | --- |
+| `7KR80011U08627743` (F24 run) | `SUCCEEDED` / `COMPLETED` / **`UNKNOWN`** since 14:10:46 UTC / `POSTED`, 1500 captured and later refunded | `ESCALATED`, 13 attempts, `UNRESOLVED_AGE_LIMIT` | `ESCALATED`, `UNRESOLVED_AGE_LIMIT` |
+| `0KR118477V189483U` (F33, order 2) | `SUCCEEDED` / `COMPLETED` / `KNOWN` / `POSTED` | `RESOLVED`, task **`WAITING`**, 11 attempts | `RESOLVED`, task `DONE` |
+| `5B364987DH5879225` (F33, order 5) | `SUCCEEDED` / `COMPLETED` / `KNOWN` / `POSTED` | `RESOLVED`, task **`WAITING`**, 6 attempts | `RESOLVED`, task `DONE` |
+
+For `7KR80011U08627743`, after the capture at 13:57:28, the create task queried the order eight more times between 13:59 and 14:08, and every answer was `COMPLETED`. Then:
+
+- 14:10:46: one query timed out (`NO_RESPONSE`), and the payment became `UNKNOWN`.
+- 14:10 to 15:15: there are no provider observations at all for any payment. The cause was not determined; a host sleep or a network outage are likely.
+- 15:15:54: the next query failed again, and the create operation was escalated.
+- 15:20:05: L2 woke the finished capture task, its query failed too, and the capture operation was escalated.
+
+Across the stack, the order queries recorded 66 successes and 3 timeouts, all three on this order. The ops console shows the stuck tasks as recovery `WAITING`; the F33 live check found them there.
+
+The diagnosis is in the shared session notes (`paypal-recovery.md`, 2026-10-31).
+
+### Impact
+
+No money moves wrongly: nothing is resent, nothing is captured twice, and postings and refunds are correct. But:
+
+- every successful PayPal payment is polled forever;
+- sooner or later, every successful PayPal payment becomes a manual escalation with `resolution_status = UNKNOWN`, which buries the escalations that matter;
+- anything that trusts `resolution_status` (reconciliation, refund checks, the ops console) sees a settled, refunded payment as uncertain;
+- the endless polling spends the provider request budget.
+
+### Likelihood
+
+Defect 1 happens to every successful checkout. Defect 2 needs one failed provider read followed by an hour without a successful one. Locally that took a sleeping laptop; on a deployed host it takes any provider or network hiccup at the wrong moment, and the endless polling gives it unlimited chances.
+
+### Workarounds without code
+
+None that clears the state. A successful `GET /v1/payments/{id}` puts the payment back to `KNOWN`. It does not change escalated operations or tasks, because `RecoveryWakeRules` refuses `ESCALATED`. Treat `UNRESOLVED_AGE_LIMIT` escalations on payments that are `SUCCEEDED` and `POSTED` as this issue, and check the payment in the PayPal sandbox before acting.
+
+### Proposed fix
+
+A feature in the ledger payment module, test first.
+
+- **Fix A:** `OperationLeaseRules.paymentTaskDone` also returns true for `CREATE_CHECKOUT` + `RESOLVED` + `SUCCEEDED` + `KNOWN`, mirroring F06's capture rule. Unposted money is still found by L2, because `PENDING_EVIDENCE` wakes even `DONE` tasks.
+- **Fix B:** `PaymentEvidenceRules.decide` keeps the payment's resolution, instead of `UNKNOWN`, only when all of these hold:
+  - the query brought no evidence at all (no session, no intent, no charges, no conflict);
+  - the payment is `KNOWN`;
+  - the payment is `SUCCEEDED` or `CANCELED`.
+
+  Partial or inconsistent evidence must still downgrade, and payments that are not yet settled keep today's behaviour. The plan must confirm the side effect that `merge` then treats such a failed query as applicable (op `RESOLVED`, task `DONE`).
+
+Tests:
+
+- Two existing assertions lock in the bug and change on purpose. This is an intended behaviour change, not a weakened test:
+  - `OperationLeaseRulesTest` (line 95);
+  - `PaymentStateMachinePayPalTest.captureTaskDone` (line 196).
+- New unit cases for both rules.
+- New ITs in `PayPalCaptureIT`:
+  - the create task finishes after capture, and later passes send no request;
+  - a failed read keeps a settled payment `KNOWN`;
+  - the live sequence (fail, wait more than an hour, fail again) ends with both tasks `DONE` and no escalation. This one fails on today's code with exactly the observed state.
+- A Stripe-shaped case in `OperationRecoveryIT`.
+
+The existing age-limit tests for unsettled payments (`OperationRecoveryIT`, `PayPalCaptureUnknownIT`, `ProviderResultCharacterizationIT`) must stay green unchanged. Run the full `./mvnw verify`.
+
+Why the tests missed it:
+
+- `PayPalCaptureFixture.onlyCaptureTaskRecovers()` and `PayPalRefundIT.onlyRefundTasksRecover()` force the create task to `DONE` with SQL, so no PayPal IT ever saw the lingering task.
+- `PayPalCaptureIT` never runs recovery after a success.
+
+Out of scope for the fix: the payment `7KR80011U08627743` stays `ESCALATED`/`UNKNOWN`. Clearing it needs an ops decision, or a separate "re-verify escalated operation" tool.
+
+### Revisit when
+
+Before F29 deploys the stack. Plan the fix as its own ledger feature.
+
+### Related
+
+- `ledger/src/main/java/com/paymentsledger/payment/domain/OperationLeaseRules.java` (`paymentTaskDone`).
+- `ledger/src/main/java/com/paymentsledger/payment/domain/PaymentEvidenceRules.java` (`decide`).
+- `ledger/src/main/java/com/paymentsledger/payment/ProviderQueryService.java` (`queryOrder`).
+- `docs/adr/paypal-state-mapping.md`: D5 and §5 step 6 cover a payment that is uncertain during capture, not a settled one.
+- `docs/plans/F06.md`: decision 13 and test 31, which added the capture rule and pinned the create case to false.
+- The F33 entry in `docs/progress.md`.
