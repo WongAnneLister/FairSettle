@@ -4,14 +4,13 @@ import {TypeOrmModule} from '@nestjs/typeorm';
 import {Order} from 'src/orders/entities/order.entity';
 
 import {CheckoutReturnController} from './checkout-return.controller';
-import {PaymentRefreshService} from './payment-refresh.service';
-import {PaymentRefreshResolver} from './payment-refresh.resolver';
-
 import {LedgerNotification} from './entities/ledger-notification.entity';
 import {HttpLedgerClient} from './http-ledger-client';
 import {LEDGER_CLIENT} from './ledger-client';
 import {LedgerNotificationService} from './ledger-notification.service';
 import {LedgerNotificationsController} from './ledger-notifications.controller';
+import {PaymentRefreshResolver} from './payment-refresh.resolver';
+import {PaymentRefreshService} from './payment-refresh.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([LedgerNotification, Order])],
