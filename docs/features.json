@@ -742,8 +742,9 @@
       "depends_on": [
         "F24"
       ],
-      "state": "not_started",
-      "evidence": null
+      "state": "active",
+      "evidence": null,
+      "started_at": "2026-10-31T00:43:15+09:00"
     }
   ]
 }

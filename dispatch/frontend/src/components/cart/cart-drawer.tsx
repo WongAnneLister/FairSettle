@@ -15,8 +15,6 @@ export function CartDrawer() {
     items,
     itemCount,
     subtotalCents,
-    deliveryFeeCents,
-    serviceFeeCents,
     totalCents,
     updateQuantity,
     removeItem,
@@ -164,22 +162,6 @@ export function CartDrawer() {
                   <span>菜品小计</span>
                   <span className="font-semibold text-slate-800">
                     {formatCents(subtotalCents)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>配送费</span>
-                  <span>
-                    {deliveryFeeCents === 0 ? (
-                      <span className="text-emerald-600 font-bold">免配送费</span>
-                    ) : (
-                      formatCents(deliveryFeeCents)
-                    )}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>包装与平台调度费</span>
-                  <span className="font-semibold text-slate-800">
-                    {formatCents(serviceFeeCents)}
                   </span>
                 </div>
                 <div className="border-t border-slate-200/60 pt-2 flex justify-between text-sm font-black text-slate-900">

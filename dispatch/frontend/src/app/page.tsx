@@ -7,238 +7,22 @@ import {
   Search,
   Sparkles,
   Flame,
-  ArrowRight,
   ChefHat,
   Bike,
-  ShieldCheck,
   Store,
-  Clock,
   Compass,
-  Zap,
-  SlidersHorizontal,
-  Plus,
-  Utensils,
-  Layers,
 } from 'lucide-react';
 import { ALL_RESTAURANTS_QUERY, ALL_CATEGORIES_QUERY } from '@/lib/graphql/queries';
-import { Restaurant, Category, Dish } from '@/lib/types';
+import { Restaurant, Category } from '@/lib/types';
 import { RestaurantCard } from '@/components/restaurant/restaurant-card';
 import { CategoryPills } from '@/components/restaurant/category-pills';
-import { DishOptionModal } from '@/components/dish/dish-option-modal';
 import { SafeImage } from '@/components/ui/safe-image';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
-import { formatCents } from '@/lib/currency';
-import { useCart } from '@/lib/cart-context';
-
-// Curated Popular Featured Dishes for Direct Ordering from Homepage
-const FEATURED_HOME_DISHES: (Dish & { restaurantName: string; categorySlug: string })[] = [
-  {
-    id: 1,
-    restaurantId: 1,
-    restaurantName: '东京一胜 浓汤豚骨拉面馆',
-    categorySlug: 'noodles',
-    name: '特制浓汤招牌豚骨叉烧拉面',
-    priceCents: 1250,
-    photo: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
-    description: '14小时慢熬白汤浓郁豚骨精华，搭配手切慢炖五花叉烧与日式溏心蛋。',
-    options: [
-      {
-        name: '面条软硬',
-        choices: [
-          { name: '适中 (推荐)', extraCents: 0 },
-          { name: '偏硬 (弹牙)', extraCents: 0 },
-          { name: '偏软 (入味)', extraCents: 0 },
-        ],
-      },
-      {
-        name: '加料自选',
-        choices: [
-          { name: '加溏心蛋一枚', extraCents: 150 },
-          { name: '加厚切叉烧两片', extraCents: 350 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 4,
-    restaurantId: 2,
-    restaurantName: '罗马工坊 手工窑炉披萨 (Pizza Art)',
-    categorySlug: 'pizza',
-    name: '经典玛格丽特手工窑炉披萨 (12寸)',
-    priceCents: 1580,
-    photo: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80',
-    description: '那不勒斯传统窑炉烤制，圣马扎诺番茄酱、鲜马苏里拉与新鲜罗勒叶。',
-    options: [
-      {
-        name: '饼底工艺',
-        choices: [
-          { name: '传统意式薄脆底', extraCents: 0 },
-          { name: '芝士夹心卷边', extraCents: 300 },
-        ],
-      },
-      {
-        name: '芝士加料',
-        choices: [
-          { name: '双份马苏里拉芝士', extraCents: 250 },
-          { name: '水牛芝士球', extraCents: 400 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 7,
-    restaurantId: 3,
-    restaurantName: 'Shake & Smash 美式手作和牛堡',
-    categorySlug: 'burger',
-    name: '双层经典安格斯和牛暴风堡',
-    priceCents: 1590,
-    photo: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80',
-    description: '双片现压纯和牛牛肉饼，美式融化车达芝士，焦糖洋葱与独家秘酱。',
-    options: [
-      {
-        name: '肉饼熟度',
-        choices: [
-          { name: '七分熟 (粉嫩多汁)', extraCents: 0 },
-          { name: '全熟 (焦香浓郁)', extraCents: 0 },
-        ],
-      },
-      {
-        name: '豪华加料',
-        choices: [
-          { name: '枫糖厚切培根', extraCents: 200 },
-          { name: '加一片和牛肉饼', extraCents: 450 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 9,
-    restaurantId: 4,
-    restaurantName: '京都松阪屋 炭火烧肉与和牛丼饭',
-    categorySlug: 'japanese',
-    name: '炭火炙烤特选和牛温泉蛋丼',
-    priceCents: 1880,
-    photo: 'https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=600&q=80',
-    description: '精选和牛厚切炭烤，淋上特调照烧汁，配伊势生食级温泉蛋。',
-    options: [
-      {
-        name: '米饭分量',
-        choices: [
-          { name: '标准分量', extraCents: 0 },
-          { name: '加量大份米饭', extraCents: 100 },
-        ],
-      },
-      {
-        name: '加料',
-        choices: [
-          { name: '双份温泉蛋', extraCents: 150 },
-          { name: '加倍和牛肉量', extraCents: 500 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 11,
-    restaurantId: 5,
-    restaurantName: '绿意森林 轻食沙拉能量碗 Healthy Bowl',
-    categorySlug: 'healthy',
-    name: '低卡炙烤鸡胸能量轻食碗',
-    priceCents: 1190,
-    photo: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80',
-    description: '低温慢煮香草鸡胸肉，搭配三色藜麦、羽衣甘蓝、烤南瓜与牛油果。',
-    options: [
-      {
-        name: '主食基底',
-        choices: [
-          { name: '三色藜麦糙米饭', extraCents: 0 },
-          { name: '全蔬菜沙拉底 (无碳水)', extraCents: 0 },
-        ],
-      },
-      {
-        name: '特调酱汁',
-        choices: [
-          { name: '经典意式油醋汁', extraCents: 0 },
-          { name: '日式焙煎芝麻低卡酱', extraCents: 0 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 12,
-    restaurantId: 6,
-    restaurantName: '甜心手作 舒芙蕾与鲜果下午茶 Sweet Lab',
-    categorySlug: 'dessert',
-    name: '日式空气舒芙蕾厚松饼 (鲜莓果)',
-    priceCents: 1280,
-    photo: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=600&q=80',
-    description: '现点现烤云朵般轻盈蓬松，搭配北海道生巧奶油与当季草莓果酱。',
-    options: [
-      {
-        name: '甜度偏好',
-        choices: [
-          { name: '标准甜 (推荐)', extraCents: 0 },
-          { name: '少糖微甜', extraCents: 0 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 13,
-    restaurantId: 7,
-    restaurantName: '老坛金汤酸菜鱼 川香现炒小馆',
-    categorySlug: 'chinese',
-    name: '老坛古法金汤酸菜黑鱼片',
-    priceCents: 1680,
-    photo: 'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80',
-    description: '活杀无刺鲜嫩黑鱼片，古法坛泡老酸菜，大骨浓汤酸辣开胃极度下饭。',
-    options: [
-      {
-        name: '辣度选择',
-        choices: [
-          { name: '微辣 (大众口味)', extraCents: 0 },
-          { name: '经典中辣', extraCents: 0 },
-          { name: '特辣加麻', extraCents: 100 },
-        ],
-      },
-      {
-        name: '加菜',
-        choices: [
-          { name: '加嫩豆腐', extraCents: 150 },
-          { name: '加金针菇宽粉', extraCents: 200 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 5,
-    restaurantId: 2,
-    restaurantName: '罗马工坊 手工窑炉披萨 (Pizza Art)',
-    categorySlug: 'pizza',
-    name: '黑松露帕尔马火腿披萨 (12寸)',
-    priceCents: 2190,
-    photo: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80',
-    description: '精选帕尔马风干火腿，野生特级黑松露酱与新鲜芝麻菜，香气优雅馥郁。',
-    options: [
-      {
-        name: '芝士份量',
-        choices: [
-          { name: '标准芝士', extraCents: 0 },
-          { name: '加重黑松露芝士', extraCents: 350 },
-        ],
-      },
-    ],
-  },
-];
 
 export default function HomePage() {
-  const { addItem } = useCart();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-
-  // Modal state for direct ordering from homepage
-  const [modalDish, setModalDish] = useState<Dish | null>(null);
-  const [modalRestaurant, setModalRestaurant] = useState<{ id: number; name: string } | null>(null);
 
   // Queries
   const { data: restData, loading: restLoading } = useQuery(ALL_RESTAURANTS_QUERY, {
@@ -273,28 +57,6 @@ export default function HomePage() {
   const promotedRestaurants = useMemo(() => {
     return restaurants.filter((r) => r.isPromoted);
   }, [restaurants]);
-
-  // Filter featured dishes by category or search
-  const filteredFeaturedDishes = useMemo(() => {
-    return FEATURED_HOME_DISHES.filter((d) => {
-      const matchCategory =
-        !selectedCategory || d.categorySlug.toLowerCase() === selectedCategory.toLowerCase();
-      const matchSearch =
-        searchQuery.trim() === '' ||
-        d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.restaurantName.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchCategory && matchSearch;
-    });
-  }, [selectedCategory, searchQuery]);
-
-  const handleDishAction = (dish: typeof FEATURED_HOME_DISHES[0]) => {
-    if (dish.options && dish.options.length > 0) {
-      setModalDish(dish);
-      setModalRestaurant({ id: dish.restaurantId, name: dish.restaurantName });
-    } else {
-      addItem(dish.restaurantId, dish.restaurantName, dish, []);
-    }
-  };
 
   return (
     <div className="flex flex-col gap-12 pb-20 relative">
@@ -454,90 +216,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* NEW FEATURE: Popular Featured Dishes Direct Ordering Grid */}
-      {filteredFeaturedDishes.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Flame className="w-5 h-5 text-brand-500 fill-brand-500" />
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                    🔥 全城必吃·爆款美食抢先点
-                  </h2>
-                  <span className="text-xs font-bold text-brand-700 bg-brand-500/10 border border-brand-500/20 px-2.5 py-0.5 rounded-full">
-                    538道菜品精选
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  无需进店，在首页即可直接加料选配，一键加入购物车
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {filteredFeaturedDishes.map((dish) => (
-                <div
-                  key={dish.id}
-                  className="glass-card glass-card-hover rounded-3xl p-4 flex flex-col justify-between gap-3 group border border-white/90"
-                >
-                  <div>
-                    {/* Dish Image */}
-                    <div className="relative w-full h-40 rounded-2xl overflow-hidden bg-slate-100 mb-3 border border-white/80">
-                      <SafeImage
-                        src={dish.photo}
-                        alt={dish.name}
-                        fill
-                        className="object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
-                        sizes="(max-width: 768px) 100vw, 300px"
-                      />
-                      <Link
-                        href={`/restaurant/${dish.restaurantId}`}
-                        className="absolute bottom-2.5 left-2.5 glass-pill px-2.5 py-1 rounded-xl text-[10px] font-bold text-slate-800 hover:bg-white transition-all max-w-[85%] truncate shadow-sm"
-                      >
-                        {dish.restaurantName}
-                      </Link>
-                    </div>
-
-                    <h3 className="font-black text-slate-900 text-sm group-hover:text-brand-600 transition-colors line-clamp-1">
-                      {dish.name}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                      {dish.description}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                    <div>
-                      <span className="text-base font-black text-slate-900">
-                        {formatCents(dish.priceCents)}
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => handleDishAction(dish)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-95 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white shadow-md shadow-brand-500/20"
-                    >
-                      {dish.options && dish.options.length > 0 ? (
-                        <>
-                          <SlidersHorizontal className="w-3.5 h-3.5 text-white" />
-                          <span>选规格</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3.5 h-3.5 text-white" />
-                          <span>加购</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Promoted Section */}
       {promotedRestaurants.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
@@ -617,19 +295,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Option Modal for Homepage Direct Ordering */}
-      {modalDish && modalRestaurant && (
-        <DishOptionModal
-          isOpen={!!modalDish}
-          onClose={() => {
-            setModalDish(null);
-            setModalRestaurant(null);
-          }}
-          dish={modalDish}
-          restaurantId={modalRestaurant.id}
-          restaurantName={modalRestaurant.name}
-        />
-      )}
     </div>
   );
 }

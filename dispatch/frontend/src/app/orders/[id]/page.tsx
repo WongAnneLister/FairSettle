@@ -1,16 +1,14 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { Suspense } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery, useSubscription, useMutation } from '@apollo/client';
 import {
   ArrowLeft,
   Store,
   Bike,
   Clock,
-  ShieldCheck,
-  Radio,
   RefreshCw,
   Sparkles,
   PhoneCall,
@@ -22,6 +20,7 @@ import { ORDER_UPDATES_SUBSCRIPTION } from '@/lib/graphql/subscriptions';
 import { EDIT_ORDER_MUTATION, TAKE_ORDER_MUTATION } from '@/lib/graphql/mutations';
 import { Order, OrderStatus, UserRole } from '@/lib/types';
 import { formatCents } from '@/lib/currency';
+import { OrderPaymentCard } from '@/components/order/order-payment-card';
 import { OrderTimeline } from '@/components/order/order-timeline';
 import { OrderStatusBadge } from '@/components/order/order-status-badge';
 import { Spinner } from '@/components/ui/spinner';
@@ -29,8 +28,11 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
 
-export default function OrderDetailPage() {
+function OrderDetail() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const autoPay = searchParams.get('pay') === '1';
+  const canceled = searchParams.get('payment') === 'canceled';
   const orderId = parseInt(params.id as string, 10);
   const { user } = useAuth();
   const { success, error } = useToast();
@@ -53,43 +55,27 @@ export default function OrderDetailPage() {
 
   const rawOrder: Order | undefined = subData?.orderUpdates || data?.getOrder?.order;
 
-  // Fallback demo order
-  const order: Order = rawOrder || {
-    id: orderId || 1,
-    customerId: user?.id || 1,
-    status: OrderStatus.Pending,
-    totalCents: 2530,
-    createdAt: new Date().toISOString(),
-    restaurant: {
-      id: 1,
-      name: '罗马手工披萨屋 Roma Artisan Pizza',
-      coverImage: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80',
-      address: '美食街88号 意式风情街B座',
-      isPromoted: true,
-    },
-    items: [
-      {
-        id: 1,
-        dish: {
-          id: 101,
-          name: '玛格丽特特级黑松露披萨',
-          priceCents: 1680,
-          description: '',
-        },
-        options: [{ name: '饼底规格', choice: '12寸手工厚底' }],
-      },
-      {
-        id: 2,
-        dish: {
-          id: 105,
-          name: '冷萃鲜柠气泡冰茶',
-          priceCents: 450,
-          description: '',
-        },
-        options: [{ name: '甜度与冰量', choice: '标准冰·微糖' }],
-      },
-    ],
-  };
+  const order = rawOrder;
+
+  if (loading && !data && !rawOrder) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
+        <Spinner className="w-8 h-8 text-brand-500" />
+        <p className="text-xs text-slate-400">正在建立实时订单信道...</p>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="glass-card rounded-3xl p-8 mx-auto my-8 max-w-lg text-center flex flex-col items-center gap-4">
+        <p className="font-bold text-slate-900">订单不存在或无权查看</p>
+        <Link href="/orders" className="text-brand-600 font-semibold">返回我的订单</Link>
+      </div>
+    );
+  }
+
+  const isCustomer = user?.role === UserRole.Client && order.customer?.id === user.id;
 
   const handleAdvanceStatus = async (nextStatus: OrderStatus) => {
     try {
@@ -128,14 +114,6 @@ export default function OrderDetailPage() {
     }
   };
 
-  if (loading && !data && !rawOrder) {
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
-        <Spinner className="w-8 h-8 text-brand-500" />
-        <p className="text-xs text-slate-400">正在建立实时订单信道...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
@@ -177,6 +155,14 @@ export default function OrderDetailPage() {
           <OrderStatusBadge status={order.status} />
         </div>
       </div>
+
+      <OrderPaymentCard
+        order={order}
+        isCustomer={isCustomer}
+        autoPay={autoPay}
+        canceled={canceled}
+        onRefreshed={() => refetch()}
+      />
 
       {/* Visual Step Progress Frosted Glass Card */}
       <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-white/90 shadow-[0_20px_50px_0_rgba(15,23,42,0.06)] flex flex-col gap-5">
@@ -384,4 +370,8 @@ export default function OrderDetailPage() {
       </div>
     </div>
   );
+}
+
+export default function OrderDetailPage() {
+  return <Suspense fallback={null}><OrderDetail /></Suspense>;
 }

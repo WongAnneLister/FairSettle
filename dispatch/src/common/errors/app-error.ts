@@ -6,7 +6,8 @@
  * not yours" from "someone else just claimed it" — the last of which is the only
  * one worth retrying. Prose is for humans; the code is for the client.
  */
-export type AppErrorCode = 'NOT_FOUND' | 'FORBIDDEN' | 'CONFLICT' | 'VALIDATION' | 'INTERNAL';
+export type AppErrorCode =
+  'NOT_FOUND' | 'FORBIDDEN' | 'CONFLICT' | 'VALIDATION' | 'UNAVAILABLE' | 'INTERNAL';
 
 /**
  * A failure the service meant to produce. Anything that is NOT an AppError
@@ -47,5 +48,12 @@ export class ConflictError extends AppError {
 export class ValidationError extends AppError {
   constructor(message: string) {
     super('VALIDATION', message);
+  }
+}
+
+/** A dependency this operation needs did not answer usefully; trying again later may work. */
+export class UnavailableError extends AppError {
+  constructor(message: string) {
+    super('UNAVAILABLE', message);
   }
 }

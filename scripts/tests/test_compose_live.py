@@ -58,14 +58,14 @@ class ComposeLiveTest(unittest.TestCase):
             "dispatch-postgres", "dispatch-redis", "dispatch", "kafka-init",
             "ledger-notification-target", "agent-postgres", "agent", "langfuse-postgres",
             "langfuse-redis", "langfuse-clickhouse", "langfuse-s3", "langfuse-s3-init",
-            "langfuse-worker", "langfuse-web"})
+            "langfuse-worker", "langfuse-web", "storefront"})
         for name, service in self.services.items():
             with self.subTest(service=name):
                 self.assertNotIn("container_name", service)
 
     def test_published_ports(self):
         published = {"ledger-api": 8080, "ledger-worker": 8081, "dispatch": 4000,
-                     "agent": 8000, "langfuse-web": 3000}
+                     "agent": 8000, "langfuse-web": 3000, "storefront": 3001}
         for name, service in self.services.items():
             with self.subTest(service=name):
                 if name in published:
@@ -73,7 +73,7 @@ class ComposeLiveTest(unittest.TestCase):
                     self.assertEqual(len(ports), 1)
                     self.assertEqual(ports[0]["target"], published[name])
                     self.assertEqual(str(ports[0]["published"]), str(published[name]))
-                    if name in {"agent", "langfuse-web"}:
+                    if name in {"agent", "langfuse-web", "storefront"}:
                         self.assertEqual(ports[0]["host_ip"], "127.0.0.1")
                     else:
                         self.assertIn(ports[0].get("host_ip"), (None, "0.0.0.0", ""))
@@ -154,6 +154,18 @@ class ComposeLiveTest(unittest.TestCase):
         self.assertNotIn("FAIRSETTLE_TRACING", env)
         self.assertTrue(agent["build"]["context"].endswith("/agent"))
         self.assertEqual(agent["image"], "fairsettle-agent:local")
+
+    def test_storefront_builds_against_dispatch(self):
+        storefront = self.services["storefront"]
+        self.assertTrue(storefront["build"]["context"].endswith("dispatch/frontend"))
+        self.assertEqual(storefront["build"]["args"], {
+            "BACKEND_GRAPHQL_URL": "http://dispatch:4000/graphql",
+            "BACKEND_UPLOADS_URL": "http://dispatch:4000/uploads",
+        })
+        self.assertEqual(storefront["depends_on"]["dispatch"]["condition"], "service_healthy")
+        self.assertFalse(set(storefront.get("environment", {})) & set(KEYS))
+        self.assertEqual(self.services["dispatch"]["environment"]["STOREFRONT_URL"],
+                         "http://localhost:3001")
 
     def test_images_pinned(self):
         for name, service in self.services.items():

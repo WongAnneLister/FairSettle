@@ -1,6 +1,7 @@
 # Live M2 overlay; always layer it on docker-compose.yml.
 # Start: docker compose --env-file .env.live -f docker-compose.yml -f docker-compose.live.yml up -d --build --wait
 # Every secret comes from .env.live through --env-file. See docs/m2-live-run.md.
+# Storefront: http://localhost:3001 (F33).
 x-langfuse-env: &langfuse-env
   NEXTAUTH_URL: http://localhost:3000
   NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?LANGFUSE_NEXTAUTH_SECRET is required in .env.live}
@@ -72,6 +73,7 @@ services:
         condition: service_completed_successfully
   dispatch:
     environment:
+      STOREFRONT_URL: http://localhost:3001
       LEDGER_CHECKOUT: enabled
       LEDGER_BASE_URL: http://ledger-api:8080
       LEDGER_APP_TOKEN: app_10000000-0000-0000-0000-000000000041.${LOCAL_APP_SECRET:?LOCAL_APP_SECRET is required in .env.live}
@@ -156,6 +158,24 @@ services:
       timeout: 5s
       retries: 20
       start_period: 30s
+  storefront:
+    build:
+      context: ./dispatch/frontend
+      args:
+        BACKEND_GRAPHQL_URL: http://dispatch:4000/graphql
+        BACKEND_UPLOADS_URL: http://dispatch:4000/uploads
+    image: fairsettle-storefront:local
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      dispatch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
   langfuse-postgres:
     image: postgres:16
     environment:

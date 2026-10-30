@@ -7,6 +7,9 @@ export type Step =
   | {respond: 'unknown'}
   | {respond: 'slow'; delayMs: number};
 
+export type ReadStep =
+  {respond: 'resource'; paymentStatus?: string} | {respond: 'status'; status: number; code: string};
+
 interface FakePayment {
   id: string;
   key: string;
@@ -23,6 +26,7 @@ export class FakeLedger {
   }> = [];
   readonly payments = new Map<string, FakePayment>();
   private readonly steps = new Map<string, Step[]>();
+  private readonly readSteps = new Map<string, ReadStep[]>();
   private readonly timers = new Set<ReturnType<typeof setTimeout>>();
   private server: Server;
   private sequence = 0;
@@ -40,6 +44,28 @@ export class FakeLedger {
         headers: request.headers,
         body,
       });
+      const read = request.url?.match(/^\/v1\/payments\/(pay_[0-9A-Z]{26})$/);
+      if (request.method === 'GET' && read) {
+        if (!request.headers.authorization?.startsWith('Bearer ')) {
+          this.answer(response, 401, {code: 'UNAUTHORIZED'});
+          return;
+        }
+        const step = this.readSteps.get(read[1])?.shift() ?? {respond: 'resource'};
+        if (step.respond === 'status') {
+          this.answer(response, step.status, {code: step.code});
+          return;
+        }
+        const payment = [...this.payments.values()].find(value => value.id === read[1]);
+        if (!payment) {
+          this.answer(response, 404, {code: 'NOT_FOUND'});
+          return;
+        }
+        this.answer(response, 200, {
+          ...this.resource(payment),
+          paymentStatus: step.paymentStatus ?? 'AWAITING_CUSTOMER',
+        });
+        return;
+      }
       if (request.method !== 'POST' || request.url !== '/v1/payments') {
         this.answer(response, 404, {code: 'NOT_FOUND'});
         return;
@@ -109,6 +135,10 @@ export class FakeLedger {
 
   script(orderKey: string, steps: Step[]): void {
     this.steps.set(orderKey, [...steps]);
+  }
+
+  scriptRead(paymentId: string, steps: ReadStep[]): void {
+    this.readSteps.set(paymentId, [...steps]);
   }
 
   private resource(payment: FakePayment): Record<string, unknown> {

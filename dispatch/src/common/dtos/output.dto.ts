@@ -9,7 +9,7 @@ export class CoreOutput {
   ok: boolean;
 
   /**
-   * Stable failure code — NOT_FOUND, FORBIDDEN, CONFLICT, VALIDATION, INTERNAL.
+   * Stable failure code — NOT_FOUND, FORBIDDEN, CONFLICT, VALIDATION, UNAVAILABLE, INTERNAL.
    * `error` is prose for a human; this is what a client should branch on.
    * Null on success.
    */

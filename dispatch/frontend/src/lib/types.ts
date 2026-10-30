@@ -12,6 +12,13 @@ export enum OrderStatus {
   Delivered = 'Delivered',
 }
 
+export enum OrderPaymentStatus {
+  NotRequired = 'NotRequired',
+  AwaitingPayment = 'AwaitingPayment',
+  Paid = 'Paid',
+  Failed = 'Failed',
+}
+
 export interface User {
   id: number;
   email: string;
@@ -84,6 +91,8 @@ export interface Order {
   restaurant?: Restaurant | null;
   items: OrderItem[];
   totalCents?: number | null;
+  paymentStatus?: OrderPaymentStatus;
+  checkoutUrl?: string | null;
   status: OrderStatus;
   createdAt?: string;
   updatedAt?: string;

@@ -6,6 +6,8 @@ export const ORDER_UPDATES_SUBSCRIPTION = gql`
       id
       status
       totalCents
+      paymentStatus
+      checkoutUrl
       customer {
         id
         email

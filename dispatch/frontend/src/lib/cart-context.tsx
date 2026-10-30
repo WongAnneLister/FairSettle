@@ -25,8 +25,6 @@ interface CartContextValue {
   items: CartItem[];
   itemCount: number;
   subtotalCents: number;
-  deliveryFeeCents: number;
-  serviceFeeCents: number;
   totalCents: number;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
@@ -198,21 +196,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [items]
   );
 
-  // Delivery fee: $2.50 (250 cents) if under $35, free otherwise
-  const deliveryFeeCents = useMemo(() => {
-    if (items.length === 0) return 0;
-    return subtotalCents >= 3500 ? 0 : 250;
-  }, [items.length, subtotalCents]);
-
-  const serviceFeeCents = useMemo(() => {
-    if (items.length === 0) return 0;
-    return 150; // $1.50 platform packaging and service fee
-  }, [items.length]);
-
-  const totalCents = useMemo(
-    () => subtotalCents + deliveryFeeCents + serviceFeeCents,
-    [subtotalCents, deliveryFeeCents, serviceFeeCents]
-  );
+  // What dispatch charges and PayPal collects: the dish sum, no client-side fees (F33).
+  const totalCents = subtotalCents;
 
   return (
     <CartContext.Provider
@@ -222,8 +207,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         items,
         itemCount,
         subtotalCents,
-        deliveryFeeCents,
-        serviceFeeCents,
         totalCents,
         isOpen,
         setIsOpen,

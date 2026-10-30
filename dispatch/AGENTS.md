@@ -7,6 +7,7 @@ Read before changing anything here: `docs/adr/` (6 ADRs).
 ## Commands
 
 - Infrastructure for local development and e2e: `docker compose up -d` in this folder starts PostgreSQL 16 and Redis 7 on host ports. The whole stack, dispatch included, runs from the repository-root compose (F13).
+- Storefront (`frontend/`, Next.js): `npm ci`, `npm run dev` (port 3001), `npm test` (vitest), `npm run build`. In the live overlay it runs as `storefront` (F33).
 - Install: `npm ci`. Run: `npm run start:dev` (migrations run on boot outside production). GraphQL at `http://localhost:4000/graphql`.
 - Unit tests: `npm test`.
 - E2E tests against real PostgreSQL and Redis: copy `env.test.example` to `.env.test`, then `npm run test:e2e`.
@@ -20,7 +21,8 @@ Read before changing anything here: `docs/adr/` (6 ADRs).
 | --- | --- |
 | `src/orders/order-events.ts` | The order event log: one row per applied order change, in the change's own transaction; read by `orderTimeline` (F19) |
 | `src/orders/order-state-machine.ts` | The only place order status changes. API calls, provider callbacks and new ledger notifications all go through it |
-| `src/ledger/` | The only place dispatch calls the ledger. Payment creation goes through the outbox (`order.payment`); the key is derived from the order id (F15); receives signed ledger payment notifications at `POST /webhooks/ledger` (raw-byte HMAC, inbox by eventId) and moves `paymentStatus` through the state machine (F16) |
+| `frontend/` | Customer, owner and driver storefront. Talks to dispatch GraphQL only; pays through the order's PayPal sandbox `checkoutUrl` and asks dispatch to read the payment with `refreshOrderPayment` (F33) |
+| `src/ledger/` | The only place dispatch calls the ledger. Payment creation goes through the outbox (`order.payment`); the key is derived from the order id (F15); receives signed ledger payment notifications at `POST /webhooks/ledger` (raw-byte HMAC, inbox by eventId) and moves `paymentStatus` through the state machine (F16); `refreshOrderPayment` reads the ledger payment so the ledger captures, and `GET /checkout/success` / `/checkout/cancel` redirect PayPal's return to the storefront (F33) |
 | `src/fulfillment/` | Provider adapter, transactional outbox, signed webhook ingestion, retry and dead-letter |
 | `src/common/errors/` | Error taxonomy; no bare `catch` that flattens errors |
 

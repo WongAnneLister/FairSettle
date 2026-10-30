@@ -32,6 +32,10 @@ export const schema = Joi.object({
     .min(32)
     .when('LEDGER_CHECKOUT', {is: 'enabled', then: Joi.required()}),
   LEDGER_TIMEOUT_MS: Joi.number().default(10000),
+  // Storefront origin that PayPal's return is redirected to (F33).
+  STOREFRONT_URL: Joi.string()
+    .uri({scheme: ['http', 'https']})
+    .default('http://localhost:3001'),
   MAIL_HOST: Joi.string(),
   MAIL_PORT: Joi.number(),
   MAIL_USER: Joi.string(),

@@ -235,3 +235,39 @@ F29 configures deployment settings.
 
 - The F23 entry in `docs/progress.md`.
 - `docs/plans/F23.md`: decision 10.
+
+## KI-5 · createOrder accepts dishes from another restaurant
+
+Status: **deferred** (2026-10-31, F33). Area: `dispatch`.
+
+### What happens
+
+`OrderService.createOrder` loads the restaurant and then every dish by id, but never checks that each dish belongs to that restaurant. An order can mix dishes from several restaurants, priced at their real prices, under one restaurant.
+
+### Observed
+
+Found while planning F33, not in a run. The storefront's fake featured dishes could have hit it; F33 removes them.
+
+### Impact
+
+The customer pays the real price of the dishes they sent, but the restaurant receives items it does not sell, and the liability split of a later refund is booked against the wrong restaurant.
+
+### Likelihood
+
+Only through a hand-made GraphQL request; the storefront sends dishes from the restaurant page's own menu.
+
+### Workarounds without code
+
+None needed for the demo.
+
+### Proposed fix
+
+In `createOrder`, reject with `ValidationError` when any dish's `restaurantId` differs from the order's restaurant, with an e2e test.
+
+### Revisit when
+
+Before F29 makes dispatch public.
+
+### Related
+
+- `docs/plans/F33.md`: decision 6.

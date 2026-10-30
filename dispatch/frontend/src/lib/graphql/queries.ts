@@ -221,6 +221,7 @@ export const GET_ORDERS_QUERY = gql`
         id
         status
         totalCents
+        paymentStatus
         createdAt
         customer {
           id
@@ -263,6 +264,8 @@ export const GET_ORDER_QUERY = gql`
         id
         status
         totalCents
+        paymentStatus
+        checkoutUrl
         createdAt
         customer {
           id

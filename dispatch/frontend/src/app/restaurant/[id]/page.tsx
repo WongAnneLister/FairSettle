@@ -22,93 +22,6 @@ import { DishOptionModal } from '@/components/dish/dish-option-modal';
 import { useCart } from '@/lib/cart-context';
 import { formatCents } from '@/lib/currency';
 import { Spinner } from '@/components/ui/spinner';
-import { Button } from '@/components/ui/button';
-
-// Fallback menu if freshly created or testing
-const FALLBACK_DISHES: Dish[] = [
-  {
-    id: 101,
-    name: '玛格丽特特级黑松露披萨',
-    priceCents: 1680,
-    photo: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=600&q=80',
-    description: '采用水牛马苏里拉芝士、圣马扎诺番茄酱、野生黑松露碎与新鲜罗勒叶。',
-    options: [
-      {
-        name: '饼底规格',
-        choices: [
-          { name: '9寸意式薄脆', extraCents: 0 },
-          { name: '12寸手工厚底', extraCents: 400 },
-        ],
-      },
-      {
-        name: '芝士加料',
-        choices: [
-          { name: '正常芝士', extraCents: 0 },
-          { name: '双倍水牛芝士', extraCents: 300 },
-          { name: '爆浆芝心卷边', extraCents: 500 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 102,
-    name: '经典帕尔马火腿火箭菜披萨',
-    priceCents: 1880,
-    photo: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80',
-    description: '窖藏18个月帕尔马火腿切片，搭配清脆芝麻菜与帕玛森干酪片。',
-    options: [
-      {
-        name: '规格大小',
-        choices: [
-          { name: '标准9寸', extraCents: 0 },
-          { name: '尊享12寸', extraCents: 450 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 103,
-    name: '香烤香蒜迷迭香鸡翅 (4只)',
-    priceCents: 850,
-    photo: 'https://images.unsplash.com/photo-1527477378372-13224b17f8b9?auto=format&fit=crop&w=600&q=80',
-    description: '慢烤鲜嫩多汁鸡中翅，佐以新鲜迷迭香与初榨橄榄油。',
-    options: [
-      {
-        name: '蘸酱选择',
-        choices: [
-          { name: '秘制番茄辣酱', extraCents: 0 },
-          { name: '蜂蜜芥末酱', extraCents: 50 },
-          { name: '松露蛋黄酱', extraCents: 100 },
-        ],
-      },
-    ],
-  },
-  {
-    id: 104,
-    name: '意式经典提拉米苏杯',
-    priceCents: 680,
-    photo: 'https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=600&q=80',
-    description: '马斯卡彭芝士搭配浓缩意式咖啡浸润的手指饼干，可可香气浓郁。',
-    options: [],
-  },
-  {
-    id: 105,
-    name: '冷萃鲜柠气泡冰茶',
-    priceCents: 450,
-    photo: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80',
-    description: '手工手打香水柠檬，搭配大吉岭红茶与清爽气泡水。',
-    options: [
-      {
-        name: '甜度与冰量',
-        choices: [
-          { name: '标准冰·微糖', extraCents: 0 },
-          { name: '少冰·无糖', extraCents: 0 },
-          { name: '去冰·微糖', extraCents: 0 },
-        ],
-      },
-    ],
-  },
-];
 
 export default function RestaurantDetailPage() {
   const params = useParams();
@@ -117,26 +30,12 @@ export default function RestaurantDetailPage() {
   const { itemCount, totalCents, setIsOpen } = useCart();
 
   const { data, loading } = useQuery(RESTAURANT_QUERY, {
-    variables: { input: { restaurantId: isNaN(restaurantId) ? 1 : restaurantId } },
+    variables: { input: { restaurantId } },
+    skip: !(restaurantId > 0),
     errorPolicy: 'all',
   });
 
   const backendRestaurant = data?.restaurant?.restaurant;
-
-  const restaurant: Restaurant = backendRestaurant || {
-    id: isNaN(restaurantId) ? 1 : restaurantId,
-    name: '罗马手工披萨屋 Roma Artisan Pizza',
-    coverImage: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1200&q=80',
-    address: '美食街88号 意式风情街B座',
-    isPromoted: true,
-    category: { id: 1, name: '披萨意面', slug: 'pizza' },
-    menu: FALLBACK_DISHES,
-  };
-
-  const menuDishes: Dish[] =
-    restaurant.menu && restaurant.menu.length > 0
-      ? restaurant.menu
-      : FALLBACK_DISHES;
 
   if (loading && !backendRestaurant) {
     return (
@@ -146,6 +45,18 @@ export default function RestaurantDetailPage() {
       </div>
     );
   }
+
+  if (!backendRestaurant) {
+    return (
+      <div className="glass-card rounded-3xl p-8 mx-auto my-8 max-w-lg text-center flex flex-col items-center gap-4">
+        <p className="font-bold text-slate-900">餐厅不存在或暂时无法加载</p>
+        <Link href="/" className="text-brand-600 font-semibold">返回首页</Link>
+      </div>
+    );
+  }
+
+  const restaurant: Restaurant = backendRestaurant;
+  const menuDishes: Dish[] = backendRestaurant.menu ?? [];
 
   return (
     <div className="flex flex-col pb-28">
@@ -228,6 +139,11 @@ export default function RestaurantDetailPage() {
               </span>
             </div>
 
+            {menuDishes.length === 0 ? (
+              <div className="glass-card rounded-3xl p-8 text-center text-slate-500">
+                该餐厅暂未上架菜品
+              </div>
+            ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {menuDishes.map((dish) => (
                 <DishCard
@@ -239,6 +155,7 @@ export default function RestaurantDetailPage() {
                 />
               ))}
             </div>
+            )}
           </div>
 
           {/* Right sidebar: Notice & Security guarantees */}

@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -17,6 +18,7 @@ const nextConfig = {
       },
     ],
   },
+  // Rewrites are fixed at build time: pass BACKEND_GRAPHQL_URL and BACKEND_UPLOADS_URL as build arguments (F33).
   async rewrites() {
     return [
       {

@@ -123,3 +123,14 @@ export const CREATE_PAYMENT_MUTATION = gql`
     }
   }
 `;
+
+export const REFRESH_ORDER_PAYMENT_MUTATION = gql`
+  mutation RefreshOrderPayment($input: RefreshOrderPaymentInput!) {
+    refreshOrderPayment(input: $input) {
+      ok
+      error
+      code
+      paymentStatus
+    }
+  }
+`;

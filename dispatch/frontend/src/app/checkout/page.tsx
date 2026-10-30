@@ -10,8 +10,6 @@ import {
   ShieldCheck,
   ArrowLeft,
   ShoppingBag,
-  Store,
-  CheckCircle2,
   Sparkles,
 } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
@@ -30,8 +28,6 @@ export default function CheckoutPage() {
     restaurantName,
     items,
     subtotalCents,
-    deliveryFeeCents,
-    serviceFeeCents,
     totalCents,
     clearCart,
   } = useCart();
@@ -40,7 +36,6 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState('科技大道99号 创新大厦B座 1802室');
   const [phone, setPhone] = useState('13800138000');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>('online');
 
   const [createOrder, { loading }] = useMutation(CREATE_ORDER_MUTATION);
 
@@ -80,8 +75,8 @@ export default function CheckoutPage() {
 
       if (ok && orderId) {
         clearCart();
-        success('下单成功！', `订单编号 #${orderId}，已进入后厨制作队列`);
-        router.push(`/orders/${orderId}`);
+        success('下单成功！', `订单编号 #${orderId}，正在前往 PayPal 付款`);
+        router.push(`/orders/${orderId}?pay=1`);
       } else {
         error('下单失败', errMessage || '请稍后重试');
       }
@@ -178,47 +173,9 @@ export default function CheckoutPage() {
               <span>支付方式</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('online')}
-                className={`p-4 rounded-2xl text-left flex flex-col gap-1 transition-all duration-200 ${
-                  paymentMethod === 'online'
-                    ? 'glass-card border-brand-500/70 shadow-sm text-brand-900 ring-2 ring-brand-500/20'
-                    : 'glass-pill text-slate-600'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs">即时在线支付</span>
-                  {paymentMethod === 'online' && (
-                    <CheckCircle2 className="w-4 h-4 text-brand-500" />
-                  )}
-                </div>
-                <span className="text-[11px] text-slate-400">
-                  支持微信、支付宝、银行卡极速免密
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('cash')}
-                className={`p-4 rounded-2xl text-left flex flex-col gap-1 transition-all duration-200 ${
-                  paymentMethod === 'cash'
-                    ? 'glass-card border-brand-500/70 shadow-sm text-brand-900 ring-2 ring-brand-500/20'
-                    : 'glass-pill text-slate-600'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs">货到付款 / 现付</span>
-                  {paymentMethod === 'cash' && (
-                    <CheckCircle2 className="w-4 h-4 text-brand-500" />
-                  )}
-                </div>
-                <span className="text-[11px] text-slate-400">
-                  骑手送达后现场扫码或现金支付
-                </span>
-              </button>
-            </div>
+            <p className="text-sm text-slate-600">
+              PayPal（沙盒环境）· 提交订单后将跳转到 PayPal 完成付款
+            </p>
           </div>
 
           {/* Ordered Dishes Preview */}
@@ -271,30 +228,13 @@ export default function CheckoutPage() {
                   {formatCents(subtotalCents)}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span>配送服务费</span>
-                <span>
-                  {deliveryFeeCents === 0 ? (
-                    <span className="text-emerald-600 font-bold">满额立减免运费</span>
-                  ) : (
-                    formatCents(deliveryFeeCents)
-                  )}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>餐盒打包与平台服务费</span>
-                <span className="font-semibold text-slate-900">
-                  {formatCents(serviceFeeCents)}
-                </span>
-              </div>
-
               <div className="pt-3 border-t border-slate-200/60 flex justify-between items-baseline text-slate-900">
                 <span className="text-sm font-bold">应付总计</span>
                 <div className="text-right">
                   <span className="text-2xl font-black text-brand-600">
                     {formatCents(totalCents)}
                   </span>
-                  <p className="text-[10px] text-slate-400">严格使用整数分精度计费</p>
+                  <p className="text-[10px] text-slate-400">以 PayPal 实际扣款为准</p>
                 </div>
               </div>
             </div>
@@ -306,7 +246,7 @@ export default function CheckoutPage() {
               loading={loading}
               className="w-full text-xs font-bold gap-2 shadow-lg shadow-brand-500/25"
             >
-              <span>立即提交并支付</span>
+              <span>提交订单并前往 PayPal 付款</span>
             </Button>
 
             <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">

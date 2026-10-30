@@ -17,7 +17,7 @@ This file is read by every coding agent (Codex reads it directly; Claude Code im
 
 Whole stack: `docker compose up -d --wait` from the repository root (F13) starts both databases, both Redis instances, Kafka, the ledger API and worker, and dispatch. Only ports 8080, 8081 and 4000 are published; reach the databases with `docker compose exec <service> psql …`. `docker compose down` stops it and keeps the volumes.
 
-The live chain (PayPal sandbox, notifications, the agent on 8000 and Langfuse on 3000) runs from `docker-compose.live.yml` with secrets in `.env.live`; see `docs/m2-live-run.md` (F24).
+The live chain (PayPal sandbox, notifications, the agent on 8000, Langfuse on 3000 and the storefront on 3001) runs from `docker-compose.live.yml` with secrets in `.env.live`; see `docs/m2-live-run.md` (F24, F33).
 
 Each service has its own `AGENTS.md` (imported by its `CLAUDE.md`). Before planning, implementing or reviewing work in a service, read that file.
 

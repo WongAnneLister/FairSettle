@@ -16,6 +16,7 @@ The ledger's complete internal contract remains in
 
 `ledger-merchant-notifications.md` defines the signed ledger-to-dispatch payment notification contract (F16).
 `fixtures/ledger-payment-succeeded.json` is its full-capture example for dispatch order 1 (F16).
+Dispatch reads `getPayment` with its application token after the buyer returns, so the ledger captures the approved PayPal order; it never changes the order's payment status from that answer (F33).
 
 Lint the shared ledger contract from the repository root:
 
