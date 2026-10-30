@@ -914,3 +914,52 @@ Pitfalls found
 - An observation opened with `trace_context` always has a parent: Langfuse 5.0.4 gives it a non-recording parent span that is never exported. Find roots by "no exported parent", not `parent is None`.
 - `Langfuse.get_trace_url()` connects to the server to fetch the project id; never call it in the agent or tests.
 - Maven needs JDK 21; the shell default here is 17. Set `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home` per command.
+
+## 2026-10-30 · session 19 · F24
+
+### State on 2026-10-30
+
+- passing 23/32
+- active: F24 M2: full chain with PayPal
+- recently passing: F19 (bd0e86a), F20 (c0d4876), F21 (15d1ff5), F22 (edceee7), F23 (865cd24)
+
+Done this session
+- commit 907b9e5: F24 plan (live compose overlay with self-hosted Langfuse 4.58.0, FastAPI agent service, agent fixture credential 42, English proposal review page, `scripts/m2_live_run.py`, runbook `docs/m2-live-run.md`). Amended twice before the work commit: English-only notices on the review page; the read-only `delivery_task` query and `scripts/__pycache__` cleanup.
+- commit 61d6a83: work commit (Codex). Codex reported agent 143, root scripts 44, page tests 42, IdentityIT and PageHttpIT 31, ledger unit 517 passed; Docker build and in-image import pass.
+- Review (fresh session): bfc6de0 and 5e2aade (blank lines), 52efdfc (`.env.live` values must not contain shell or interpolation characters), 8c14dcc records them under Deviations. Reran all named suites green.
+- commit 07805ad: plan amendment after review (user decision): `main()` prints the summary and exits 2 on any unexpected exception, with new test M14. commit d014332 implements it (Codex); 45 root script tests pass.
+- commit 0fd2e78: runbook Troubleshooting for `HELD` / `INVALID_DESTINATION` caused by fake-IP DNS (see Pitfalls), recorded under Deviations.
+- Live run on the PayPal sandbox, script summary:
+
+```
+F24 live run: PASS
+dispatch order id: 1
+ledger payment id: pay_01M66HBBHGWVD58ZYGQR7MCK6Y
+paypal order id: 7KR80011U08627743
+paypal capture id: 6EK05389VT454793L
+complaint id: complaint-m2-20261030225248
+proposal id: prop_01M66HWK7QWWF99DZHHSDNZC1Q
+ledger refund id: ref_01M66HZSTJPZX03DCJPBCC56JP
+paypal refund id: 6AS25386B8603770P
+refund amount: 300 USD
+liability RESTAURANT 10000 bp = 300
+liability DRIVER 0 bp = 0
+liability PLATFORM 0 bp = 0
+liability journal id: 59668f28-b92a-44a3-ba1d-7ffadbd31780
+trace: http://localhost:3000/project/fairsettle-local/traces/bd653726fc552479c613ca4cf80b2bbf
+```
+
+- The agent (DeepSeek `deepseek-v4-pro`) proposed `PARTIAL_REFUND` 300 cents, `MISSING_ITEM`, restaurant 10000 bp, citing `order-item:2` and `order:1`; a human approved it unchanged on the review page.
+
+Not done / left half-way
+- A verify run on 2026-10-30 before any live run was confirmed by mistake; its uncommitted `docs/features.json` and `docs/evidence/F24.log` were discarded and F24 went back to `active`.
+- Branch `codex/f24` is not merged into main yet. The live stack and the ngrok tunnel are still running; stop them with the runbook's Cleanup.
+- Open design issues from review, not fixed: the review page's notice when a second decision is refused reads like a lost response; after a decision the page always reloads the `PENDING_REVIEW` list; `ledger-notification-target` writes the target row as `payments_migrator`, while the research notes name the configuration role.
+- `dispatch/frontend` (the Next.js storefront) ignores `checkoutUrl` and `paymentStatus` and is not in compose; it defaults to port 3000, which Langfuse uses here. The user decided to add a feature for it after F24 and before F28; the user adds the entry to `docs/features.json`.
+
+Next
+- Merge `codex/f24` into main, then add the storefront PayPal feature and plan it.
+
+Pitfalls found
+- A local proxy with fake-IP DNS (here Shadowrocket, resolver `198.18.0.2`) makes Docker Desktop resolve the ngrok host to `198.18.x.x`; the ledger's `NotificationTargetPolicy` refuses that range, so every notification task is `HELD` with `INVALID_DESTINATION` and dispatch never becomes `Paid`. Fix: `always-real-ip = *.ngrok-free.dev` in the proxy, then wait 60 seconds for the held tasks to be checked again.
+- The script prints nothing while it waits (payment, `Paid`, the agent's decision); check progress with the runbook's read-only `delivery_task` query and `logs agent` instead of assuming it is stuck.

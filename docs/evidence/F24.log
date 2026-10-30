@@ -1,0 +1,9 @@
+feature: F24
+kind: manual
+commit: 0fd2e78bb477db2f13eb7732ba43df07810c8fcb
+confirmed_at: 2026-10-30T23:05:52+09:00
+----
+[x] Complaint id, proposal id, PayPal refund id recorded in docs/progress.md
+[x] Ledger shows the allocation entries for the liable party
+[x] Langfuse trace for the run opens and shows cited evidence
+note: 

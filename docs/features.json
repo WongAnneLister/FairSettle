@@ -562,8 +562,13 @@
         "F16",
         "F23"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "0fd2e78bb477db2f13eb7732ba43df07810c8fcb",
+        "verified_at": "2026-10-30T23:05:58+09:00",
+        "log": "docs/evidence/F24.log",
+        "log_sha256": "4793ad4ce41401ded79b625043e7f904cf3edcb74bb313b988f129a61bf2932c"
+      },
       "started_at": "2026-10-30T02:26:37+09:00"
     },
     {
