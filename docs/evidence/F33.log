@@ -1,0 +1,8 @@
+feature: F33
+kind: manual
+commit: 70fcbe458abd5f6470c25593b167a4e1dc78fb37
+confirmed_at: 2026-10-31T01:22:24+09:00
+----
+[x] Place an order in the storefront at http://localhost:3001 and approve it on the PayPal sandbox page
+[x] Back in the storefront, the order page shows the order as paid without a reload error, and the payment appears in the ledger console
+note: 

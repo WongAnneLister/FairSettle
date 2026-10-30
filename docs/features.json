@@ -742,8 +742,13 @@
       "depends_on": [
         "F24"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "70fcbe458abd5f6470c25593b167a4e1dc78fb37",
+        "verified_at": "2026-10-31T01:22:36+09:00",
+        "log": "docs/evidence/F33.log",
+        "log_sha256": "46dba9e0e315f26632968f9ae2c1e5182ad581ec32e78f71bae0512d877142eb"
+      },
       "started_at": "2026-10-31T00:43:15+09:00"
     }
   ]

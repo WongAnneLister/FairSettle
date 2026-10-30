@@ -963,3 +963,35 @@ Next
 Pitfalls found
 - A local proxy with fake-IP DNS (here Shadowrocket, resolver `198.18.0.2`) makes Docker Desktop resolve the ngrok host to `198.18.x.x`; the ledger's `NotificationTargetPolicy` refuses that range, so every notification task is `HELD` with `INVALID_DESTINATION` and dispatch never becomes `Paid`. Fix: `always-real-ip = *.ngrok-free.dev` in the proxy, then wait 60 seconds for the held tasks to be checked again.
 - The script prints nothing while it waits (payment, `Paid`, the agent's decision); check progress with the runbook's read-only `delivery_task` query and `logs agent` instead of assuming it is stuck.
+
+## 2026-10-31 · session 20 · F33
+
+### State on 2026-10-31
+
+- passing 24/33
+- active: F33 Storefront pays through PayPal
+- recently passing: F20 (c0d4876), F21 (15d1ff5), F22 (edceee7), F23 (865cd24), F24 (0fd2e78)
+- ready next: F27 Evaluation suite, F25 Proactive trigger, F26 Investigate node
+
+Done this session
+- commit c5cf239: F33 plan. Decided with the user: the order page triggers capture through a new customer-only `refreshOrderPayment` (the ledger captures an approved PayPal order only when its payment is read); PayPal's return goes to dispatch `/checkout/success` / `/checkout/cancel`, which redirect to the storefront; no client-side fees; all fake data removed from the order path; Chinese UI text; the storefront runs in the live overlay on 127.0.0.1:3001; the missing dish-belongs-to-restaurant check is KI-5.
+- commit 80912ae: F33 added to `docs/features.json` by the user (script run by hand), F28 now depends on F33.
+- commit 535a7ad: work commit (Codex). Codex reported dispatch unit 79, e2e 107 (98 + 9), storefront vitest 5, root scripts 46; storefront type check, production build and Docker build pass.
+- Review (fresh session): 8ef73db makes the order page refresh once the customer is known (on a full page load after PayPal, the order could load before `me`, so the one-shot refresh was skipped and nothing captured); 4c10401 sorts the ledger module imports; e82f719 records both under Deviations. Review reran every suite green.
+- Live check on the PayPal sandbox (stack rebuilt from `codex/f33`): storefront order 2, Margherita, 1200 cents; ledger payment `pay_01M66S55ZYSWJ10WTF8JZYVA3J`, PayPal order `0KR118477V189483U`, capture `5CM75026VV198534F` (`COMPLETED`, 1200 captured); every notification `DELIVERED`; the storefront order page showed 已支付.
+- The live check found that checkout dropped cart quantities: dispatch's `createOrder` has no quantity, and the storefront sent one item per cart line, so four Margheritas ($48.00) became a $12.00 order (order 4, left unpaid; order 3 also unpaid). commit 70fcbe4 (review fix, test first) sends one item per unit through `orderItemsFromCart`; storefront 9 tests, `tsc` and `next build` pass.
+- Live check after the fix: storefront order 5, five Margheritas, 6000 cents, matching the cart; ledger payment `pay_01M66SMNKN6TCYNKPKMSE87P4H`, PayPal order `5B364987DH5879225`, capture `9YE330191U532992V` (6000 captured, `succeeded`); notifications `DELIVERED`; order page 已支付.
+
+Not done / left half-way
+- Branch `codex/f33` is not merged into main yet. The live stack and the ngrok tunnel are still running; stop them with the runbook's Cleanup.
+- KI-5 (`createOrder` accepts dishes from another restaurant) is recorded, not fixed.
+- The quick demo login keeps its built-in demo passwords; F29 must decide before the storefront is public.
+
+Next
+- Merge `codex/f33` into main, then F28 (complaint UI) or F27 (evaluation suite).
+
+Pitfalls found
+- Next 14 bakes `rewrites()` destinations into the build: the storefront image needs `BACKEND_GRAPHQL_URL` / `BACKEND_UPLOADS_URL` as build arguments, not runtime env.
+- A client page that waits for two queries (`getOrder` and `me`) must not consume a one-shot effect guard before both have loaded.
+- Dispatch order items are units, not lines: any client must repeat a dish to order it twice. Check the charged amount against the cart, not only the status.
+- Ledger, not investigated: after a PayPal payment succeeds, its `CREATE_CHECKOUT` recovery task stays `WAITING` and keeps querying PayPal although the operation is `RESOLVED` (order 2: 10 attempts, order 5: 5 within minutes), while the `CAPTURE_ORDER` task goes `DONE`. The F24 payment (`7KR80011U08627743`) shows where this ends: both tasks `ESCALATED` with `UNRESOLVED_AGE_LIMIT` and the payment's `resolution_status` back to `UNKNOWN`, although it is `SUCCEEDED`, captured and refunded. No money moved wrongly, but every successful PayPal payment becomes an escalation for a person. The ops console shows it as recovery `WAITING`.
