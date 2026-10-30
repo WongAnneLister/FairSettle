@@ -1,8 +1,11 @@
+import contextlib
 from copy import deepcopy
 import importlib.util
+import io
 from pathlib import Path
 import sys
 import unittest
+from unittest import mock
 
 SCRIPT = Path(__file__).resolve().parents[1] / "m2_live_run.py"
 SPEC = importlib.util.spec_from_file_location("m2_live_run", SCRIPT)
@@ -226,6 +229,28 @@ class M2LiveRunTest(unittest.TestCase):
         source = SCRIPT.read_text()
         self.assertNotIn("/decision", source)
         self.assertNotIn("subprocess", source)
+
+    def test_main_prints_a_summary_for_every_error(self):
+        cases = (
+            ("a", KeyError("status"), 2, "failure: unexpected KeyError: 'status'"),
+            ("b", lambda *args, **kwargs: (200, None), 2, "failure: unexpected AttributeError"),
+            ("c", RuntimeError("HTTP 503: UNAVAILABLE"), 1, "failure: HTTP 503: UNAVAILABLE"),
+            ("d", TimeoutError("Timed out waiting for live run evidence"), 2,
+             "failure: Timed out waiting for live run evidence"),
+        )
+        for case, side_effect, expected_code, expected_line in cases:
+            with self.subTest(case=case):
+                output = io.StringIO()
+                with mock.patch.dict(runner.os.environ, self.env(), clear=True), \
+                        mock.patch.object(runner, "request", side_effect=side_effect), \
+                        contextlib.redirect_stdout(output):
+                    code = runner.main()
+                self.assertEqual(code, expected_code)
+                text = output.getvalue()
+                self.assertTrue(text.startswith("F24 live run: FAIL"))
+                self.assertEqual(text.splitlines()[-1], expected_line)
+                for secret in ("a" * 43, "b" * 43, "c" * 43):
+                    self.assertNotIn(secret, text)
 
 
 if __name__ == "__main__":

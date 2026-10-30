@@ -90,7 +90,7 @@ ops_10000000-0000-0000-0000-000000000062.<LOCAL_OPS_SECRET>
 
 Replace the placeholder locally. Credential 61 is a viewer and cannot decide. Review the exact proposal id printed by the script, its amount, liability, explanation and cited evidence. Approve exactly as submitted. The page does not edit amounts or shares. If the response is lost, use the pending retry; it sends the same body with the same idempotency key.
 
-The script waits up to 30 minutes for review, follows the refund, checks the liability journal and balance deltas, then prints a summary and a trace URL. Exit 0 is a passing script run; exit 1 is a failed check or error; exit 2 is an interruption or timeout. A sandbox answer that differs from the plan must be recorded and needs a plan amendment.
+The script waits up to 30 minutes for review, follows the refund, checks the liability journal and balance deltas, then prints a summary and a trace URL. Exit 0 is a passing script run; exit 1 is a failed check or error; exit 2 is an interruption, a timeout or an unexpected response shape (the summary's last line names the error type); keep the printed ids and see Troubleshooting. A sandbox answer that differs from the plan must be recorded and needs a plan amendment.
 
 ## Check
 

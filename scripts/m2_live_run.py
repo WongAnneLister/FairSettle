@@ -332,6 +332,10 @@ def main() -> int:
     except (ValueError, RuntimeError, OSError) as error:
         print(summary(ids, liability, failures + [str(error)]))
         return 1
+    except Exception as error:
+        detail = f": {error.args[0]!r}" if isinstance(error, KeyError) and error.args and isinstance(error.args[0], str) else ""
+        print(summary(ids, liability, failures + [f"unexpected {type(error).__name__}{detail}"]))
+        return 2
 
 
 if __name__ == "__main__":
