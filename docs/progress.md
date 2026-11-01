@@ -1060,3 +1060,43 @@ Pitfalls found
 - Postgres cannot drop an enum value: a `down` that removes one must swap the type, and drop and restore the column default around the cast.
 - A test that asserts the exact set of recorded fixtures (`EXPECTED_NAMES`) must change with every new fixture; check for exact-set assertions when planning new fixtures.
 - `agent.py` imports `proactive.py`, so `proactive.py` imports `RunStatus` only for type checking and `DuplicateComplaint` inside the function, to avoid a circular import.
+
+## 2026-11-01 · session 23 · F26
+
+### State on 2026-11-01
+
+- passing 27/34
+- active: F26 Investigate node
+- recently passing: F23 (865cd24), F24 (0fd2e78), F33 (70fcbe4), F34 (acf81f7), F25 (da9ab5d)
+- ready next: F27 Evaluation suite, F28 Complaint UI, F29 Deployed
+
+Done this session
+- commit cd8fdd0: F26 plan. Decided with the user:
+  - three argumentless read-only tools: `get_fulfillment_events`, `get_ledger_payment` and `get_customer_history` (30 days, from the agent's own store);
+  - a separate `investigate` node between `count` and `decide`;
+  - one tool call is one step, at most 3;
+  - a failed tool call becomes an error result and a step;
+  - results are context for `decide`, never citable evidence;
+  - Langfuse gets the step count and tool names only.
+
+  Planning found that LiteLLM 1.106.5 imports its MCP handler for any call with `tools` and fails without the `mcp` package. The user chose to add `mcp==2.3.0`; `uv.lock` only gained lines.
+
+  Amended once, after Codex stopped: the PRD's `get_paypal_capture` became `get_ledger_payment`, because `tests/test_execute.py:155` forbids "paypal" anywhere in the agent package (the agent never calls PayPal).
+- commit dae74dd: work commit (Codex). `test_investigate.py` failed at collection first. After the change: 15 passed, the agent suite 157 → 172, scripts 46, and the agent image builds.
+- Review (fresh session):
+  - bd45d21 records harmless departures.
+  - Design issue: an unknown tool name chosen by the model reached the Langfuse metadata and the `decide` prompt verbatim. Through a crafted complaint, it could carry complaint text into the trace or close the evidence marker early.
+  - The user approved recording every unknown call as `"unknown"`. 26409fe does this, changes I7 on purpose and adds I16, which brings the counts to 16 and 173. ea82dbf and 9399b4c record it under Deviations.
+
+Not done / left half-way
+- Branch `codex/f26` is not merged into main yet.
+- F26 was not run against a real model. F27's evaluation is the first run with the investigate turn; every complaint now costs at least one extra model call.
+- The live agent image has to be rebuilt to include `mcp` and F26.
+
+Next
+- Merge `codex/f26` into main, then plan F27 (evaluation suite).
+
+Pitfalls found
+- LiteLLM 1.106.5 `completion(..., tools=...)` raises `No module named 'mcp'` before any network call. The `mcp` package lives in LiteLLM's `mcp`/`proxy` extras. Add `mcp==2.3.0`, or the call silently fails.
+- A guard test scans the agent package for "paypal"; PRD names that mention PayPal must be renamed for the agent side.
+- Anything the model chooses (here a tool name) is untrusted and must not reach the trace or another prompt verbatim.

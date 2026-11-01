@@ -608,8 +608,13 @@
       "depends_on": [
         "F24"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "9399b4cc43dd56fb25ee7878505da7ef5535884a",
+        "verified_at": "2026-11-01T23:18:01+09:00",
+        "log": "docs/evidence/F26.log",
+        "log_sha256": "5ab69a46e5d51a7e10d202be1c06ec4626a06c06a9cfdaac63ee94eb1c084eea"
+      },
       "started_at": "2026-11-01T22:46:43+09:00"
     },
     {

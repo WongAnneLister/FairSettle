@@ -1,0 +1,15 @@
+feature: F26
+kind: command
+command: cd agent && python -m pytest -q tests/test_investigate.py
+commit: 9399b4cc43dd56fb25ee7878505da7ef5535884a
+started_at: 2026-11-01T23:17:48+09:00
+exit_code: 0
+----
+................                                                         [100%]
+=============================== warnings summary ===============================
+tests/test_investigate.py::test_no_tool_call_means_no_step
+  /Users/anne_lister/proj/FairSettle/agent/.venv/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:1463: UserWarning: Item 'summary' on TypedDict class 'ChatCompletionReasoningItem' is using the `ReadOnly` qualifier. Pydantic will not protect items from any mutation on dictionary instances.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+16 passed, 1 warning in 8.83s
