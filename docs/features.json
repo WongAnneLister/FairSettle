@@ -585,8 +585,13 @@
       "depends_on": [
         "F24"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "da9ab5d15e87e73f73081fb75eb1dac2ed3c3369",
+        "verified_at": "2026-11-01T22:22:32+09:00",
+        "log": "docs/evidence/F25.log",
+        "log_sha256": "d3e162907645bd72427dcaab4749ca990302ce0b260aa08841ff99708818706a"
+      },
       "started_at": "2026-11-01T21:55:41+09:00"
     },
     {

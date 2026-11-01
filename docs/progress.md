@@ -1024,3 +1024,39 @@ Pitfalls found
 - Surefire stops the build at the first failing unit test, so a single `verify` cannot show unit and IT failures together; run them separately (`-Dtest='NoSuchTest' -Dsurefire.failIfNoSpecifiedTests=false` for ITs only).
 - A test that calls a method the plan adds later does not compile before the implementation; write it last and count the compile error as its failure.
 - In a restricted sandbox, Mockito's JVM attach and local sockets fail; rerun outside the sandbox before suspecting the code.
+
+## 2026-11-01 · session 22 · F25
+
+### State on 2026-11-01
+
+- passing 26/34
+- active: F25 Proactive trigger
+- recently passing: F22 (edceee7), F23 (865cd24), F24 (0fd2e78), F33 (70fcbe4), F34 (acf81f7)
+- ready next: F27 Evaluation suite, F28 Complaint UI, F26 Investigate node
+
+Done this session
+- commit 716fb1a: F25 plan. Decided with the user:
+  - a new terminal order status `DeliveryFailed`, only from `PickedUp`, with `failureReason` `DRIVER_FAULT` or `PLATFORM_FAULT` on its order event;
+  - the agent pulls the new service-token query `deliveryFailures(afterEventId, limit)` from its poll loop, with a cursor in `agent_trigger_cursor`;
+  - the provider callback and the assigned driver may report a failure (no storefront change);
+  - proactive cases (`delivery-failed-<orderId>`) neither count toward nor are limited by the 7-day complaint total;
+  - `FAIRSETTLE_PROACTIVE` defaults on.
+
+  Amended twice before the work commit after Codex stopped:
+  - the migration's `down` enum swap is written out as SQL, with `DROP DEFAULT` / `SET DEFAULT`, because `FixSchemaTypos` only renames a value in place;
+  - `EXPECTED_NAMES` in `agent/tests/test_clients.py` gains the three new fixtures.
+- commit b1ef767: work commit (Codex). Contract first. Dispatch: migration `1790000003000-DeliveryFailure`, state machine, `failureReasonCheck`, `deliveryFailures`, webhook reasons, re-recorded agent fixtures. Agent: `proactive.py`, client, store cursor, graph prior count 0, prompt and evidence carry `failureReason`, poll loop, API refuses `delivery-failed-` ids. The new tests failed first. After: agent 143 → 157 (`test_proactive.py` 14), dispatch unit 79 → 84, e2e 107 → 115, prettier and tsc pass, scripts 46.
+- commit da9ab5d: review (fresh session), no fixes; recorded the work commit's harmless departures under Deviations. Reran every suite green. Ran the migration up, down, up on the e2e database, and saw `down` refuse while a `DeliveryFailed` order exists.
+
+Not done / left half-way
+- Branch `codex/f25` is not merged into main yet.
+- The storefront does not know `DeliveryFailed`: a failed order shows an unknown status and there is no driver button. That is a later storefront change, before the demo video if F25 is shown.
+- F25 was not run against the live stack; scenario 10 is evaluated in F27.
+
+Next
+- Merge `codex/f25` into main. Then F26 (investigate node) before F27, so the evaluation measures the final agent.
+
+Pitfalls found
+- Postgres cannot drop an enum value: a `down` that removes one must swap the type, and drop and restore the column default around the cast.
+- A test that asserts the exact set of recorded fixtures (`EXPECTED_NAMES`) must change with every new fixture; check for exact-set assertions when planning new fixtures.
+- `agent.py` imports `proactive.py`, so `proactive.py` imports `RunStatus` only for type checking and `DuplicateComplaint` inside the function, to avoid a circular import.
