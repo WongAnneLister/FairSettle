@@ -792,6 +792,23 @@
         "log_sha256": "92f667c86fca5c7acb1ee728a05ccd54d2cf2cc59883fe1569baa7184eac45d7"
       },
       "started_at": "2026-11-01T16:22:43+09:00"
+    },
+    {
+      "id": "F35",
+      "title": "Token budget for reasoning models",
+      "service": "agent",
+      "milestone": "M3",
+      "priority": "P1",
+      "behavior": "Model calls leave room for a reasoning model's hidden reasoning (cap 6000 tokens, 90 s timeout), and an investigate turn cut off by the cap ends as truncated instead of as done.",
+      "verification": {
+        "kind": "command",
+        "command": "cd agent && python -m pytest -q tests/test_token_budget.py"
+      },
+      "depends_on": [
+        "F27"
+      ],
+      "state": "not_started",
+      "evidence": null
     }
   ]
 }
