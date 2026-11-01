@@ -180,7 +180,8 @@ def test_evidence_document_lists_citable_refs():
     assert document["refundable"] == {
         "ref": f"refundable:{PAYMENT_ID}", "refundableMinor": 1250, "controlState": "NORMAL",
     }
-    assert document["policy"] == {"deliveryFeeCents": 299, "qualityCapBasisPoints": 2000}
+    assert document["policy"] == {"deliveryFeeCents": 299, "qualityCapBasisPoints": 2000,
+                                  "slowDispatchMinutes": 20, "slowDeliveryMinutes": 30}
     prohibited = {"customer", "driver", "restaurant", "email", "customerId", "driverId"}
     def walk(value):
         if isinstance(value, dict):

@@ -21,6 +21,8 @@ class PolicyConfig:
     delivery_fee_cents: int = 299
     quality_cap_basis_points: int = 2000
     repeat_complaint_limit: int = 3
+    slow_dispatch_minutes: int = 20
+    slow_delivery_minutes: int = 30
 
     def __post_init__(self) -> None:
         if type(self.delivery_fee_cents) is not int or self.delivery_fee_cents < 0:
@@ -29,6 +31,10 @@ class PolicyConfig:
             raise ValueError("quality_cap_basis_points must be an integer from 0 to 10000")
         if type(self.repeat_complaint_limit) is not int or self.repeat_complaint_limit < 1:
             raise ValueError("repeat_complaint_limit must be an integer of at least 1")
+        if type(self.slow_dispatch_minutes) is not int or not 1 <= self.slow_dispatch_minutes <= 240:
+            raise ValueError("slow_dispatch_minutes must be an integer from 1 to 240")
+        if type(self.slow_delivery_minutes) is not int or not 1 <= self.slow_delivery_minutes <= 240:
+            raise ValueError("slow_delivery_minutes must be an integer from 1 to 240")
 
 
 @dataclass(frozen=True)
