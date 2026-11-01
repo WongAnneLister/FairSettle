@@ -807,8 +807,9 @@
       "depends_on": [
         "F27"
       ],
-      "state": "not_started",
-      "evidence": null
+      "state": "active",
+      "evidence": null,
+      "started_at": "2026-11-02T00:22:03+09:00"
     }
   ]
 }

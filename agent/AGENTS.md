@@ -54,3 +54,4 @@ The agent proposes refund amounts and liability splits for delivery marketplaces
 - Rows left `running` by a crashed process are logged at startup and not resumed (F24).
 - Proactive case ids start with `delivery-failed-`; the API refuses them, and they neither count toward nor are limited by the 7-day complaint total (F25).
 - Investigation tools take no arguments and read only this complaint's order, payment and customer; Langfuse gets the step count and tool names, never their results (F26).
+- Reasoning models count hidden reasoning against `max_tokens`; the defaults are 6000 tokens and 90 s per call. An investigate turn cut off by the cap stops as `truncated` and runs no tool (F35).

@@ -22,8 +22,9 @@ DEFAULT_MODEL = "deepseek/deepseek-flash"
 class ModelConfig:
     model: str = DEFAULT_MODEL
     api_key: str | None = field(default=None, repr=False)
-    max_tokens: int = 1200
-    timeout_s: float = 30.0
+    # Reasoning models (deepseek-v4-pro) count hidden reasoning against max_tokens: s05 used up to 3094 tokens and 44 s (F35).
+    max_tokens: int = 6000
+    timeout_s: float = 90.0
 
     def __post_init__(self) -> None:
         if not isinstance(self.model, str) or "/" not in self.model:

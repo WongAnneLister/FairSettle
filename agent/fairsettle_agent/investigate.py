@@ -57,7 +57,7 @@ class Finding:
 class Investigation:
     findings: tuple[Finding, ...]
     steps: int
-    stopped: Literal["done", "step_limit", "model_unavailable"]
+    stopped: Literal["done", "step_limit", "model_unavailable", "truncated"]
     prompt_tokens: int
     completion_tokens: int
 
@@ -156,6 +156,9 @@ async def investigate(
         usage = getattr(response, "usage", None)
         prompt_tokens += getattr(usage, "prompt_tokens", 0) or 0
         completion_tokens += getattr(usage, "completion_tokens", 0) or 0
+        if response.choices[0].finish_reason == "length":
+            stopped = "truncated"
+            break
         message = response.choices[0].message
         calls = message.tool_calls or []
         if not calls:

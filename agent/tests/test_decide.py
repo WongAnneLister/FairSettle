@@ -48,7 +48,7 @@ def test_model_config_from_env_and_repr():
     assert default.api_key is None
     assert repr(default) == (
         "ModelConfig(model='deepseek/deepseek-flash', api_key=<unset>, "
-        "max_tokens=1200, timeout_s=30.0)"
+        "max_tokens=6000, timeout_s=90.0)"
     )
     custom = ModelConfig.from_env({
         "FAIRSETTLE_MODEL": "deepseek/deepseek-v4-pro", "DEEPSEEK_API_KEY": "sk-x" * 10,
@@ -244,8 +244,8 @@ def test_call_arguments_are_exact():
             "messages": build_messages(complaint, evidence, policy),
             "response_format": {"type": "json_object"},
             "temperature": 0,
-            "max_tokens": 1200,
-            "timeout": 30.0,
+            "max_tokens": 6000,
+            "timeout": 90.0,
             "num_retries": 0,
             "api_key": TEST_KEY,
         }]

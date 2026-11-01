@@ -281,7 +281,7 @@ def main() -> int:
         before = ledger("/ops/balances?currency=USD", ops=True)["items"]
         body = complaint_body(run_id, ids["order_id"])
         ids["complaint_id"] = body["complaint_id"]
-        status, complaint = request("POST", AGENT + "/v1/complaints", body=body, timeout=180)
+        status, complaint = request("POST", AGENT + "/v1/complaints", body=body, timeout=600)
         if status != 201 or complaint.get("status") != "awaiting_review":
             raise RuntimeError("complaint did not await review: " + str(complaint.get("status")))
         ids["proposal_id"], ids["trace_id"] = complaint["proposal_id"], complaint["trace_id"]
