@@ -23,7 +23,7 @@ DISHES = (("Margherita", 1200, "Tomato, mozzarella, basil"), ("Lemonade", 300, "
 COMPLAINT_TEXT = "The lemonade was missing from my bag. The pizza arrived."
 PARTY_ACCOUNTS = {"RESTAURANT": "REFUND_RECEIVABLE_RESTAURANT", "DRIVER": "REFUND_RECEIVABLE_DRIVER",
                   "PLATFORM": "REFUND_COST_PLATFORM"}
-TRACE_NAMES = {"start", "gather", "count", "decide", "submit", "resume_review", "await_review",
+TRACE_NAMES = {"start", "gather", "count", "investigate", "decide", "submit", "resume_review", "await_review",
                "approved", "resume_refund", "await_refund", "finish"}
 PAYPAL_ID = re.compile(r"^[A-Z0-9]{1,36}$")
 

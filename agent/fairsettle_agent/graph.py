@@ -14,6 +14,7 @@ from .decision import RefundDecision
 from .evidence import Evidence
 from .execution import refund_outcome
 from .gather import DispatchReader, GatherFailure, LedgerReader, gather
+from .investigate import Investigation, investigate
 from .model import ModelConfig
 from .policy import PolicyConfig, PolicyVerdict, Violation, Rule
 from .proactive import is_proactive
@@ -27,6 +28,7 @@ class RunState(TypedDict, total=False):
     received_at: str
     evidence: dict
     verdict: dict
+    investigation: dict
     run: dict
     escalation: dict
     proposal: dict
@@ -112,6 +114,20 @@ def build_graph(deps: GraphDeps) -> StateGraph:
             observation.update(metadata={"prior_complaints_in_7_days": n})
             return {"evidence": {**state["evidence"], "prior_complaints_in_7_days": n}}
 
+    async def investigate_node(state):
+        with deps.tracing.stage("investigate") as observation:
+            evidence = evidence_from_state(state)
+            complaint = ComplaintInput.model_validate(state["complaint"]).to_complaint(evidence.prior_complaints_in_7_days)
+            result = await investigate(
+                complaint, state["complaint"]["complaint_id"], datetime.fromisoformat(state["received_at"]),
+                evidence, deps.model, deps.policy, deps.dispatch, deps.ledger, deps.store, deps.complete,
+            )
+            observation.update(metadata={
+                "steps": result.steps, "tools": [f.tool for f in result.findings], "stopped": result.stopped,
+                "prompt_tokens": result.prompt_tokens, "completion_tokens": result.completion_tokens,
+            })
+            return {"investigation": result.to_state()}
+
     async def decide_node(state):
         with deps.tracing.stage("decide", as_type="generation") as observation:
             evidence = evidence_from_state(state)
@@ -119,6 +135,7 @@ def build_graph(deps: GraphDeps) -> StateGraph:
             started = time.perf_counter()
             outcome, attempts, prompt_tokens, completion_tokens = await decide(
                 complaint, evidence, deps.model, deps.policy, deps.complete,
+                investigation=Investigation.from_state(state.get("investigation")),
             )
             result = {"run": {
                 "model": deps.model.model, "attempts": attempts, "prompt_tokens": prompt_tokens,
@@ -223,12 +240,12 @@ def build_graph(deps: GraphDeps) -> StateGraph:
 
     graph = StateGraph(RunState)
     for name, node in (
-        ("gather", gather_node), ("count", count), ("decide", decide_node), ("submit", submit),
+        ("gather", gather_node), ("count", count), ("investigate", investigate_node), ("decide", decide_node), ("submit", submit),
         ("await_review", await_review), ("approved", approved), ("await_refund", await_refund), ("finish", finish),
     ):
         graph.add_node(name, node)
     graph.add_edge(START, "gather")
-    for current, next_node in (("gather", "count"), ("count", "decide"), ("submit", "await_review")):
+    for current, next_node in (("gather", "count"), ("count", "investigate"), ("investigate", "decide"), ("submit", "await_review")):
         graph.add_conditional_edges(current, lambda state, target=next_node: "finish" if "escalation" in state else target)
     graph.add_conditional_edges("decide", lambda state: "submit" if state.get("verdict", {}).get("outcome") == "propose" else "finish")
     graph.add_conditional_edges("await_review", lambda state: "approved" if state["review"]["status"] == "APPROVED" else "finish")

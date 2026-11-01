@@ -2,7 +2,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 import time
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import litellm
 from openai import OpenAIError
@@ -12,6 +12,9 @@ from .gather import DispatchReader, GatherFailure, LedgerReader, gather
 from .evidence import Evidence
 from .model import ModelConfig, DecisionInvalid, build_messages, parse_decision, retry_messages
 from .policy import PolicyConfig, PolicyVerdict, evaluate
+
+if TYPE_CHECKING:
+    from .investigate import Investigation
 
 Completion = Callable[..., Awaitable[Any]]
 
@@ -48,8 +51,9 @@ class RunResult:
 async def decide(
     complaint: Complaint, evidence: Evidence, model: ModelConfig,
     policy: PolicyConfig = PolicyConfig(), complete: Completion = litellm.acompletion,
+    *, investigation: "Investigation | None" = None,
 ) -> tuple[Outcome, int, int, int]:
-    original = build_messages(complaint, evidence, policy)
+    original = build_messages(complaint, evidence, policy, investigation=investigation)
     messages = original
     prompt_tokens = completion_tokens = 0
     for attempt in (1, 2):

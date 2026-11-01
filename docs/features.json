@@ -608,8 +608,9 @@
       "depends_on": [
         "F24"
       ],
-      "state": "not_started",
-      "evidence": null
+      "state": "active",
+      "evidence": null,
+      "started_at": "2026-11-01T22:46:43+09:00"
     },
     {
       "id": "F27",

@@ -96,7 +96,7 @@ async def open_test_agent(
             store=store, checkpointer=saver,
             dispatch=FakeDispatch() if dispatch is None else dispatch,
             ledger=FakeProposalLedger() if ledger is None else ledger,
-            complete=MockCompletion([DECISION_JSON]) if complete is None else complete,
+            complete=MockCompletion(["DONE", DECISION_JSON]) if complete is None else complete,
             failures=failures,
             model=ModelConfig(api_key="sk-test-" + "k" * 32), now=now,
             max_submit_attempts=max_submit_attempts,

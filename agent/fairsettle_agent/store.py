@@ -111,6 +111,17 @@ class ComplaintStore:
             """, (customer_id, complaint_id, received_at - timedelta(days=7), received_at))
             return (await cursor.fetchone())["n"]
 
+    async def history(self, customer_id: int, complaint_id: str, received_at: datetime,
+                      *, days: int, limit: int) -> list[ComplaintRow]:
+        self._aware(received_at)
+        async with self.pool.connection() as conn:
+            cursor = await conn.execute(f"""
+                SELECT {_COLUMNS} FROM agent_complaint
+                WHERE customer_id = %s AND complaint_id <> %s AND received_at >= %s AND received_at < %s
+                ORDER BY received_at DESC, complaint_id LIMIT %s
+            """, (customer_id, complaint_id, received_at - timedelta(days=days), received_at, limit))
+            return [ComplaintRow(**row) for row in await cursor.fetchall()]
+
     async def begin_submit(self, complaint_id: str) -> int:
         row = await self._update("""
             UPDATE agent_complaint SET status = 'submitting', submit_attempts = submit_attempts + 1,

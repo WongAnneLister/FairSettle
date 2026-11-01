@@ -20,6 +20,7 @@ The agent proposes refund amounts and liability splits for delivery marketplaces
 - `fairsettle_agent/complaint.py`: the strict complaint input contract (F21).
 - `fairsettle_agent/gather.py`: parallel evidence gathering, no model (F21).
 - `fairsettle_agent/model.py`: prompt, evidence document, and reply parsing (F21).
+- `fairsettle_agent/investigate.py`: read-only lookups the model may ask for before deciding, at most three tool calls; results are context, never citable evidence (F26).
 - `fairsettle_agent/decide.py`: one retry, then escalate; then F20's policy (F21).
 - `fairsettle_agent/proposal.py`: decision to ledger proposal request (F22).
 - `fairsettle_agent/store.py`: the agent's `agent_complaint` table: complaint registry, 7-day count, run status (F22).
@@ -50,3 +51,4 @@ The agent proposes refund amounts and liability splits for delivery marketplaces
 - Keep `FAIRSETTLE_TRACING` fixed for a deployment; switching it while a complaint is `submit_retry` changes the retried body (KI-4).
 - Rows left `running` by a crashed process are logged at startup and not resumed (F24).
 - Proactive case ids start with `delivery-failed-`; the API refuses them, and they neither count toward nor are limited by the 7-day complaint total (F25).
+- Investigation tools take no arguments and read only this complaint's order, payment and customer; Langfuse gets the step count and tool names, never their results (F26).

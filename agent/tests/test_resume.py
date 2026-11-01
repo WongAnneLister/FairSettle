@@ -220,13 +220,13 @@ def test_start_proposes_and_pauses_in_postgres(database_url):
 
 
 def test_duplicate_complaint_is_refused(database_url):
-    complete, ledger = MockCompletion([DECISION_JSON]), FakeProposalLedger()
+    complete, ledger = MockCompletion(["DONE", DECISION_JSON]), FakeProposalLedger()
     async def run():
         async with open_test_agent(database_url, ledger=ledger, complete=complete) as agent:
             await agent.start(make_input())
             with pytest.raises(DuplicateComplaint):
                 await agent.start(make_input())
-            assert len(complete.calls) == 1
+            assert len(complete.calls) == 2
             assert len(creates(ledger)) == 1
     asyncio.run(run())
 
@@ -292,7 +292,7 @@ def test_pending_or_unreadable_review_stays_paused(database_url):
 
 
 def test_resume_refuses_a_thread_that_is_not_waiting(database_url):
-    ledger, complete = FakeProposalLedger(review=make_proposal(status="APPROVED")), MockCompletion([DECISION_JSON])
+    ledger, complete = FakeProposalLedger(review=make_proposal(status="APPROVED")), MockCompletion(["DONE", DECISION_JSON])
     async def run():
         async with open_test_agent(database_url, ledger=ledger, complete=complete) as agent:
             await agent.start(make_input())
@@ -322,7 +322,7 @@ def test_review_for_another_complaint_is_refused(database_url):
 def test_policy_escalation_is_not_submitted(database_url):
     ledger = FakeProposalLedger()
     async def run():
-        async with open_test_agent(database_url, ledger=ledger, complete=MockCompletion([make_decision(amount_cents=900).model_dump_json()])) as agent:
+        async with open_test_agent(database_url, ledger=ledger, complete=MockCompletion(["DONE", make_decision(amount_cents=900).model_dump_json()])) as agent:
             assert await agent.start(make_input()) == expected_status("escalated", None)
             assert creates(ledger) == []
             state = await agent.state(COMPLAINT_ID)
@@ -336,7 +336,7 @@ def test_reject_decision_is_declined(database_url):
     ledger = FakeProposalLedger()
     decision = make_decision(decision="reject", amount_cents=0, liability=(), evidence_refs=("order:1",))
     async def run():
-        async with open_test_agent(database_url, ledger=ledger, complete=MockCompletion([decision.model_dump_json()])) as agent:
+        async with open_test_agent(database_url, ledger=ledger, complete=MockCompletion(["DONE", decision.model_dump_json()])) as agent:
             assert await agent.start(make_input()) == expected_status("declined", None)
             assert creates(ledger) == []
     asyncio.run(run())
@@ -398,14 +398,14 @@ def test_crash_after_post_recovers_by_replay(database_url, tmp_path):
 
 
 def test_transient_submit_failure_retries_from_checkpoint(database_url):
-    ledger, complete, dispatch = FakeProposalLedger(create_results=[Unavailable("ledger", "x")]), MockCompletion([DECISION_JSON]), FakeDispatch()
+    ledger, complete, dispatch = FakeProposalLedger(create_results=[Unavailable("ledger", "x")]), MockCompletion(["DONE", DECISION_JSON]), FakeDispatch()
     async def run():
         async with open_test_agent(database_url, ledger=ledger, complete=complete, dispatch=dispatch) as agent:
             assert await agent.start(make_input()) == expected_status("submit_retry", None)
             assert read_row(database_url)["submit_attempts"] == 1
             assert await agent.poll() == [expected_status("awaiting_review")]
             assert creates(ledger) == [default_request(), default_request()]
-            assert len(complete.calls) == 1
+            assert len(complete.calls) == 2
             assert dispatch.calls == [("get_order", 1), ("get_timeline", 1)]
             assert [name for name, _ in ledger.calls].count("get_payment") == 1
             assert [name for name, _ in ledger.calls].count("get_refundable") == 1

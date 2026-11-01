@@ -290,7 +290,7 @@ def test_start_is_traced_by_complaint_id(database_url):
             await agent.start(make_input())
             record = (await agent.state(COMPLAINT_ID)).values["run"]
         items = spans(tracing, exporter)
-        assert {span.name for span in items} == {"start", "gather", "count", "decide", "submit"}
+        assert {span.name for span in items} == {"start", "gather", "count", "investigate", "decide", "submit"}
         root = named(items, "start")[0]
         for span in items:
             assert format(span.context.trace_id, "032x") == Tracing.trace_id(COMPLAINT_ID)

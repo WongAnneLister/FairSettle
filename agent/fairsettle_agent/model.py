@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 import json
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import ValidationError
 
@@ -11,6 +11,9 @@ from .evidence import (
     Evidence, order_event_ref, order_item_ref, order_ref, payment_ref, refundable_ref,
 )
 from .policy import PolicyConfig
+
+if TYPE_CHECKING:
+    from .investigate import Investigation
 
 DEFAULT_MODEL = "deepseek/deepseek-flash"
 
@@ -54,6 +57,7 @@ The json object has these fields:
 - "liability": for a refund, exactly three entries {"party": "restaurant" | "driver" | "platform", "basis_points": integer}, each party once, summing to 10000. Empty for "reject" and "escalate".
 - "explanation": two to four sentences for the human reviewer.
 - "evidence_refs": ids copied from "citableRefs" in the evidence. A refund must cite at least one.
+- "investigation", when present, holds read-only lookups made for this complaint. Use them as context; cite only ids from "citableRefs".
 
 Example:
 {"decision": "partial_refund", "amount_cents": 450, "reason_code": "missing_item", "liability": [{"party": "restaurant", "basis_points": 10000}, {"party": "driver", "basis_points": 0}, {"party": "platform", "basis_points": 0}], "explanation": "The order lists one lemonade at 450 cents. The customer reports it missing and nothing shows it was delivered.", "evidence_refs": ["order:1", "order-item:11"]}
@@ -67,8 +71,8 @@ Rules:
 - Your answer is checked by policy code and reviewed by a person before any money moves."""
 
 
-def evidence_document(evidence: Evidence, policy: PolicyConfig) -> dict:
-    return {
+def evidence_document(evidence: Evidence, policy: PolicyConfig, *, investigation: "Investigation | None" = None) -> dict:
+    document = {
         "order": {
             "ref": order_ref(evidence.order.id),
             "status": evidence.order.status.value,
@@ -112,12 +116,16 @@ def evidence_document(evidence: Evidence, policy: PolicyConfig) -> dict:
         },
         "citableRefs": sorted(evidence.refs),
     }
+    if investigation is not None and investigation.findings:
+        document["investigation"] = [{"tool": f.tool, "result": f.result} for f in investigation.findings]
+    return document
 
 
 def build_messages(
     complaint: Complaint, evidence: Evidence, policy: PolicyConfig,
+    *, investigation: "Investigation | None" = None,
 ) -> list[dict[str, str]]:
-    document = json.dumps(evidence_document(evidence, policy), ensure_ascii=False, indent=2)
+    document = json.dumps(evidence_document(evidence, policy, investigation=investigation), ensure_ascii=False, indent=2)
     text = complaint.text.replace("<<<", "‹‹‹").replace(">>>", "›››")
     return [
         {"role": "system", "content": SYSTEM_PROMPT},
