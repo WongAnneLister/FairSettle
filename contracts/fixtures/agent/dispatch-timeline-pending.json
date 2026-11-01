@@ -26,7 +26,8 @@
               "actor": "Client",
               "driverId": null,
               "providerEventId": null,
-              "occurredAt": "2026-10-26T16:05:57.143Z"
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:41.967Z"
             }
           ]
         }

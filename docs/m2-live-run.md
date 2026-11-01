@@ -145,6 +145,8 @@ docker volume rm fairsettle-live-langfuse-postgres fairsettle-live-langfuse-clic
 
 If configuration values differ from `.env.live`, use a fresh shell and check `config`: exported variables override the env file. Local fixture provisioning refuses changed secrets or a database previously provisioned in FAKE mode; it never rotates credentials or changes provider bindings.
 
+To exercise F25 by hand, mark a picked-up order failed as its assigned driver: `mutation { editOrder(input: {id: <id>, status: DeliveryFailed, failureReason: DRIVER_FAULT}) { ok code } }`; within one poll interval the agent opens `delivery-failed-<id>`.
+
 ## Cleanup
 
 ```bash

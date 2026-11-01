@@ -25,6 +25,12 @@ class OrderStatus(StrEnum):
     COOKED = "Cooked"
     PICKED_UP = "PickedUp"
     DELIVERED = "Delivered"
+    DELIVERY_FAILED = "DeliveryFailed"
+
+
+class FailureReason(StrEnum):
+    DRIVER_FAULT = "DRIVER_FAULT"
+    PLATFORM_FAULT = "PLATFORM_FAULT"
 
 
 class OrderPaymentStatus(StrEnum):
@@ -95,6 +101,7 @@ class OrderEvent(Wire):
     actor: OrderEventActor
     driver_id: int | None
     provider_event_id: str | None
+    failure_reason: FailureReason | None = None
     occurred_at: AwareDatetime
 
 
@@ -114,6 +121,13 @@ class OrderTimeline(Wire):
                 OrderStatus.PICKED_UP, OrderStatus.DELIVERED,
             ))
         ))
+
+
+class DeliveryFailure(Wire):
+    event_id: Annotated[int, Field(ge=1)]
+    order_id: Annotated[int, Field(ge=1)]
+    failure_reason: FailureReason
+    occurred_at: AwareDatetime
 
 
 class ResolutionStatus(StrEnum):

@@ -16,6 +16,7 @@ from .execution import refund_outcome
 from .gather import DispatchReader, GatherFailure, LedgerReader, gather
 from .model import ModelConfig
 from .policy import PolicyConfig, PolicyVerdict, Violation, Rule
+from .proactive import is_proactive
 from .proposal import ProposalLedger, proposal_request
 from .store import ComplaintStore
 from .tracing import Stage, Tracing
@@ -102,9 +103,12 @@ def build_graph(deps: GraphDeps) -> StateGraph:
                 return _trace_escalation(observation, "count", "customer_unknown", f"order {evidence.order.id} has no customer")
             complaint_id = state["complaint"]["complaint_id"]
             await deps.store.record_customer(complaint_id, evidence.order.customer.id)
-            n = await deps.store.count_prior(
-                evidence.order.customer.id, complaint_id, datetime.fromisoformat(state["received_at"]),
-            )
+            if is_proactive(complaint_id):
+                n = 0
+            else:
+                n = await deps.store.count_prior(
+                    evidence.order.customer.id, complaint_id, datetime.fromisoformat(state["received_at"]),
+                )
             observation.update(metadata={"prior_complaints_in_7_days": n})
             return {"evidence": {**state["evidence"], "prior_complaints_in_7_days": n}}
 

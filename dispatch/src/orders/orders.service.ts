@@ -2,6 +2,7 @@ import {Caller, callerRef} from 'src/auth/caller';
 import {OrderEvent, OrderEventActor, OrderEventKind} from './entities/order-event.entity';
 import {recordOrderEvent} from './order-events';
 import {OrderTimelineInput, OrderTimelineOutput} from './dto/order-timeline.dto';
+import {DeliveryFailuresInput, DeliveryFailuresOutput} from './dto/delivery-failures.dto';
 import {Inject, Injectable, Logger} from '@nestjs/common';
 import {ConfigService} from '@nestjs/config';
 import {InjectRepository} from '@nestjs/typeorm';
@@ -24,13 +25,13 @@ import {isCheckoutTotal} from 'src/ledger/checkout';
 import {Dish} from 'src/restaurants/entities/dish.entity';
 import {Restaurant} from 'src/restaurants/entities/restaurant.entity';
 import {User, UserRole} from 'src/users/entities/user.entity';
-import {DataSource, In, Repository} from 'typeorm';
+import {DataSource, In, MoreThan, Repository} from 'typeorm';
 import {CreateOrderInput, CreateOrderOutput} from './dto/create-order.dto';
 import {EditOrderInput, EditOrderOutput} from './dto/edit-order.dto';
 import {GetOrderInput, GetOrderOutput} from './dto/get-order.dto';
 import {GetOrdersInput, GetOrdersOutput} from './dto/get-orders.dto';
 import {TakeOrderInput, TakeOrderOutput} from './dto/take-order.dto';
-import {TransitionActor, evaluateTransition} from './order-state-machine';
+import {TransitionActor, evaluateTransition, failureReasonCheck} from './order-state-machine';
 import {OrderItem} from './entities/order-item.entity';
 import {Order, OrderPaymentStatus, OrderStatus} from './entities/order.entity';
 
@@ -271,6 +272,48 @@ export class OrderService {
     return caller.kind === 'service' || this.canSeeOrder(caller.user, order);
   }
 
+  async deliveryFailures(
+    caller: Caller,
+    {afterEventId, limit}: DeliveryFailuresInput,
+  ): Promise<DeliveryFailuresOutput> {
+    try {
+      if (caller.kind !== 'service') {
+        throw new ForbiddenError('Only the agent service reads delivery failures.');
+      }
+      if (!Number.isInteger(afterEventId) || afterEventId < 0) {
+        throw new ValidationError('afterEventId must be an integer of at least 0');
+      }
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+        throw new ValidationError('limit must be an integer from 1 to 100');
+      }
+      const events = await this.orderEvents.find({
+        where: {
+          kind: OrderEventKind.STATUS_CHANGED,
+          toStatus: OrderStatus.DeliveryFailed,
+          id: MoreThan(afterEventId),
+        },
+        order: {id: 'ASC'},
+        take: limit,
+      });
+      return {
+        ok: true,
+        failures: events.map(e => ({
+          eventId: e.id,
+          orderId: e.orderId,
+          failureReason: e.failureReason,
+          occurredAt: e.occurredAt,
+        })),
+      };
+    } catch (error) {
+      return failure(error, this.logger, {
+        op: 'deliveryFailures',
+        caller: callerRef(caller),
+        afterEventId,
+        limit,
+      });
+    }
+  }
+
   async editOrder(user: User, editOrderInput: EditOrderInput): Promise<EditOrderOutput> {
     try {
       const order = await this.orders.findOne({where: {id: editOrderInput.id}});
@@ -297,6 +340,8 @@ export class OrderService {
           throw new ForbiddenError(verdict.reason);
       }
 
+      failureReasonCheck(editOrderInput.status, editOrderInput.failureReason ?? null);
+
       // The verdict was computed from a status read a moment ago. Making the
       // write conditional on that same status means a concurrent transition
       // cannot slip in between — the same reasoning as the claim in takeOrder.
@@ -320,6 +365,7 @@ export class OrderService {
           orderId: order.id,
           from: order.status,
           to: editOrderInput.status,
+          failureReason: editOrderInput.failureReason ?? null,
           actor,
           driverId: actor === OrderEventActor.AssignedDriver ? user.id : null,
           providerEventId: null,

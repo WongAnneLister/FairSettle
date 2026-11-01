@@ -1,6 +1,6 @@
 import {EntityManager} from 'typeorm';
 import {OrderEvent, OrderEventActor, OrderEventKind} from './entities/order-event.entity';
-import {OrderStatus} from './entities/order.entity';
+import {DeliveryFailureReason, OrderStatus} from './entities/order.entity';
 
 export type NewOrderEvent =
   | {kind: OrderEventKind.CREATED; orderId: number}
@@ -15,6 +15,7 @@ export type NewOrderEvent =
         | OrderEventActor.FulfillmentProvider;
       driverId: number | null;
       providerEventId: string | null;
+      failureReason: DeliveryFailureReason | null;
     }
   | {kind: OrderEventKind.DRIVER_ASSIGNED; orderId: number; driverId: number};
 
@@ -33,6 +34,7 @@ export async function recordOrderEvent(
         actor: OrderEventActor.Client,
         driverId: null,
         providerEventId: null,
+        failureReason: null,
       });
       break;
     case OrderEventKind.STATUS_CHANGED:
@@ -44,6 +46,7 @@ export async function recordOrderEvent(
         actor: event.actor,
         driverId: event.driverId,
         providerEventId: event.providerEventId,
+        failureReason: event.failureReason,
       });
       break;
     case OrderEventKind.DRIVER_ASSIGNED:
@@ -55,6 +58,7 @@ export async function recordOrderEvent(
         actor: OrderEventActor.AssignedDriver,
         driverId: event.driverId,
         providerEventId: null,
+        failureReason: null,
       });
       break;
   }

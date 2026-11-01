@@ -1,6 +1,7 @@
+import {ValidationError} from 'src/common/errors/app-error';
 import {UserRole} from 'src/users/entities/user.entity';
 
-import {OrderPaymentStatus, OrderStatus} from './entities/order.entity';
+import {DeliveryFailureReason, OrderPaymentStatus, OrderStatus} from './entities/order.entity';
 
 /**
  * Who may perform a transition.
@@ -27,6 +28,7 @@ export type TransitionActor =
 
 /**
  * The order lifecycle, in one place.
+ * DeliveryFailed is terminal: the delivery stopped after pickup, with a reason on its event (F25).
  *
  * Replaces a set of conditions scattered through editOrder that checked only
  * the TARGET status against the caller's role, never the current status. Under
@@ -43,8 +45,12 @@ export const ORDER_TRANSITIONS: Readonly<
   [OrderStatus.Pending]: {[OrderStatus.Cooking]: [UserRole.Owner]},
   [OrderStatus.Cooking]: {[OrderStatus.Cooked]: [UserRole.Owner]},
   [OrderStatus.Cooked]: {[OrderStatus.PickedUp]: ['AssignedDriver', 'FulfillmentProvider']},
-  [OrderStatus.PickedUp]: {[OrderStatus.Delivered]: ['AssignedDriver', 'FulfillmentProvider']},
+  [OrderStatus.PickedUp]: {
+    [OrderStatus.Delivered]: ['AssignedDriver', 'FulfillmentProvider'],
+    [OrderStatus.DeliveryFailed]: ['AssignedDriver', 'FulfillmentProvider'],
+  },
   [OrderStatus.Delivered]: {},
+  [OrderStatus.DeliveryFailed]: {},
 };
 
 export type TransitionVerdict =
@@ -126,4 +132,14 @@ export function evaluatePaymentEvent(
     return {kind: 'allowed', next};
   }
   return {kind: 'ignored', reason: event + ' cannot apply to a ' + current + ' order'};
+}
+
+/** Require a reason exactly when a delivery fails (F25). */
+export function failureReasonCheck(to: OrderStatus, reason: DeliveryFailureReason | null): void {
+  if (to === OrderStatus.DeliveryFailed && reason === null) {
+    throw new ValidationError('failureReason is required for DeliveryFailed');
+  }
+  if (to !== OrderStatus.DeliveryFailed && reason !== null) {
+    throw new ValidationError('failureReason is only for DeliveryFailed');
+  }
 }

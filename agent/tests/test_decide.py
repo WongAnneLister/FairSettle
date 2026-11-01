@@ -171,7 +171,7 @@ def test_evidence_document_lists_citable_refs():
     }
     assert document["timeline"] == [
         {"ref": f"order-event:{event_id}", "kind": "CREATED", "fromStatus": None,
-         "toStatus": "Pending", "actor": "Client", "occurredAt": NOW.isoformat()}
+         "toStatus": "Pending", "actor": "Client", "failureReason": None, "occurredAt": NOW.isoformat()}
         for event_id in (101, 102, 103)
     ]
     assert document["payment"] == {

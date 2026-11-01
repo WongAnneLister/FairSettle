@@ -22,6 +22,7 @@ from .gather import DispatchReader
 from .graph import AgentLedger, GraphDeps, SubmitDeferred, build_graph
 from .model import ModelConfig
 from .policy import PolicyConfig
+from .proactive import DeliveryFailureTrigger, FailureFeed
 from .store import ComplaintStore
 from .tracing import Tracing, TracingConfig
 
@@ -53,12 +54,13 @@ class AgentConfig:
     ledger_app_token: str = field(repr=False)
     model: ModelConfig
     tracing: TracingConfig | None
+    proactive: bool = True
 
     def __repr__(self) -> str:
         return (
             f"AgentConfig(database_url=<set>, dispatch_base_url={self.dispatch_base_url!r}, "
             f"dispatch_service_token=<set>, ledger_base_url={self.ledger_base_url!r}, "
-            f"ledger_app_token=<set>, model={self.model!r}, tracing={self.tracing!r})"
+            f"ledger_app_token=<set>, model={self.model!r}, tracing={self.tracing!r}, proactive={self.proactive!r})"
         )
 
     @classmethod
@@ -80,7 +82,10 @@ class AgentConfig:
                 if not env.get(name):
                     raise ValueError(f"{name} is required")
             tracing = TracingConfig(*(env[name] for name in tracing_names))
-        return cls(*(env[name] for name in names), model=ModelConfig.from_env(env), tracing=tracing)
+        mode = env.get("FAIRSETTLE_PROACTIVE", "on")
+        if mode not in ("on", "off"):
+            raise ValueError("FAIRSETTLE_PROACTIVE must be on or off")
+        return cls(*(env[name] for name in names), model=ModelConfig.from_env(env), tracing=tracing, proactive=mode == "on")
 
 
 def utc_now() -> datetime:
@@ -93,10 +98,12 @@ class Agent:
         dispatch: DispatchReader, ledger: AgentLedger, model: ModelConfig, tracing: Tracing,
         policy: PolicyConfig = PolicyConfig(), complete: Completion = litellm.acompletion,
         now: Callable[[], datetime] = utc_now, max_submit_attempts: int = 3,
+        failures: FailureFeed | None = None,
     ) -> None:
         if type(max_submit_attempts) is not int or max_submit_attempts < 1:
             raise ValueError("max_submit_attempts must be an integer of at least 1")
         self._store = store
+        self._failures = failures
         self._ledger = ledger
         self._now = now
         self._tracing = tracing
@@ -179,6 +186,11 @@ class Agent:
                     changed.append(after)
             return changed
 
+    async def poll_failures(self) -> list[RunStatus]:
+        if self._failures is None:
+            return []
+        return await DeliveryFailureTrigger(self._failures, self._store, self.start).run_once()
+
     async def running(self) -> list[str]:
         return await self._store.running()
 
@@ -218,9 +230,11 @@ async def open_agent(config: AgentConfig, *, complete: Completion = litellm.acom
                 httpx.AsyncClient(base_url=config.dispatch_base_url, timeout=10.0) as dispatch_http,
                 httpx.AsyncClient(base_url=config.ledger_base_url, timeout=10.0) as ledger_http,
             ):
+                dispatch_client = DispatchClient(dispatch_http, config.dispatch_service_token)
                 yield Agent(
                     store=store, checkpointer=saver,
-                    dispatch=DispatchClient(dispatch_http, config.dispatch_service_token),
+                    dispatch=dispatch_client,
+                    failures=dispatch_client if config.proactive else None,
                     ledger=LedgerClient(ledger_http, config.ledger_app_token),
                     model=config.model, complete=complete, tracing=tracing,
                 )

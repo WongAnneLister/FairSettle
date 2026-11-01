@@ -1,0 +1,54 @@
+{
+  "name": "dispatch-order-delivery-failed",
+  "source": "dispatch/test/agent-fixtures.e2e-spec.ts",
+  "request": {
+    "method": "POST",
+    "path": "/graphql",
+    "operationName": "AgentOrder",
+    "variables": {
+      "id": 13
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "getOrder": {
+          "ok": true,
+          "code": null,
+          "error": null,
+          "order": {
+            "id": 13,
+            "createdAt": "2026-11-01T13:05:42.836Z",
+            "updatedAt": "2026-11-01T13:05:42.887Z",
+            "status": "DeliveryFailed",
+            "paymentStatus": "NotRequired",
+            "totalCents": 1250,
+            "ledgerPaymentId": null,
+            "customer": {
+              "id": 1
+            },
+            "driver": {
+              "id": 3
+            },
+            "restaurant": {
+              "id": 1,
+              "name": "Agent Kitchen"
+            },
+            "items": [
+              {
+                "id": 13,
+                "dish": {
+                  "id": 1,
+                  "name": "Agent Dish",
+                  "priceCents": 1250
+                },
+                "options": null
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

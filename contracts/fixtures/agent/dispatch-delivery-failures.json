@@ -1,0 +1,33 @@
+{
+  "name": "dispatch-delivery-failures",
+  "source": "dispatch/test/agent-fixtures.e2e-spec.ts",
+  "request": {
+    "method": "POST",
+    "path": "/graphql",
+    "operationName": "AgentDeliveryFailures",
+    "variables": {
+      "afterEventId": 0,
+      "limit": 50
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "deliveryFailures": {
+          "ok": true,
+          "code": null,
+          "error": null,
+          "failures": [
+            {
+              "eventId": 63,
+              "orderId": 13,
+              "failureReason": "DRIVER_FAULT",
+              "occurredAt": "2026-11-01T13:05:42.888Z"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

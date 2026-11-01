@@ -1,7 +1,13 @@
 import {UserRole} from 'src/users/entities/user.entity';
+import {ValidationError} from 'src/common/errors/app-error';
 
-import {OrderPaymentStatus, OrderStatus} from './entities/order.entity';
-import {TransitionActor, evaluateTransition, evaluatePaymentEvent} from './order-state-machine';
+import {DeliveryFailureReason, OrderPaymentStatus, OrderStatus} from './entities/order.entity';
+import {
+  TransitionActor,
+  evaluateTransition,
+  evaluatePaymentEvent,
+  failureReasonCheck,
+} from './order-state-machine';
 
 const ALL_STATUSES = Object.values(OrderStatus);
 const ALL_ACTORS: TransitionActor[] = [
@@ -20,9 +26,54 @@ const LEGAL: ReadonlyArray<[OrderStatus, OrderStatus, TransitionActor]> = [
   // A third-party provider drives only the part of the lifecycle it performs.
   [OrderStatus.Cooked, OrderStatus.PickedUp, 'FulfillmentProvider'],
   [OrderStatus.PickedUp, OrderStatus.Delivered, 'FulfillmentProvider'],
+  [OrderStatus.PickedUp, OrderStatus.DeliveryFailed, 'AssignedDriver'],
+  [OrderStatus.PickedUp, OrderStatus.DeliveryFailed, 'FulfillmentProvider'],
 ];
 
 describe('order state machine', () => {
+  it('allows delivery failure only after pickup and makes failure terminal', () => {
+    for (const actor of ['AssignedDriver', 'FulfillmentProvider'] as const) {
+      expect(evaluateTransition(OrderStatus.PickedUp, OrderStatus.DeliveryFailed, actor)).toEqual({
+        kind: 'allowed',
+      });
+    }
+    for (const actor of [UserRole.Owner, UserRole.Client] as const) {
+      expect(evaluateTransition(OrderStatus.PickedUp, OrderStatus.DeliveryFailed, actor).kind).toBe(
+        'forbidden',
+      );
+    }
+    for (const from of [OrderStatus.Cooked, OrderStatus.Delivered]) {
+      expect(evaluateTransition(from, OrderStatus.DeliveryFailed, 'AssignedDriver').kind).toBe(
+        'illegal',
+      );
+    }
+    for (const to of ALL_STATUSES.filter(status => status !== OrderStatus.DeliveryFailed)) {
+      for (const actor of ALL_ACTORS) {
+        expect(evaluateTransition(OrderStatus.DeliveryFailed, to, actor).kind).toBe('illegal');
+      }
+    }
+    expect(
+      evaluateTransition(OrderStatus.DeliveryFailed, OrderStatus.DeliveryFailed, UserRole.Owner),
+    ).toEqual({kind: 'noop'});
+  });
+
+  it('failureReasonCheck requires a reason only for DeliveryFailed', () => {
+    expect(() => failureReasonCheck(OrderStatus.DeliveryFailed, null)).toThrow(ValidationError);
+    expect(() => failureReasonCheck(OrderStatus.DeliveryFailed, null)).toThrow(
+      'failureReason is required for DeliveryFailed',
+    );
+    expect(() =>
+      failureReasonCheck(OrderStatus.Delivered, DeliveryFailureReason.DRIVER_FAULT),
+    ).toThrow(ValidationError);
+    expect(() =>
+      failureReasonCheck(OrderStatus.Delivered, DeliveryFailureReason.DRIVER_FAULT),
+    ).toThrow('failureReason is only for DeliveryFailed');
+    expect(() =>
+      failureReasonCheck(OrderStatus.DeliveryFailed, DeliveryFailureReason.PLATFORM_FAULT),
+    ).not.toThrow();
+    expect(() => failureReasonCheck(OrderStatus.Delivered, null)).not.toThrow();
+  });
+
   describe('the happy path', () => {
     it.each(LEGAL)('allows %s -> %s for %s', (from, to, actor) => {
       expect(evaluateTransition(from, to, actor)).toEqual({kind: 'allowed'});

@@ -26,7 +26,8 @@
               "actor": "Client",
               "driverId": null,
               "providerEventId": null,
-              "occurredAt": "2026-10-26T16:05:56.831Z"
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:41.734Z"
             },
             {
               "id": 2,
@@ -36,7 +37,8 @@
               "actor": "Owner",
               "driverId": null,
               "providerEventId": null,
-              "occurredAt": "2026-10-26T16:05:56.856Z"
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:41.759Z"
             },
             {
               "id": 3,
@@ -46,7 +48,8 @@
               "actor": "Owner",
               "driverId": null,
               "providerEventId": null,
-              "occurredAt": "2026-10-26T16:05:56.871Z"
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:41.775Z"
             },
             {
               "id": 4,
@@ -56,7 +59,8 @@
               "actor": "AssignedDriver",
               "driverId": 3,
               "providerEventId": null,
-              "occurredAt": "2026-10-26T16:05:56.883Z"
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:41.784Z"
             },
             {
               "id": 5,
@@ -66,7 +70,8 @@
               "actor": "AssignedDriver",
               "driverId": 3,
               "providerEventId": null,
-              "occurredAt": "2026-10-26T16:05:56.903Z"
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:41.798Z"
             },
             {
               "id": 6,
@@ -75,8 +80,9 @@
               "toStatus": "Delivered",
               "actor": "FulfillmentProvider",
               "driverId": null,
-              "providerEventId": "eec29eea-eb7a-403c-85ab-6a49e574108e",
-              "occurredAt": "2026-10-26T16:05:56.942Z"
+              "providerEventId": "0cfa4a5e-7d85-4af2-8e86-da1658120fa5",
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:41.834Z"
             }
           ]
         }

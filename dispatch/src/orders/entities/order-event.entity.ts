@@ -1,6 +1,6 @@
 import {Field, Int, ObjectType, registerEnumType} from '@nestjs/graphql';
 import {Check, Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn} from 'typeorm';
-import {Order, OrderStatus} from './order.entity';
+import {DeliveryFailureReason, Order, OrderStatus} from './order.entity';
 
 export enum OrderEventKind {
   CREATED = 'CREATED',
@@ -28,8 +28,13 @@ registerEnumType(OrderEventActor, {name: 'OrderEventActor'});
 )
 @Check(
   'CHK_order_event_status',
-  `("fromStatus" IS NULL OR "fromStatus" IN ('Pending', 'Cooking', 'Cooked', 'PickedUp', 'Delivered'))
-    AND ("toStatus" IS NULL OR "toStatus" IN ('Pending', 'Cooking', 'Cooked', 'PickedUp', 'Delivered'))`,
+  `("fromStatus" IS NULL OR "fromStatus" IN ('Pending', 'Cooking', 'Cooked', 'PickedUp', 'Delivered', 'DeliveryFailed'))
+    AND ("toStatus" IS NULL OR "toStatus" IN ('Pending', 'Cooking', 'Cooked', 'PickedUp', 'Delivered', 'DeliveryFailed'))`,
+)
+@Check(
+  'CHK_order_event_failure',
+  `("failureReason" IS NULL OR "failureReason" IN ('DRIVER_FAULT', 'PLATFORM_FAULT'))
+    AND (("kind" = 'STATUS_CHANGED' AND "toStatus" = 'DeliveryFailed') = ("failureReason" IS NOT NULL))`,
 )
 @Check(
   'CHK_order_event_shape',
@@ -68,6 +73,10 @@ export class OrderEvent {
   @Field(type => String, {nullable: true})
   @Column({type: 'varchar', length: 128, nullable: true})
   providerEventId: string | null;
+
+  @Field(type => DeliveryFailureReason, {nullable: true})
+  @Column({type: 'varchar', length: 16, nullable: true})
+  failureReason: DeliveryFailureReason | null;
 
   @Field(type => Date)
   @Column({type: 'timestamptz', default: () => 'clock_timestamp()'})

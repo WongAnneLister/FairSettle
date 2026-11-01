@@ -18,6 +18,7 @@ export interface FulfillmentCallback {
   providerRef: string;
   orderId: number;
   status: string;
+  failureReason?: string;
 }
 
 @Controller('webhooks')

@@ -188,6 +188,7 @@ describe('agent fixtures (e2e)', () => {
         actor: 'Client',
         driverId: null,
         providerEventId: null,
+        failureReason: null,
       },
       {
         kind: 'STATUS_CHANGED',
@@ -196,6 +197,7 @@ describe('agent fixtures (e2e)', () => {
         actor: 'Owner',
         driverId: null,
         providerEventId: null,
+        failureReason: null,
       },
       {
         kind: 'STATUS_CHANGED',
@@ -204,6 +206,7 @@ describe('agent fixtures (e2e)', () => {
         actor: 'Owner',
         driverId: null,
         providerEventId: null,
+        failureReason: null,
       },
       {
         kind: 'DRIVER_ASSIGNED',
@@ -212,6 +215,7 @@ describe('agent fixtures (e2e)', () => {
         actor: 'AssignedDriver',
         driverId,
         providerEventId: null,
+        failureReason: null,
       },
       {
         kind: 'STATUS_CHANGED',
@@ -220,6 +224,7 @@ describe('agent fixtures (e2e)', () => {
         actor: 'AssignedDriver',
         driverId,
         providerEventId: null,
+        failureReason: null,
       },
       {
         kind: 'STATUS_CHANGED',
@@ -228,6 +233,7 @@ describe('agent fixtures (e2e)', () => {
         actor: 'FulfillmentProvider',
         driverId: null,
         providerEventId: deliveredEventId,
+        failureReason: null,
       },
     ];
   }
@@ -239,12 +245,13 @@ describe('agent fixtures (e2e)', () => {
       document.definitions.map(definition =>
         definition.kind === Kind.OPERATION_DEFINITION ? definition.name?.value : null,
       ),
-    ).toEqual(['AgentOrder', 'AgentOrderTimeline']);
+    ).toEqual(['AgentOrder', 'AgentOrderTimeline', 'AgentDeliveryFailures']);
   });
 
   it("the timeline enums carry the agent's spellings on the wire", () => {
     const schema = ctx.moduleRef.get(GraphQLSchemaHost).schema;
     for (const [name, expected] of [
+      ['DeliveryFailureReason', ['DRIVER_FAULT', 'PLATFORM_FAULT']],
       ['OrderEventKind', ['CREATED', 'STATUS_CHANGED', 'DRIVER_ASSIGNED']],
       ['OrderEventActor', ['Owner', 'Client', 'AssignedDriver', 'FulfillmentProvider']],
     ] as const) {
@@ -308,6 +315,7 @@ describe('agent fixtures (e2e)', () => {
         actor: 'FulfillmentProvider',
         driverId: null,
         providerEventId: eventId,
+        failureReason: null,
       },
     ]);
   });
@@ -437,6 +445,201 @@ describe('agent fixtures (e2e)', () => {
     });
     const anonymous = await harness.gql(app, query);
     expect(anonymous.body.errors[0].extensions.code).toBe('FORBIDDEN');
+  });
+
+  describe('delivery failures', () => {
+    let created: number[];
+
+    beforeEach(() => {
+      created = [];
+    });
+    afterEach(async () => {
+      if (created.length)
+        await ctx.dataSource.query('DELETE FROM "order" WHERE id = ANY($1)', [created]);
+    });
+
+    async function ready(pickup = true): Promise<number> {
+      const id = await placeOrder();
+      created.push(id);
+      expect(await edit(id, 'Cooking')).toMatchObject({ok: true});
+      expect(await edit(id, 'Cooked')).toMatchObject({ok: true});
+      expect(await take(id)).toMatchObject({ok: true});
+      if (pickup) expect(await edit(id, 'PickedUp', driver)).toMatchObject({ok: true});
+      return id;
+    }
+
+    async function fail(
+      id: number,
+      token = driver,
+      status = 'DeliveryFailed',
+      reason: string | null = 'DRIVER_FAULT',
+    ) {
+      const field = reason === null ? '' : `, failureReason: ${reason}`;
+      const response = await harness.gql(
+        app,
+        `mutation { editOrder(input: {id: ${id}, status: ${status}${field}}) { ok code } }`,
+        token,
+      );
+      return response.body.data.editOrder;
+    }
+
+    it('the assigned driver marks a picked-up order failed', async () => {
+      const id = await ready();
+      const before = await rows(id);
+      expect(await fail(id)).toMatchObject({ok: true});
+      const response = await agent('AgentOrder', {id});
+      expect(response.body.data.getOrder.order.status).toBe('DeliveryFailed');
+      const events = await rows(id);
+      expect(events).toHaveLength(before.length + 1);
+      expect(events[events.length - 1]).toMatchObject({
+        kind: 'STATUS_CHANGED',
+        fromStatus: 'PickedUp',
+        toStatus: 'DeliveryFailed',
+        actor: 'AssignedDriver',
+        driverId,
+        failureReason: 'DRIVER_FAULT',
+      });
+    });
+
+    it('a failure needs its reason, and only a failure takes one', async () => {
+      const id = await ready();
+      const before = await rows(id);
+      expect(await fail(id, driver, 'DeliveryFailed', null)).toMatchObject({
+        ok: false,
+        code: 'VALIDATION',
+      });
+      expect(await fail(id, driver, 'Delivered')).toMatchObject({ok: false, code: 'VALIDATION'});
+      expect(await rows(id)).toEqual(before);
+    });
+
+    it('only the driver or provider may fail a delivery, and only after pickup', async () => {
+      const id = await ready();
+      expect(await fail(id, owner)).toMatchObject({ok: false, code: 'FORBIDDEN'});
+      expect(await fail(id, otherDriver)).toMatchObject({ok: false, code: 'FORBIDDEN'});
+      const cooked = await ready(false);
+      expect(await fail(cooked)).toMatchObject({ok: false, code: 'CONFLICT'});
+      expect(await fail(id)).toMatchObject({ok: true});
+      expect(await edit(id, 'Delivered', driver)).toMatchObject({ok: false, code: 'CONFLICT'});
+    });
+
+    it('a provider callback fails a delivery with its reason', async () => {
+      const id = await ready();
+      const body = {
+        eventId: randomUUID(),
+        providerRef: await providerRef(id),
+        orderId: id,
+        status: 'DeliveryFailed',
+        failureReason: 'PLATFORM_FAULT',
+      };
+      expect((await postCallback(body).expect(200)).body.applied).toBe(true);
+      const events = await rows(id);
+      expect(events[events.length - 1]).toMatchObject({
+        kind: 'STATUS_CHANGED',
+        actor: 'FulfillmentProvider',
+        providerEventId: body.eventId,
+        failureReason: 'PLATFORM_FAULT',
+      });
+      expect((await postCallback(body).expect(200)).body).toMatchObject({
+        applied: false,
+        reason: 'duplicate',
+      });
+    });
+
+    it('a callback without a reason is handled but not applied', async () => {
+      const id = await ready();
+      const before = await rows(id);
+      const body = {
+        eventId: randomUUID(),
+        providerRef: await providerRef(id),
+        orderId: id,
+        status: 'DeliveryFailed',
+      };
+      expect((await postCallback(body).expect(200)).body).toEqual({
+        received: true,
+        applied: false,
+        reason: 'failureReason required for DeliveryFailed',
+      });
+      expect(await rows(id)).toEqual(before);
+      expect((await agent('AgentOrder', {id})).body.data.getOrder.order.status).toBe('PickedUp');
+      expect(
+        await ctx.dataSource.getRepository(ProcessedEvent).countBy({eventId: body.eventId}),
+      ).toBe(1);
+    });
+
+    it('deliveryFailures lists failures after a cursor', async () => {
+      const first = await ready();
+      const second = await ready();
+      expect(await fail(first)).toMatchObject({ok: true});
+      expect(await fail(second)).toMatchObject({ok: true});
+      const all = (await agent('AgentDeliveryFailures', {afterEventId: 0, limit: 50})).body.data
+        .deliveryFailures;
+      expect(all.ok).toBe(true);
+      expect(all.failures).toHaveLength(2);
+      expect(all.failures.map(failure => failure.orderId)).toEqual([first, second]);
+      expect(all.failures[0].eventId).toBeLessThan(all.failures[1].eventId);
+      const later = (
+        await agent('AgentDeliveryFailures', {afterEventId: all.failures[0].eventId, limit: 50})
+      ).body.data.deliveryFailures;
+      expect(later).toEqual({...all, failures: [all.failures[1]]});
+      expect(
+        (await agent('AgentDeliveryFailures', {afterEventId: 0, limit: 1})).body.data
+          .deliveryFailures.failures,
+      ).toEqual([all.failures[0]]);
+      for (const variables of [
+        {afterEventId: -1, limit: 50},
+        {afterEventId: 0, limit: 0},
+        {afterEventId: 0, limit: 101},
+      ]) {
+        expect(
+          (await agent('AgentDeliveryFailures', variables)).body.data.deliveryFailures,
+        ).toMatchObject({ok: false, code: 'VALIDATION'});
+      }
+    });
+
+    it('deliveryFailures is for the service only', async () => {
+      for (const token of [client, owner]) {
+        const response = await harness.gql(
+          app,
+          'query { deliveryFailures(input: {afterEventId: 0, limit: 50}) { ok code } }',
+          token,
+        );
+        expect(response.body.data.deliveryFailures).toEqual({ok: false, code: 'FORBIDDEN'});
+      }
+    });
+
+    it('agent reads a failed delivery', async () => {
+      const id = await ready();
+      expect(await fail(id)).toMatchObject({ok: true});
+      const failures = await agent('AgentDeliveryFailures', {afterEventId: 0, limit: 50}).expect(
+        200,
+      );
+      expect(failures.body.data.deliveryFailures.ok).toBe(true);
+      expect(failures.body.data.deliveryFailures.failures).toHaveLength(1);
+      fixture(
+        'dispatch-delivery-failures',
+        {operationName: 'AgentDeliveryFailures', variables: {afterEventId: 0, limit: 50}},
+        failures,
+      );
+      const order = await agent('AgentOrder', {id}).expect(200);
+      expect(order.body.data.getOrder.order.status).toBe('DeliveryFailed');
+      fixture(
+        'dispatch-order-delivery-failed',
+        {operationName: 'AgentOrder', variables: {id}},
+        order,
+      );
+      const timeline = await agent('AgentOrderTimeline', {orderId: id}).expect(200);
+      const events = timeline.body.data.orderTimeline.events;
+      expect(timeline.body.data.orderTimeline.ok).toBe(true);
+      expect(events[events.length - 1]).toMatchObject({
+        toStatus: 'DeliveryFailed',
+        failureReason: 'DRIVER_FAULT',
+      });
+      fixture(
+        'dispatch-timeline-delivery-failed',
+        {operationName: 'AgentOrderTimeline', variables: {orderId: id}},
+        timeline,
+      );
+    });
   });
 
   it('a callback that loses a race records nothing and is redelivered', async () => {

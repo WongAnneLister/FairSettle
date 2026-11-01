@@ -47,6 +47,30 @@ class ComplaintStore:
                 """)
             await conn.execute("CREATE INDEX IF NOT EXISTS agent_complaint_customer ON agent_complaint (customer_id, received_at)")
             await conn.execute("CREATE INDEX IF NOT EXISTS agent_complaint_status ON agent_complaint (status)")
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS agent_trigger_cursor (
+                    name text PRIMARY KEY,
+                    last_event_id bigint NOT NULL CHECK (last_event_id >= 0),
+                    updated_at timestamptz NOT NULL
+                )
+            """)
+
+    async def get_cursor(self, name: str) -> int:
+        async with self.pool.connection() as conn:
+            cursor = await conn.execute("SELECT last_event_id FROM agent_trigger_cursor WHERE name = %s", (name,))
+            row = await cursor.fetchone()
+            return 0 if row is None else row["last_event_id"]
+
+    async def set_cursor(self, name: str, event_id: int) -> None:
+        if type(event_id) is not int or event_id < 0:
+            raise ValueError("event_id must be an integer of at least 0")
+        async with self.pool.connection() as conn:
+            await conn.execute("""
+                INSERT INTO agent_trigger_cursor (name, last_event_id, updated_at) VALUES (%s, %s, now())
+                ON CONFLICT (name) DO UPDATE SET
+                    last_event_id = GREATEST(agent_trigger_cursor.last_event_id, EXCLUDED.last_event_id),
+                    updated_at = now()
+            """, (name, event_id))
 
     @staticmethod
     def _aware(received_at: datetime) -> None:
@@ -76,12 +100,14 @@ class ComplaintStore:
             (customer_id, complaint_id), complaint_id,
         )
 
+    # Keep the SQL prefix in sync with PROACTIVE_PREFIX in proactive.py.
     async def count_prior(self, customer_id: int, complaint_id: str, received_at: datetime) -> int:
         self._aware(received_at)
         async with self.pool.connection() as conn:
             cursor = await conn.execute("""
                 SELECT count(*) AS n FROM agent_complaint
                 WHERE customer_id = %s AND complaint_id <> %s AND received_at >= %s AND received_at < %s
+                    AND complaint_id NOT LIKE 'delivery-failed-%%'
             """, (customer_id, complaint_id, received_at - timedelta(days=7), received_at))
             return (await cursor.fetchone())["n"]
 

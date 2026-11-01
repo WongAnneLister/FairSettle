@@ -89,7 +89,7 @@ class FakeProposalLedger(FakeLedger):
 @asynccontextmanager
 async def open_test_agent(
     database_url, *, dispatch=None, ledger=None, complete=None, now=lambda: NOW,
-    max_submit_attempts=3, tracing=None,
+    max_submit_attempts=3, tracing=None, failures=None,
 ):
     async with open_persistence(database_url) as (store, saver):
         yield Agent(
@@ -97,6 +97,7 @@ async def open_test_agent(
             dispatch=FakeDispatch() if dispatch is None else dispatch,
             ledger=FakeProposalLedger() if ledger is None else ledger,
             complete=MockCompletion([DECISION_JSON]) if complete is None else complete,
+            failures=failures,
             model=ModelConfig(api_key="sk-test-" + "k" * 32), now=now,
             max_submit_attempts=max_submit_attempts,
             tracing=Tracing.off() if tracing is None else tracing,

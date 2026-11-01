@@ -13,7 +13,7 @@ Read before changing anything here: `docs/adr/` (6 ADRs).
 - E2E tests against real PostgreSQL and Redis: copy `env.test.example` to `.env.test`, then `npm run test:e2e`.
 - Race reproduction, before and after the fix: `./scripts/race-demo.sh`.
 
-- The agent's service token is `AGENT_SERVICE_TOKEN`; it reads `getOrder` and `orderTimeline` only.
+- The agent's service token is `AGENT_SERVICE_TOKEN`; it reads `getOrder`, `orderTimeline` and `deliveryFailures` only (F25).
 
 ## Where things live
 

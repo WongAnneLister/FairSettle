@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from .errors import (
     Forbidden, MalformedResponse, NotFound, ServiceError, Unauthorized, Unavailable,
 )
-from .models import Order, OrderTimeline
+from .models import DeliveryFailure, Order, OrderTimeline
 
 AGENT_ORDER_QUERY: str = """query AgentOrder($id: Float!) {
   getOrder(input: {id: $id}) {
@@ -40,12 +40,27 @@ AGENT_ORDER_TIMELINE_QUERY: str = """query AgentOrderTimeline($orderId: Int!) {
       actor
       driverId
       providerEventId
+      failureReason
       occurredAt
     }
   }
 }"""
 
-DOCUMENT: str = AGENT_ORDER_QUERY + "\n\n" + AGENT_ORDER_TIMELINE_QUERY
+AGENT_DELIVERY_FAILURES_QUERY: str = """query AgentDeliveryFailures($afterEventId: Int!, $limit: Int!) {
+  deliveryFailures(input: {afterEventId: $afterEventId, limit: $limit}) {
+    ok
+    code
+    error
+    failures {
+      eventId
+      orderId
+      failureReason
+      occurredAt
+    }
+  }
+}"""
+
+DOCUMENT: str = AGENT_ORDER_QUERY + "\n\n" + AGENT_ORDER_TIMELINE_QUERY + "\n\n" + AGENT_DELIVERY_FAILURES_QUERY
 
 
 class DispatchClient:
@@ -75,6 +90,22 @@ class DispatchClient:
             return OrderTimeline.model_validate({
                 "order_id": order_id, "events": envelope.get("events"),
             })
+        except ValidationError as exc:
+            raise self._validation_error(exc) from exc
+
+    async def delivery_failures(self, after_event_id: int, limit: int) -> list[DeliveryFailure]:
+        if type(after_event_id) is not int or after_event_id < 0:
+            raise ValueError("after_event_id must be an integer of at least 0")
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("limit must be an integer from 1 to 100")
+        envelope = await self._query(
+            "AgentDeliveryFailures", {"afterEventId": after_event_id, "limit": limit}, "deliveryFailures",
+        )
+        failures = envelope.get("failures")
+        if not isinstance(failures, list):
+            raise MalformedResponse("dispatch", "Invalid fields: failures")
+        try:
+            return [DeliveryFailure.model_validate(item) for item in failures]
         except ValidationError as exc:
             raise self._validation_error(exc) from exc
 

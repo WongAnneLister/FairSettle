@@ -1,0 +1,92 @@
+{
+  "name": "dispatch-timeline-delivery-failed",
+  "source": "dispatch/test/agent-fixtures.e2e-spec.ts",
+  "request": {
+    "method": "POST",
+    "path": "/graphql",
+    "operationName": "AgentOrderTimeline",
+    "variables": {
+      "orderId": 13
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "orderTimeline": {
+          "ok": true,
+          "code": null,
+          "error": null,
+          "events": [
+            {
+              "id": 58,
+              "kind": "CREATED",
+              "fromStatus": null,
+              "toStatus": "Pending",
+              "actor": "Client",
+              "driverId": null,
+              "providerEventId": null,
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:42.840Z"
+            },
+            {
+              "id": 59,
+              "kind": "STATUS_CHANGED",
+              "fromStatus": "Pending",
+              "toStatus": "Cooking",
+              "actor": "Owner",
+              "driverId": null,
+              "providerEventId": null,
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:42.851Z"
+            },
+            {
+              "id": 60,
+              "kind": "STATUS_CHANGED",
+              "fromStatus": "Cooking",
+              "toStatus": "Cooked",
+              "actor": "Owner",
+              "driverId": null,
+              "providerEventId": null,
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:42.858Z"
+            },
+            {
+              "id": 61,
+              "kind": "DRIVER_ASSIGNED",
+              "fromStatus": null,
+              "toStatus": null,
+              "actor": "AssignedDriver",
+              "driverId": 3,
+              "providerEventId": null,
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:42.864Z"
+            },
+            {
+              "id": 62,
+              "kind": "STATUS_CHANGED",
+              "fromStatus": "Cooked",
+              "toStatus": "PickedUp",
+              "actor": "AssignedDriver",
+              "driverId": 3,
+              "providerEventId": null,
+              "failureReason": null,
+              "occurredAt": "2026-11-01T13:05:42.878Z"
+            },
+            {
+              "id": 63,
+              "kind": "STATUS_CHANGED",
+              "fromStatus": "PickedUp",
+              "toStatus": "DeliveryFailed",
+              "actor": "AssignedDriver",
+              "driverId": 3,
+              "providerEventId": null,
+              "failureReason": "DRIVER_FAULT",
+              "occurredAt": "2026-11-01T13:05:42.888Z"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

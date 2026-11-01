@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from .agent import DuplicateComplaint, RunStatus
 from .complaint import ComplaintInput
+from .proactive import is_proactive
 from .tracing import Tracing
 
 logger = logging.getLogger("fairsettle_agent.service")
@@ -37,6 +38,7 @@ class ServiceAgent(Protocol):
     async def start(self, complaint: ComplaintInput) -> RunStatus: ...
     async def status(self, complaint_id: str) -> RunStatus | None: ...
     async def poll(self) -> list[RunStatus]: ...
+    async def poll_failures(self) -> list[RunStatus]: ...
     async def running(self) -> list[str]: ...
 
 
@@ -55,6 +57,11 @@ async def poll_loop(agent: ServiceAgent, interval: float, *, sleep=asyncio.sleep
                 logger.info("complaint %s is %s", status.complaint_id, status.status)
         except Exception as error:
             logger.error("poll pass failed: %s", type(error).__name__)
+        try:
+            for status in await agent.poll_failures():
+                logger.info("proactive case %s is %s", status.complaint_id, status.status)
+        except Exception as error:
+            logger.error("proactive pass failed: %s", type(error).__name__)
         await sleep(interval)
 
 
@@ -82,6 +89,8 @@ def create_app(open_agent: Callable[[], AbstractAsyncContextManager[ServiceAgent
 
     @app.post("/v1/complaints", status_code=201)
     async def start(complaint: ComplaintInput):
+        if is_proactive(complaint.complaint_id):
+            return JSONResponse({"code": "RESERVED_COMPLAINT_ID"}, status_code=422)
         try:
             status = await app.state.agent.start(complaint)
         except DuplicateComplaint:

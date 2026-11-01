@@ -25,6 +25,7 @@ npx --yes @redocly/cli lint contracts/ledger-openapi.yaml
 ```
 
 - `dispatch-agent-operations.graphql`: the dispatch queries the agent sends with the read-only service token (F19).
+  It also lists `deliveryFailures`: order events that moved an order to `DeliveryFailed`, after a cursor, which the agent turns into proactive cases (F25).
 - `fixtures/agent/`: recorded agent fixtures. Never edit them by hand. Re-record from the repository root with:
 
   ```bash

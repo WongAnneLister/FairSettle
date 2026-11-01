@@ -4,7 +4,7 @@ import {recordOrderEvent} from 'src/orders/order-events';
 import {Injectable, Logger} from '@nestjs/common';
 import {DataSource, QueryFailedError} from 'typeorm';
 
-import {Order, OrderStatus} from 'src/orders/entities/order.entity';
+import {DeliveryFailureReason, Order, OrderStatus} from 'src/orders/entities/order.entity';
 import {evaluateTransition} from 'src/orders/order-state-machine';
 
 import {OutboxEvent} from './entities/outbox-event.entity';
@@ -37,6 +37,7 @@ export class WebhookIngestService {
     providerRef: string;
     orderId: number;
     status: string;
+    failureReason?: string;
   }): Promise<IngestResult> {
     try {
       return await this.dataSource.transaction(async manager => {
@@ -65,6 +66,17 @@ export class WebhookIngestService {
         const target = event.status as OrderStatus;
         if (!Object.values(OrderStatus).includes(target)) {
           return {applied: false, reason: `unknown status ${event.status}`};
+        }
+
+        const reason = event.failureReason ?? null;
+        if (
+          target === OrderStatus.DeliveryFailed &&
+          !Object.values(DeliveryFailureReason).includes(reason as DeliveryFailureReason)
+        ) {
+          return {applied: false, reason: 'failureReason required for DeliveryFailed'};
+        }
+        if (target !== OrderStatus.DeliveryFailed && reason !== null) {
+          return {applied: false, reason: 'failureReason is only for DeliveryFailed'};
         }
 
         // The provider's callbacks go through the same state machine as a
@@ -96,6 +108,7 @@ export class WebhookIngestService {
           actor: OrderEventActor.FulfillmentProvider,
           driverId: null,
           providerEventId: event.eventId,
+          failureReason: reason as DeliveryFailureReason | null,
         });
         return {applied: true, reason: `moved to ${target}`};
       });

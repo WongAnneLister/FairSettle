@@ -13,9 +13,18 @@ export enum OrderStatus {
   Cooked = 'Cooked',
   PickedUp = 'PickedUp',
   Delivered = 'Delivered',
+  DeliveryFailed = 'DeliveryFailed',
 }
 
 registerEnumType(OrderStatus, {name: 'OrderStatus'});
+
+/** Who answers for a failed delivery (F25): the driver, or the platform. */
+export enum DeliveryFailureReason {
+  DRIVER_FAULT = 'DRIVER_FAULT',
+  PLATFORM_FAULT = 'PLATFORM_FAULT',
+}
+
+registerEnumType(DeliveryFailureReason, {name: 'DeliveryFailureReason'});
 
 export enum OrderPaymentStatus {
   NotRequired = 'NotRequired',

@@ -32,6 +32,8 @@ from fairsettle_agent.clients.replay import FIXTURES_DIR, FixtureReplay, Recordi
 EXPECTED_NAMES = {
     "dispatch-order-delivered", "dispatch-timeline-delivered",
     "dispatch-order-pending", "dispatch-timeline-pending",
+    "dispatch-delivery-failures", "dispatch-order-delivery-failed",
+    "dispatch-timeline-delivery-failed",
     "dispatch-order-not-found", "dispatch-unauthorized",
     "ledger-payment-captured", "ledger-refundable-full",
     "ledger-refundable-partial", "ledger-payment-not-found", "ledger-unauthorized",

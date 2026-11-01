@@ -84,6 +84,9 @@ class HealthAgent:
     async def poll(self):
         return []
 
+    async def poll_failures(self):
+        return []
+
 
 def test_health_needs_no_agent():
     @asynccontextmanager
@@ -96,6 +99,8 @@ def test_health_needs_no_agent():
 
 def test_poll_loop_survives_failures_and_logs_no_text(caplog):
     class Fake:
+        async def poll_failures(self):
+            return []
         calls = 0
         async def poll(self):
             self.calls += 1
@@ -119,6 +124,8 @@ def test_poll_loop_survives_failures_and_logs_no_text(caplog):
 
 def test_lifespan_logs_running_rows_and_stops_polling(caplog):
     class Fake:
+        async def poll_failures(self):
+            return []
         calls = 0
         task = None
         closed = False
