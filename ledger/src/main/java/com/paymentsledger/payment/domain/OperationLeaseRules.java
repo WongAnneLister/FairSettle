@@ -53,13 +53,16 @@ public final class OperationLeaseRules {
         return !nextBatchAt.isAfter(now);
     }
 
-    /** A task finishes once acknowledged, canceled with certainty, its cancel resolved, or its capture succeeded. */
+    /**
+     * A task finishes once acknowledged, canceled with certainty, its cancel resolved, or its create or capture resolved
+     * a payment that succeeded with certainty (F06, F34).
+     */
     public static boolean paymentTaskDone(
             String operationStatus, String operationType, String paymentStatus, String paymentResolution) {
         return "ACKNOWLEDGED".equals(operationStatus)
                 || "CANCELED".equals(paymentStatus) && "KNOWN".equals(paymentResolution)
                 || "CANCEL_PAYMENT".equals(operationType) && "RESOLVED".equals(operationStatus)
-                || "CAPTURE_ORDER".equals(operationType)
+                || ("CAPTURE_ORDER".equals(operationType) || "CREATE_CHECKOUT".equals(operationType))
                         && "RESOLVED".equals(operationStatus)
                         && "SUCCEEDED".equals(paymentStatus)
                         && "KNOWN".equals(paymentResolution);

@@ -176,7 +176,13 @@ public final class PaymentEvidenceRules {
             providerStatus = sessionStatus(facts.session());
         ResolutionStatus resolution = conflict
                 ? ResolutionStatus.CONFLICT
-                : stale ? payment.resolution() : facts.complete() ? ResolutionStatus.KNOWN : ResolutionStatus.UNKNOWN;
+                : stale
+                        ? payment.resolution()
+                        : facts.complete()
+                                ? ResolutionStatus.KNOWN
+                                : keepsSettledResolution(payment, facts)
+                                        ? payment.resolution()
+                                        : ResolutionStatus.UNKNOWN;
         return new StateDecision(
                 status,
                 providerStatus,
@@ -272,6 +278,22 @@ public final class PaymentEvidenceRules {
                 && payment.capturedMinor() == 0
                 && payment.checkoutSessionId() != null
                 && payment.paymentIntentId() == null;
+    }
+
+    /** A read that brought no evidence at all: no session, intent, charge or settlement, and no conflict (F34). */
+    public static boolean noEvidence(PaymentFacts facts) {
+        return facts.session() == null
+                && facts.intent() == null
+                && facts.charges().isEmpty()
+                && facts.settlements().isEmpty()
+                && !facts.conflict();
+    }
+
+    /** ADR D13: a read without evidence cannot make a payment that is settled with certainty uncertain again. */
+    public static boolean keepsSettledResolution(PaymentSnapshot payment, PaymentFacts facts) {
+        return noEvidence(facts)
+                && payment.resolution() == ResolutionStatus.KNOWN
+                && (payment.status() == PaymentStatus.SUCCEEDED || payment.status() == PaymentStatus.CANCELED);
     }
 
     /**

@@ -35,6 +35,7 @@ PayPal's published OpenAPI files (`paypal/paypal-rest-api-specifications`, `chec
 - **D10 Webhooks are level-3 evidence** (payment.md §6). They may move state forward along allowed transitions, never backwards, and never change a terminal state. A webhook that contradicts a recorded fact makes the object CONFLICT; it does not pick a side.
 - **D11 Requests send `Prefer: return=representation`** on create, capture and refund, so responses carry full status and amounts. The refund sample 08 was a minimal response without the amount.
 - **D12 Refund correlation.** Every refund request sets `custom_id` to the ledger refund id (UUID). Refund recovery finds refunds through GET order `purchase_units[0].payments.refunds[]` by `custom_id`.
+- **D13 A settled payment stays settled (F34).** A provider read that brings no evidence at all (a timeout or no response) leaves a payment that is `SUCCEEDED` or `CANCELED` with `resolution_status=KNOWN` unchanged, instead of making it `UNKNOWN`. Partial or contradicting evidence still downgrades or conflicts, and a payment that is not settled still becomes `UNKNOWN` (the §5 timeout path). The `CREATE_CHECKOUT` recovery task finishes once its payment succeeded with certainty, like the capture task (F06). Before F34, every settled checkout was polled until a read failed and then escalated (`docs/known-issues.md` KI-6).
 
 Any order, capture or refund status not listed in §3, §4 or §7 is `CONTRACT_MISMATCH`: automatic processing stops and the evidence is kept. It is never mapped to the nearest known value.
 

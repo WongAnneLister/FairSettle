@@ -92,7 +92,14 @@ class OperationLeaseRulesTest {
                 .isFalse();
         assertThat(OperationLeaseRules.paymentTaskDone("RESOLVED", "CANCEL_PAYMENT", "SUCCEEDED", "KNOWN"))
                 .isTrue();
+        // F34 (KI-6): a resolved create of a payment that succeeded with certainty is done.
         assertThat(OperationLeaseRules.paymentTaskDone("RESOLVED", "CREATE_CHECKOUT", "SUCCEEDED", "KNOWN"))
+                .isTrue();
+        assertThat(OperationLeaseRules.paymentTaskDone("RESOLVED", "CREATE_CHECKOUT", "SUCCEEDED", "UNKNOWN"))
+                .isFalse();
+        assertThat(OperationLeaseRules.paymentTaskDone("RESOLVED", "CREATE_CHECKOUT", "PROCESSING", "KNOWN"))
+                .isFalse();
+        assertThat(OperationLeaseRules.paymentTaskDone("UNKNOWN", "CREATE_CHECKOUT", "SUCCEEDED", "KNOWN"))
                 .isFalse();
     }
 

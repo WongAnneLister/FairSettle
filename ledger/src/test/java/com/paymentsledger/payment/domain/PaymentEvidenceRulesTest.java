@@ -66,6 +66,10 @@ class PaymentEvidenceRulesTest {
         return new PaymentFacts(s, i, List.of(), complete, false, T0.plusSeconds(seconds));
     }
 
+    static PaymentFacts empty() {
+        return new PaymentFacts(null, null, List.of(), false, false, T0.plusSeconds(1));
+    }
+
     @Test
     void queriesAreStaleWhenOlderThanTheLastConfirmationOrForAnotherVersion() {
         var p = awaiting();
@@ -210,6 +214,63 @@ class PaymentEvidenceRulesTest {
         assertThat(stale.resolution()).isEqualTo(ResolutionStatus.KNOWN);
         assertThat(stale.session()).isNull();
         assertThat(stale.intent()).isNull();
+    }
+
+    @Test
+    void settledPaymentKeepsItsResolutionWhenAReadBringsNoEvidence() {
+        var succeeded = payment(PaymentStatus.SUCCEEDED, ResolutionStatus.KNOWN, FinancialStatus.POSTED);
+        var settled = decide(succeeded, empty(), 10000, 10000L);
+        assertThat(settled.resolution()).isEqualTo(ResolutionStatus.KNOWN);
+        assertThat(settled.status()).isEqualTo(PaymentStatus.SUCCEEDED);
+        assertThat(settled.financial()).isEqualTo(FinancialStatus.POSTED);
+
+        var canceled = decide(
+                payment(PaymentStatus.CANCELED, ResolutionStatus.KNOWN, FinancialStatus.NOT_APPLICABLE),
+                empty(),
+                0,
+                null);
+        assertThat(canceled.resolution()).isEqualTo(ResolutionStatus.KNOWN);
+        assertThat(canceled.status()).isEqualTo(PaymentStatus.CANCELED);
+        assertThat(decide(awaiting(), empty(), 0, null).resolution()).isEqualTo(ResolutionStatus.UNKNOWN);
+        assertThat(decide(
+                                payment(PaymentStatus.SUCCEEDED, ResolutionStatus.UNKNOWN, FinancialStatus.POSTED),
+                                empty(),
+                                10000,
+                                10000L)
+                        .resolution())
+                .isEqualTo(ResolutionStatus.UNKNOWN);
+        assertThat(decide(
+                                succeeded,
+                                facts(session("cs_1", CheckoutSessionStatus.COMPLETE, "paid"), null, false, 1),
+                                10000,
+                                10000L)
+                        .resolution())
+                .isEqualTo(ResolutionStatus.UNKNOWN);
+        assertThat(PaymentEvidenceRules.decide(
+                                succeeded,
+                                new PaymentFacts(null, null, List.of(), false, true, T0.plusSeconds(1)),
+                                true,
+                                false,
+                                true,
+                                10000,
+                                10000L)
+                        .resolution())
+                .isEqualTo(ResolutionStatus.CONFLICT);
+    }
+
+    @Test
+    void noEvidenceMeansNothingAtAll() {
+        assertThat(PaymentEvidenceRules.noEvidence(empty())).isTrue();
+        assertThat(PaymentEvidenceRules.noEvidence(
+                        facts(session("cs_1", CheckoutSessionStatus.OPEN, "unpaid"), null, false, 1)))
+                .isFalse();
+        assertThat(PaymentEvidenceRules.noEvidence(facts(null, intent("pi_1", "processing", 0L), false, 1)))
+                .isFalse();
+        assertThat(PaymentEvidenceRules.noEvidence(new PaymentFacts(
+                        null, null, List.of(charge("succeeded", true, 10000, 10000L)), false, false, T0)))
+                .isFalse();
+        assertThat(PaymentEvidenceRules.noEvidence(new PaymentFacts(null, null, List.of(), false, true, T0)))
+                .isFalse();
     }
 
     @Test

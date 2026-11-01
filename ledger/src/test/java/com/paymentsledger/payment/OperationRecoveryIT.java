@@ -514,4 +514,22 @@ class OperationRecoveryIT extends PaymentCoreFixture {
         assertThat(jdbc.queryForObject("SELECT status FROM platform.recovery_task", String.class))
                 .isEqualTo("ESCALATED");
     }
+
+    @Test
+    void succeededCheckoutFinishesItsCreateTask() {
+        var resource =
+                service.create(context, "settled-key", command("settled")).resource();
+        fake.controls().attemptPayment(scope, session(resource), FakeControls.AttemptOutcome.SUCCEED);
+        fake.clock().advance(Duration.ofMinutes(3));
+        recovery().recoverDue(10);
+        assertThat(repository.read(context, payment(resource)))
+                .containsEntry("paymentStatus", "SUCCEEDED")
+                .containsEntry("resolutionStatus", "KNOWN");
+        assertThat(jdbc.queryForObject(
+                        "SELECT status FROM platform.recovery_task WHERE operation_id=?",
+                        String.class,
+                        repository.createOperation(payment(resource))))
+                .isEqualTo("DONE");
+        assertThat(fake.counters(scope).sessionCreatedCount()).isEqualTo(1);
+    }
 }

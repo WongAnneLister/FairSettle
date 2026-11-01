@@ -274,7 +274,7 @@ Before F29 makes dispatch public.
 
 ## KI-6 · A settled payment's recovery never finishes and later escalates as UNKNOWN
 
-Status: **open**, a bug; fix before F29 (2026-10-31). Area: `ledger` (payment recovery).
+Status: **fixed** by F34 (2026-11-01), except one payment in the local live database (below). Area: `ledger` (payment recovery).
 
 ### What happens
 
@@ -368,3 +368,7 @@ Before F29 deploys the stack. Plan the fix as its own ledger feature.
 - `docs/adr/paypal-state-mapping.md`: D5 and §5 step 6 cover a payment that is uncertain during capture, not a settled one.
 - `docs/plans/F06.md`: decision 13 and test 31, which added the capture rule and pinned the create case to false.
 - The F33 entry in `docs/progress.md`.
+
+### Resolution
+
+F34 makes a `CREATE_CHECKOUT` task finish once its payment succeeded with certainty, and keeps a settled payment `KNOWN` when a read brings no evidence (ADR D13). Tasks that are still `WAITING` heal on their next successful recovery query. The F24 payment `7KR80011U08627743` in the local live database stays `ESCALATED`/`UNKNOWN`: recovery never revisits escalated operations, and clearing it needs a person or a separate ops tool, which F34 does not add.

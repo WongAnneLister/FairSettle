@@ -197,4 +197,78 @@ class PayPalCaptureIT extends PayPalCaptureFixture {
         assertThat(captureCalls()).hasSize(1);
         assertThat(count("balance_transaction")).isZero();
     }
+
+    private UUID settled() {
+        UUID payment = create();
+        approved(payment);
+        captureAndComplete(payment);
+        assertThat(service.get(context, payment)).containsEntry("resolutionStatus", "KNOWN");
+        return payment;
+    }
+
+    @Test
+    void createTaskFinishesAfterCaptureAndStopsQuerying() {
+        UUID payment = settled();
+        completed(payment);
+        fake.clock().advance(Duration.ofMinutes(3));
+        recovery().recoverDue(10);
+        assertThat(jdbc.queryForObject("""
+                SELECT t.status FROM platform.recovery_task t
+                JOIN platform.provider_operation o ON o.id=t.operation_id
+                WHERE o.operation_type='CREATE_CHECKOUT'
+                """, String.class)).isEqualTo("DONE");
+        int calls = transport.orderCalls().size();
+        fake.clock().advance(Duration.ofHours(1));
+        recovery().recoverDue(10);
+        assertThat(transport.orderCalls()).hasSize(calls);
+        assertThat(repository.read(context, payment))
+                .containsEntry("paymentStatus", "SUCCEEDED")
+                .containsEntry("resolutionStatus", "KNOWN")
+                .containsEntry("financialStatus", "POSTED");
+        assertThat(captureCalls()).hasSize(1);
+        assertThat(count("balance_transaction")).isEqualTo(1);
+        assertThat(count("journal")).isEqualTo(1);
+    }
+
+    @Test
+    void failedReadKeepsSettledPaymentKnown() {
+        UUID payment = settled();
+        transport.fail(new HttpTimeoutException("x"));
+        var result = service.get(context, payment);
+        assertThat(result)
+                .containsEntry("paymentStatus", "SUCCEEDED")
+                .containsEntry("resolutionStatus", "KNOWN")
+                .containsEntry("financialStatus", "POSTED");
+        assertThat(jdbc.queryForObject(
+                        "SELECT unresolved_since FROM platform.payment WHERE id=?", java.sql.Timestamp.class, payment))
+                .isNull();
+        assertThat(captureCalls()).hasSize(1);
+    }
+
+    @Test
+    void settledPaymentNeverAgesIntoEscalation() {
+        UUID payment = settled();
+        transport.fail(new HttpTimeoutException("x"));
+        fake.clock().advance(Duration.ofMinutes(3));
+        recovery().recoverDue(10);
+        fake.clock().advance(Duration.ofMinutes(65));
+        transport.fail(new HttpTimeoutException("x"));
+        recovery().scanL2(10);
+        recovery().recoverDue(10);
+        assertThat(repository.read(context, payment))
+                .containsEntry("paymentStatus", "SUCCEEDED")
+                .containsEntry("resolutionStatus", "KNOWN")
+                .containsEntry("financialStatus", "POSTED");
+        assertThat(jdbc.queryForObject(
+                        "SELECT unresolved_since FROM platform.payment WHERE id=?", java.sql.Timestamp.class, payment))
+                .isNull();
+        assertThat(jdbc.queryForObject(
+                        "SELECT count(*) FROM platform.provider_operation WHERE status='ESCALATED'", Long.class))
+                .isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM platform.recovery_task WHERE status<>'DONE'", Long.class))
+                .isZero();
+        assertThat(captureCalls()).hasSize(1);
+        assertThat(count("balance_transaction")).isEqualTo(1);
+        assertThat(count("journal")).isEqualTo(1);
+    }
 }

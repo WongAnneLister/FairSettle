@@ -193,8 +193,9 @@ class PaymentStateMachinePayPalTest {
                 .isFalse();
         assertThat(OperationLeaseRules.paymentTaskDone("RESOLVED", "CAPTURE_ORDER", "PROCESSING", "KNOWN"))
                 .isFalse();
+        // F34 (KI-6): a resolved create of a payment that succeeded with certainty is done.
         assertThat(OperationLeaseRules.paymentTaskDone("RESOLVED", "CREATE_CHECKOUT", "SUCCEEDED", "KNOWN"))
-                .isFalse();
+                .isTrue();
     }
 
     @Test
