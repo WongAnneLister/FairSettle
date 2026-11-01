@@ -766,8 +766,13 @@
       "depends_on": [
         "F06"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "acf81f75eb6d5fc2210ae28adb44affd4c8d0ac3",
+        "verified_at": "2026-11-01T21:36:43+09:00",
+        "log": "docs/evidence/F34.log",
+        "log_sha256": "92f667c86fca5c7acb1ee728a05ccd54d2cf2cc59883fe1569baa7184eac45d7"
+      },
       "started_at": "2026-11-01T16:22:43+09:00"
     }
   ]

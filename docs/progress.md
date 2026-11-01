@@ -995,3 +995,32 @@ Pitfalls found
 - A client page that waits for two queries (`getOrder` and `me`) must not consume a one-shot effect guard before both have loaded.
 - Dispatch order items are units, not lines: any client must repeat a dish to order it twice. Check the charged amount against the cart, not only the status.
 - Ledger, not investigated: after a PayPal payment succeeds, its `CREATE_CHECKOUT` recovery task stays `WAITING` and keeps querying PayPal although the operation is `RESOLVED` (order 2: 10 attempts, order 5: 5 within minutes), while the `CAPTURE_ORDER` task goes `DONE`. The F24 payment (`7KR80011U08627743`) shows where this ends: both tasks `ESCALATED` with `UNRESOLVED_AGE_LIMIT` and the payment's `resolution_status` back to `UNKNOWN`, although it is `SUCCEEDED`, captured and refunded. No money moved wrongly, but every successful PayPal payment becomes an escalation for a person. The ops console shows it as recovery `WAITING`.
+
+## 2026-11-01 · session 21 · F34
+
+### State on 2026-11-01
+
+- passing 25/34
+- active: F34 Settled payment recovery finishes
+- recently passing: F21 (15d1ff5), F22 (edceee7), F23 (865cd24), F24 (0fd2e78), F33 (70fcbe4)
+- ready next: F27 Evaluation suite, F28 Complaint UI, F25 Proactive trigger
+
+Done this session
+- commit 0a87ee9: KI-6 recorded. A read-only diagnosis (separate session, notes `paypal-recovery.md`) found two defects behind the recovery `WAITING` seen in the F33 live check: `OperationLeaseRules.paymentTaskDone` never finished a `CREATE_CHECKOUT` task whose payment succeeded with certainty, and `PaymentEvidenceRules.decide` turned a read with no evidence into `UNKNOWN` even for a settled payment, which the unresolved-age limit then escalated (the F24 payment `7KR80011U08627743`).
+- commit cc0c99f: F34 plan. Decided with the user: fix both defects; verify by command (unit tests plus `PayPalCaptureIT` and `OperationRecoveryIT`); the escalated F24 payment is out of scope. Amended once before the work commit after Codex stopped: units and ITs are run separately to see the expected failures (Surefire stops before Failsafe), and U3 is written last because `noEvidence` did not exist yet.
+- commit 9cf1208: F34 added to `docs/features.json` by the user (script run by hand); F29 now depends on F34.
+- commit acf81f7: work commit (Codex). Before the fix: units 33 passed and 3 failed (the two changed `CREATE_CHECKOUT` assertions and U2), ITs 30 passed and exactly I1–I4 failed, U3 did not compile. After: the verification command 37 unit and 34 IT tests, `spotless:check`, all 519 unit tests, and one full `./mvnw verify` (699 ITs, 3 skipped) passed.
+- Review (fresh session): no issues and no review fixes; reran the verification command, `spotless:check` and F06's verification command green.
+
+Not done / left half-way
+- Branch `codex/f34` is not merged into main yet.
+- The F24 payment `7KR80011U08627743` in the local live database stays `ESCALATED`/`UNKNOWN` (KI-6 Resolution); the F33 payments' `WAITING` create tasks heal on their next successful query once the stack runs F34's code.
+- The live stack and the ngrok tunnel may still be running from F33.
+
+Next
+- Merge `codex/f34` into main, then F28 (complaint UI) or F27 (evaluation suite).
+
+Pitfalls found
+- Surefire stops the build at the first failing unit test, so a single `verify` cannot show unit and IT failures together; run them separately (`-Dtest='NoSuchTest' -Dsurefire.failIfNoSpecifiedTests=false` for ITs only).
+- A test that calls a method the plan adds later does not compile before the implementation; write it last and count the compile error as its failure.
+- In a restricted sandbox, Mockito's JVM attach and local sockets fail; rerun outside the sandbox before suspecting the code.
