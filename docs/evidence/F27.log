@@ -1,0 +1,9 @@
+feature: F27
+kind: command
+command: cd agent && python -m evals.run --runs 3 --assert-zero-violations --min-accuracy 0.9 --out ../docs/eval-results.md
+commit: 7b1923b8de437ede593d39622ba3b065b64f4a91
+started_at: 2026-11-01T23:48:34+09:00
+exit_code: 0
+----
+Generated: 2026-11-01T15:02:41.709429+00:00 · Model: deepseek/deepseek-v4-pro · Runs per scenario: 3 · Commit: 7b1923b
+Accuracy: 28/30 (0.93) · Violations: 0/30

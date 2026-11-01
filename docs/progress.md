@@ -1100,3 +1100,38 @@ Pitfalls found
 - LiteLLM 1.106.5 `completion(..., tools=...)` raises `No module named 'mcp'` before any network call. The `mcp` package lives in LiteLLM's `mcp`/`proxy` extras. Add `mcp==2.3.0`, or the call silently fails.
 - A guard test scans the agent package for "paypal"; PRD names that mention PayPal must be renamed for the agent side.
 - Anything the model chooses (here a tool name) is untrusted and must not reach the trace or another prompt verbatim.
+
+## 2026-11-02 · session 24 · F27
+
+### State on 2026-11-02
+
+- passing 29/34
+- recently passing: F33 (70fcbe4), F34 (acf81f7), F25 (da9ab5d), F26 (9399b4c), F27 (7b1923b)
+- ready next: F28 Complaint UI, F30 README and architecture, F29 Deployed
+
+Done this session
+- commit 9555a5b: F27 plan. Decided with the user:
+  - Accuracy is strict: outcome, decision, reason, exact amount and the 10000-bp party. A model failure is never a correct escalation.
+  - A violation is a model decision that breaks one of the five hard rules (not `REPEAT_COMPLAINT`, a routing rule).
+  - Each run goes `gather → investigate → decide → policy` with fixtures.
+  - The PRD's default refund and liable party went into the decide prompt first.
+
+  The planner added lateness thresholds of 20 and 30 minutes to `PolicyConfig`, as prompt guidance only.
+- commit 7b1923b: work commit (Codex). `agent/evals/` (ten fixed scenarios, runner, Markdown report). `test_evals.py` failed at collection first; after: 12 passed, agent suite 173 → 185. Without a key the CLI exits 2 and writes nothing.
+- Review (fresh session): no issues, no review fixes.
+- `verify F27` with the real `deepseek/deepseek-v4-pro`:
+  - accuracy 28/30 (0.93), counted violations 0/30;
+  - report in `docs/eval-results.md`, generated 2026-11-01T15:02:41Z at 7b1923b.
+
+  Every scenario was 3/3 except s05 ("Already refunded"), which was 1/3: two runs escalated as `decide/decision_invalid`. s05 and s06 used the investigate turn (1.3 and 2.0 steps on average) and cost the most tokens (about 13k and 11k per run, against 4–7k elsewhere).
+
+Not done / left half-way
+- Branch `codex/f27` is not merged into main yet.
+- s05's `decision_invalid` was not investigated. The model's reply failed to parse twice, after investigating. A likely cause is a reply cut off at `max_tokens=1200` or an invalid shape once investigation results are in the prompt. Look at it before the demo; the evaluation can be rerun at no code cost.
+
+Next
+- Merge `codex/f27` into main, then F28 (complaint UI).
+
+Pitfalls found
+- `verify F27` calls the real model and takes about 15 minutes. Read the key from `.env.live` with `export DEEPSEEK_API_KEY="$(sed -n 's/^DEEPSEEK_API_KEY=//p' .env.live)"`, never typed on the command line; check it with `echo ${#DEEPSEEK_API_KEY}`.
+- The verify run rewrites `docs/eval-results.md`, so the record commit carries it too.
