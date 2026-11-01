@@ -658,7 +658,8 @@
         ]
       },
       "depends_on": [
-        "F24"
+        "F24",
+        "F34"
       ],
       "state": "not_started",
       "evidence": null
@@ -750,6 +751,23 @@
         "log_sha256": "46dba9e0e315f26632968f9ae2c1e5182ad581ec32e78f71bae0512d877142eb"
       },
       "started_at": "2026-10-31T00:43:15+09:00"
+    },
+    {
+      "id": "F34",
+      "title": "Settled payment recovery finishes",
+      "service": "ledger",
+      "milestone": "M3",
+      "priority": "P1",
+      "behavior": "After a payment is settled with certainty, its CREATE_CHECKOUT recovery task finishes, and a provider read that brings no evidence no longer downgrades it to UNKNOWN, so a settled payment is never polled forever or escalated by the unresolved-age limit (KI-6).",
+      "verification": {
+        "kind": "command",
+        "command": "cd ledger && ./mvnw -q -Dtest='OperationLeaseRulesTest,PaymentStateMachinePayPalTest,PaymentEvidenceRulesTest' -Dit.test='PayPalCaptureIT,OperationRecoveryIT' verify"
+      },
+      "depends_on": [
+        "F06"
+      ],
+      "state": "not_started",
+      "evidence": null
     }
   ]
 }
