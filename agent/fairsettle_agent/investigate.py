@@ -36,6 +36,7 @@ TOOLS: list[dict] = [
         "description": "List this customer's other cases from the last 30 days: when, which order, and how each ended.",
         "parameters": {"type": "object", "properties": {}, "additionalProperties": False}}},
 ]
+TOOL_NAMES = frozenset(tool["function"]["name"] for tool in TOOLS)
 
 INVESTIGATE_PROMPT: str = (
     "You prepare a food-delivery refund decision. The evidence and complaint follow. "
@@ -86,7 +87,7 @@ async def _run_tool(call, complaint: Complaint, complaint_id: str, received_at: 
                     evidence: Evidence, dispatch: DispatchReader, ledger: LedgerReader,
                     history: HistoryReader) -> dict:
     name = call.function.name
-    if name not in {"get_fulfillment_events", "get_ledger_payment", "get_customer_history"}:
+    if name not in TOOL_NAMES:
         return {"error": "UNKNOWN_TOOL"}
     arguments = call.function.arguments
     if not isinstance(arguments, str):
@@ -173,7 +174,8 @@ async def investigate(
                     call, complaint, complaint_id, received_at, evidence, dispatch, ledger, history,
                 )
                 steps += 1
-                findings.append(Finding(call.function.name, result))
+                # A name the model made up never leaves this turn: not in decide's prompt, not in the trace.
+                findings.append(Finding(call.function.name if call.function.name in TOOL_NAMES else "unknown", result))
             messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result, ensure_ascii=False)})
         if steps == MAX_STEPS:
             stopped = "step_limit"
