@@ -16,7 +16,7 @@ SUBMIT_TIMEOUT_S = 660.0
 LABELS = {
     "running": "Working on it", "submitting": "Sending the proposal", "submit_retry": "Sending the proposal",
     "awaiting_review": "Waiting for a reviewer", "approved": "Approved, refund in progress",
-    "rejected": "Rejected by the agent", "declined": "Declined by a reviewer", "escalated": "Passed to a person",
+    "declined": "Rejected by the agent", "rejected": "Declined by a reviewer", "escalated": "Passed to a person",
     "refunded": "Refunded", "refund_failed": "Refund failed, a person will follow up",
 }
 

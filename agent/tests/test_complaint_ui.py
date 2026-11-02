@@ -168,6 +168,9 @@ def test_render():
     assert "**Decision:** passed to a person" in render(body, None)
     body["decision"] = {"outcome": "reject"}
     assert "**Decision:** reject" in render(body, None)
+    # finish: an agent reject ends "declined"; a reviewer's REJECTED ends "rejected".
+    assert "**Status:** Rejected by the agent" in render({**body, "status": "declined"}, None)
+    assert "**Status:** Declined by a reviewer" in render({**body, "status": "rejected"}, None)
 
 
 def test_is_final():
