@@ -19,6 +19,8 @@ Whole stack: `docker compose up -d --wait` from the repository root (F13) starts
 
 The live chain (PayPal sandbox, notifications, the agent on 8000, Langfuse on 3000, the storefront on 3001 and the complaint page on 7860) runs from `docker-compose.live.yml` with secrets in `.env.live`; see `docs/m2-live-run.md` (F24, F33).
 
+The root `README.md` is the public entry point (F30). Keep its quick start, ports and evaluation line in step with the compose files and `docs/eval-results.md`; `scripts/tests/test_readme.py` checks it. Before publishing, `python3 scripts/secret_scan.py` must exit 0.
+
 Each service has its own `AGENTS.md` (imported by its `CLAUDE.md`). Before planning, implementing or reviewing work in a service, read that file.
 
 ## Hard rules

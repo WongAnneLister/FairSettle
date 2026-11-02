@@ -16,7 +16,7 @@ Use one agent process. Its lock is per process; never run a second replica again
 
 Copy `env.live.example` to `.env.live`. The destination is gitignored; never commit it, print its contents or put credentials in a progress entry. Keep all 16 keys and fill every empty value. Compose reads the file and the Run step sources it in a shell, so no value may contain spaces, quotes, `$`, `;`, `&`, `|`, backticks or backslashes; Compose would interpolate a `$` and the shell would run what follows a `;`. This matters most for `LANGFUSE_ADMIN_PASSWORD`.
 
-Copy `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` from the root `.env` manually. They must belong to the sandbox app, never a live app. Obtain `DEEPSEEK_API_KEY` from the operator.
+Copy `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` from your sandbox REST app in the PayPal developer dashboard. They must belong to the sandbox app, never a live app. Obtain `DEEPSEEK_API_KEY` from the operator.
 
 Generate each of `LOCAL_APP_SECRET`, `LOCAL_OPS_SECRET` and `LOCAL_AGENT_SECRET` separately with this command. Each must be 43 characters and different from the others:
 
