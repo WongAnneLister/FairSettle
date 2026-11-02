@@ -1165,3 +1165,41 @@ Next
 Pitfalls found
 - Reasoning models count hidden reasoning against `max_tokens`; a low cap fails as empty content with `finish_reason="length"`, not as an error. Size the cap from `usage.completion_tokens_details.reasoning_tokens` on a real call.
 - A model turn cut off by the cap must not be read as "no tool calls"; check `finish_reason` first.
+
+## 2026-11-02 · session 26 · F28
+
+### State on 2026-11-02
+
+- passing 30/35
+- active: F28 Complaint UI
+- recently passing: F34 (acf81f7), F25 (da9ab5d), F26 (9399b4c), F27 (7b1923b), F35 (590c17e)
+- ready next: F30 README and architecture, F29 Deployed
+
+Done this session
+- commit 0deb30b: F28 plan. Decided with the user:
+  - an English Gradio page in the agent package (`fairsettle_agent/ui.py`, `gradio==6.31.0`), run as the `complaint-ui` service from the agent image on 127.0.0.1:7860, talking to the agent over HTTP only;
+  - the page shows a decision summary (outcome, decision, amount, reason, basis points per party). For this, `GET /v1/complaints/{id}` gained `decision`, without the explanation, evidence refs, complaint text or escalation detail.
+  - `gradio` was probed first: 18 packages added, no existing version changed; `huggingface-hub` comes transitively and is unused.
+- commit 86ea22a: work commit (Codex). C1–C12 failed first. After: agent suite 192 → 204, scripts 46 → 47, the image builds.
+- Review (fresh session):
+  - dbfe8fb fixes the plan's swapped labels: an agent reject ends `declined`, a reviewer's reject ends `rejected`.
+  - 8a36df6 records it.
+  - After the first live check, 85c7a94 (user-approved) shows "Sending your complaint. This can take a few minutes." with the button disabled while the agent runs, and names the rule behind a policy escalation. UI tests 13, agent suite 205.
+- Live check (stack rebuilt from `codex/f28`; order setup by a scratchpad helper reusing `scripts/m2_live_run.py`):
+  - Order 1 complaint `ui-4405e04f87754a38`: a $12.00 missing-item proposal, restaurant 100%, later approved and refunded. A double click during the silent wait sent `ui-937e96ea7326479c`, which escalated as `repeat_complaint`. That double click led to 85c7a94.
+  - Order 8 complaint `ui-d09aa813c20d4504`: $3.00, restaurant 100%, approved, PayPal refund `6CW54061F40677438`. The page had been reloaded, so the live update was not seen.
+  - Order 8 again, `ui-61612411da5b4474`: escalated `decide: model unavailable`, because the DeepSeek balance had run out (HTTP 400 "Insufficient Balance"). The user topped up.
+  - Order 9, new customer, complaint `ui-43228aed247e4c60`: proposal `prop_01M6DFT7G55NBYCEEBXX3TPHTQ`, $3.00 missing item, restaurant 10000 bp. The page showed "Waiting for a reviewer", then updated by itself to Approved and Refunded after approval on the review page, without a reload error. The ledger refund is `SUCCEEDED`, 300 cents, PayPal refund `1670162843023340L`. No errors in the `complaint-ui` logs.
+
+Not done / left half-way
+- Branch `codex/f28` is not merged into main yet.
+- The page has no authentication (127.0.0.1 only); F29 must add it before going public.
+- The page loses its case on reload, and there is no lookup by case id.
+
+Next
+- Merge `codex/f28` into main, then F30 (README and architecture) and F29 (deployed).
+
+Pitfalls found
+- A synchronous submit that takes minutes needs a visible "sending" state and a disabled button, or people click twice and open a second case. The repeat-complaint rule then escalates it.
+- A model call that fails because the account balance ran out looks like `BadRequestError` ("model unavailable"). Check the balance with `GET https://api.deepseek.com/user/balance` before a demo or an evaluation. Two evaluation runs and the live checks used up the earlier balance.
+- Each live complaint needs a fresh, paid and delivered order from a customer under the 7-day limit. The scratchpad helper (accounts, restaurant, order, PayPal link, then cook and deliver) saves the manual role switching.

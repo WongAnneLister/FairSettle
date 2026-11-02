@@ -1,0 +1,8 @@
+feature: F28
+kind: manual
+commit: 85c7a946d626ec7d192a559e5381d2c62c5450f6
+confirmed_at: 2026-11-02T15:45:30+09:00
+----
+[x] Submit a complaint from the page and see the proposal appear in the ledger console
+[x] Status updates after approval without a page reload error
+note: order 9, case ui-43228aed247e4c60, proposal prop_01M6DFT7G55NBYCEEBXX3TPHTQ, PayPal refund 1670162843023340L; page updated to Approved then Refunded without reload

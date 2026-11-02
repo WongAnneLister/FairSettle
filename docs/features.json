@@ -658,8 +658,13 @@
         "F24",
         "F33"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "85c7a946d626ec7d192a559e5381d2c62c5450f6",
+        "verified_at": "2026-11-02T15:45:36+09:00",
+        "log": "docs/evidence/F28.log",
+        "log_sha256": "d749faa99cdae4b551635976523b32839ece44a1b77081b2a37b04696ece5ea6"
+      },
       "started_at": "2026-11-02T13:58:12+09:00"
     },
     {
