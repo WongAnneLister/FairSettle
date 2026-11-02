@@ -1135,3 +1135,33 @@ Next
 Pitfalls found
 - `verify F27` calls the real model and takes about 15 minutes. Read the key from `.env.live` with `export DEEPSEEK_API_KEY="$(sed -n 's/^DEEPSEEK_API_KEY=//p' .env.live)"`, never typed on the command line; check it with `echo ${#DEEPSEEK_API_KEY}`.
 - The verify run rewrites `docs/eval-results.md`, so the record commit carries it too.
+
+## 2026-11-02 · session 25 · F35
+
+### State on 2026-11-02
+
+- passing 30/35
+- recently passing: F34 (acf81f7), F25 (da9ab5d), F26 (9399b4c), F27 (7b1923b), F35 (590c17e)
+- ready next: F28 Complaint UI, F30 README and architecture, F29 Deployed
+
+Done this session
+- Probe of F27's s05 misses (read-only, scratchpad scripts, real model). `deepseek-v4-pro` writes hidden reasoning that counts against `max_tokens`:
+  - with the old cap of 1200, replies ended with `finish_reason="length"` and empty or half-written JSON;
+  - with a cap of 8000, s05 needed 1757–3094 completion tokens, of which 1644–2973 were reasoning, and took 25–44 s, above the 30 s timeout;
+  - `investigate` also treated a truncated reply as "done", silently.
+- commit 73f78fd: F35 plan. Decided with the user: defaults of 6000 tokens and 90 s; the M2 script waits 600 s for `POST /v1/complaints`. Planner: a truncated investigate turn stops as `truncated` and runs none of its tool calls.
+- commit 4e16166: F35 added to `docs/features.json` by the user (script run by hand).
+- commit 590c17e: work commit (Codex). Before: 6 failed, 1 passed (B7, because `Literal` is not enforced at runtime). After: 7 passed, agent suite 185 → 192, scripts 46.
+- Review (fresh session): no issues, no review fixes.
+- Evaluation rerun after `verify F35` (`deepseek/deepseek-v4-pro`, 3 runs): accuracy 29/30 (0.97), counted violations 0/30, `docs/eval-results.md` regenerated at 590c17e. No miss was a truncation. The one miss is s05 run 1, where the model chose `escalate` itself on the already-refunded case, a judgment call. s05 and s06 still use the investigate turn (2.0 and 3.0 steps on average).
+
+Not done / left half-way
+- Branch `codex/f35` is not merged into main yet.
+- The live agent image still predates F26 and F35; rebuild with `up --build` before the next live run or demo.
+
+Next
+- Merge `codex/f35` into main, then F28 (complaint UI).
+
+Pitfalls found
+- Reasoning models count hidden reasoning against `max_tokens`; a low cap fails as empty content with `finish_reason="length"`, not as an error. Size the cap from `usage.completion_tokens_details.reasoning_tokens` on a real call.
+- A model turn cut off by the cap must not be read as "no tool calls"; check `finish_reason` first.

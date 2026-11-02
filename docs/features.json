@@ -807,8 +807,13 @@
       "depends_on": [
         "F27"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "590c17e6d8f88d7e8b8034b8a63f93d3ea6543b8",
+        "verified_at": "2026-11-02T12:57:54+09:00",
+        "log": "docs/evidence/F35.log",
+        "log_sha256": "d1ea50e982847078dbedff926c44882c9e16eca8b477252cc858e8d4f2c57972"
+      },
       "started_at": "2026-11-02T00:22:03+09:00"
     }
   ]
