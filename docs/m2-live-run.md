@@ -8,7 +8,7 @@ This run is performed by a human after review, on `main` with F24's work merged.
 - ngrok installed, with a public host that stays the same throughout the run.
 - The F12 PayPal sandbox app and its PERSONAL buyer and BUSINESS merchant accounts.
 - A DeepSeek API key.
-- Ports 3000, 3001, 4000, 8000, 8080 and 8081 free. On this Mac, `redis-admin` holds 8081: stop it only with its owner's agreement.
+- Ports 3000, 3001, 4000, 7860, 8000, 8080 and 8081 free. On this Mac, `redis-admin` holds 8081: stop it only with its owner's agreement.
 
 Use one agent process. Its lock is per process; never run a second replica against this database. Keep tracing enabled for the whole deployment (KI-4).
 
@@ -101,6 +101,10 @@ The script waits up to 30 minutes for review, follows the refund, checks the lia
 ## Storefront
 
 Open http://localhost:3001 and use 一键免密体验 to sign in as a customer. Choose a restaurant with a menu (the script's `M2 Kitchen …` works), add dishes and submit at checkout. The order page sends you to PayPal; approve with the sandbox PERSONAL account. PayPal returns through the ngrok host: on the first visit ngrok shows its browser warning, choose Visit Site. The order page reads the payment and shows 已支付 once the ledger's notification arrives. If you closed the PayPal tab instead, open the order and choose 我已完成付款，刷新状态. Orders placed here are real sandbox payments and are not checked by the script.
+
+## Complaint page
+
+Open http://localhost:7860. Enter the number of a delivered, paid order (for example one from the storefront), choose what went wrong, describe it and send. Sending can take a few minutes while the agent investigates and decides. The page then shows the status, the proposed refund and who pays, and a trace link (sign in to Langfuse with `LANGFUSE_ADMIN_EMAIL`). Approve or decline the proposal on the review page; the complaint page updates by itself.
 
 ## Record
 

@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator, Callable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+import json
 from typing import Literal, cast
 
 import httpx
@@ -203,6 +204,22 @@ class Agent:
 
     async def state(self, complaint_id: str) -> StateSnapshot:
         return await self._graph.aget_state(self._config(complaint_id))
+
+    async def summary(self, complaint_id: str) -> dict | None:
+        values = (await self.state(complaint_id)).values
+        if "verdict" in values:
+            v = values["verdict"]
+            d = json.loads(v["decision_json"])
+            return {
+                "outcome": v["outcome"], "decision": d["decision"],
+                "amount_cents": d["amount_cents"], "reason_code": d["reason_code"],
+                "liability": [{"party": s["party"], "basis_points": s["basis_points"]} for s in d["liability"]],
+                "violations": [x["rule"] for x in v["violations"]],
+            }
+        if "escalation" in values:
+            e = values["escalation"]
+            return {"outcome": "escalate", "stage": e["stage"], "reason": e["reason"]}
+        return None
 
 
 @asynccontextmanager

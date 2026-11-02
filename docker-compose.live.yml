@@ -2,6 +2,7 @@
 # Start: docker compose --env-file .env.live -f docker-compose.yml -f docker-compose.live.yml up -d --build --wait
 # Every secret comes from .env.live through --env-file. See docs/m2-live-run.md.
 # Storefront: http://localhost:3001 (F33).
+# Complaint page: http://localhost:7860 (F28).
 x-langfuse-env: &langfuse-env
   NEXTAUTH_URL: http://localhost:3000
   NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?LANGFUSE_NEXTAUTH_SECRET is required in .env.live}
@@ -154,6 +155,26 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+  complaint-ui:
+    image: fairsettle-agent:local
+    command: ["/app/.venv/bin/python", "-m", "fairsettle_agent.ui"]
+    ports:
+      - "127.0.0.1:7860:7860"
+    environment:
+      AGENT_BASE_URL: http://agent:8000
+      TRACE_BASE_URL: http://localhost:3000/project/fairsettle-local/traces/
+      UI_HOST: 0.0.0.0
+      UI_PORT: "7860"
+      GRADIO_ANALYTICS_ENABLED: "False"
+    depends_on:
+      agent:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:7860/', timeout=3).status == 200 else 1)"]
       interval: 5s
       timeout: 5s
       retries: 20

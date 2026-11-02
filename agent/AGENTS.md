@@ -6,6 +6,7 @@ The agent proposes refund amounts and liability splits for delivery marketplaces
 
 - Setup: `uv sync --python 3.11`, then `source .venv/bin/activate`.
 - Tests: `python -m pytest -q`.
+- Complaint page: `python -m fairsettle_agent.ui` serves an English Gradio page on `UI_HOST`:`UI_PORT` (default 127.0.0.1:7860) that talks to `AGENT_BASE_URL` only; `TRACE_BASE_URL` adds trace links (F28).
 - Evaluation: `python -m evals.run --runs 3 --assert-zero-violations --min-accuracy 0.9 --out ../docs/eval-results.md` runs the ten PRD scenarios against the real model (needs `DEEPSEEK_API_KEY`; `FAIRSETTLE_MODEL` defaults to `deepseek/deepseek-v4-pro` here) from fixtures, through gather, investigate, decide and policy; no database or services (F27).
 - Run: `python -m fairsettle_agent` serves `POST /v1/complaints`, `GET /v1/complaints/{id}` and `GET /health` on port 8000 and polls every `FAIRSETTLE_POLL_SECONDS` (default 5) in the same process and, unless `FAIRSETTLE_PROACTIVE=off`, turns dispatch delivery failures into proactive cases (F25); `FAIRSETTLE_HTTP_HOST` defaults to `127.0.0.1` (F24). Image: `agent/Dockerfile`; the live stack runs it (`docs/m2-live-run.md`).
 - Tests that use Postgres (`tests/test_resume.py`) start `postgres:16` with Testcontainers and need Docker running; without Docker they fail, they never skip (F22). Ryuk is disabled in `tests/conftest.py` because it fails on Docker Desktop for Mac; after a hard kill, remove leftovers with `docker rm -f $(docker ps -aq --filter label=org.testcontainers.lang=python)`. Runtime: `FAIRSETTLE_DATABASE_URL`, `DISPATCH_BASE_URL`, `AGENT_SERVICE_TOKEN`, `LEDGER_BASE_URL`, `LEDGER_APP_TOKEN` from the environment (F22). The ledger token must be a credential of the application that created the payment (seeded in F24).
@@ -31,6 +32,7 @@ The agent proposes refund amounts and liability splits for delivery marketplaces
 - `fairsettle_agent/execution.py`: refund outcome after approval (F23).
 - `fairsettle_agent/proactive.py`: delivery failures become proactive cases, one per order, cursor in `agent_trigger_cursor` (F25).
 - `fairsettle_agent/service.py`: HTTP API and poll loop (F24).
+- `fairsettle_agent/ui.py`: the complaint page (F28).
 - `fairsettle_agent/__main__.py`: entry point (F24).
 - `fairsettle_agent/tracing.py`: Langfuse traces keyed by complaint id (F23).
 - `../contracts/dispatch-agent-operations.graphql` and `../contracts/ledger-openapi.yaml`: what the clients send.
@@ -55,3 +57,4 @@ The agent proposes refund amounts and liability splits for delivery marketplaces
 - Proactive case ids start with `delivery-failed-`; the API refuses them, and they neither count toward nor are limited by the 7-day complaint total (F25).
 - Investigation tools take no arguments and read only this complaint's order, payment and customer; Langfuse gets the step count and tool names, never their results (F26).
 - Reasoning models count hidden reasoning against `max_tokens`; the defaults are 6000 tokens and 90 s per call. An investigate turn cut off by the cap stops as `truncated` and runs no tool (F35).
+- `GET /v1/complaints/{id}`'s `decision` never carries the explanation, evidence refs, complaint text or an escalation's detail (F28).

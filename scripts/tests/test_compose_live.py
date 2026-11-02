@@ -58,14 +58,14 @@ class ComposeLiveTest(unittest.TestCase):
             "dispatch-postgres", "dispatch-redis", "dispatch", "kafka-init",
             "ledger-notification-target", "agent-postgres", "agent", "langfuse-postgres",
             "langfuse-redis", "langfuse-clickhouse", "langfuse-s3", "langfuse-s3-init",
-            "langfuse-worker", "langfuse-web", "storefront"})
+            "langfuse-worker", "langfuse-web", "storefront", "complaint-ui"})
         for name, service in self.services.items():
             with self.subTest(service=name):
                 self.assertNotIn("container_name", service)
 
     def test_published_ports(self):
         published = {"ledger-api": 8080, "ledger-worker": 8081, "dispatch": 4000,
-                     "agent": 8000, "langfuse-web": 3000, "storefront": 3001}
+                     "agent": 8000, "langfuse-web": 3000, "storefront": 3001, "complaint-ui": 7860}
         for name, service in self.services.items():
             with self.subTest(service=name):
                 if name in published:
@@ -73,7 +73,7 @@ class ComposeLiveTest(unittest.TestCase):
                     self.assertEqual(len(ports), 1)
                     self.assertEqual(ports[0]["target"], published[name])
                     self.assertEqual(str(ports[0]["published"]), str(published[name]))
-                    if name in {"agent", "langfuse-web", "storefront"}:
+                    if name in {"agent", "langfuse-web", "storefront", "complaint-ui"}:
                         self.assertEqual(ports[0]["host_ip"], "127.0.0.1")
                     else:
                         self.assertIn(ports[0].get("host_ip"), (None, "0.0.0.0", ""))
@@ -166,6 +166,19 @@ class ComposeLiveTest(unittest.TestCase):
         self.assertFalse(set(storefront.get("environment", {})) & set(KEYS))
         self.assertEqual(self.services["dispatch"]["environment"]["STOREFRONT_URL"],
                          "http://localhost:3001")
+
+    def test_complaint_ui_uses_the_agent_image(self):
+        ui = self.services["complaint-ui"]
+        self.assertEqual(ui["image"], "fairsettle-agent:local")
+        self.assertNotIn("build", ui)
+        self.assertEqual(ui["command"], ["/app/.venv/bin/python", "-m", "fairsettle_agent.ui"])
+        env = ui["environment"]
+        self.assertEqual(env["AGENT_BASE_URL"], "http://agent:8000")
+        self.assertEqual(env["TRACE_BASE_URL"], "http://localhost:3000/project/fairsettle-local/traces/")
+        self.assertEqual(env["GRADIO_ANALYTICS_ENABLED"], "False")
+        self.assertEqual(ui["depends_on"]["agent"]["condition"], "service_healthy")
+        for value in env.values():
+            self.assertFalse(any(key in str(value) for key in KEYS))
 
     def test_images_pinned(self):
         for name, service in self.services.items():
