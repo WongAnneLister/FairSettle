@@ -13,6 +13,7 @@ import httpx
 COMPLAINT_TYPES = ("late_delivery", "missing_item", "wrong_item", "quality", "other")
 FINAL = frozenset({"rejected", "declined", "escalated", "refunded", "refund_failed"})
 SUBMIT_TIMEOUT_S = 660.0
+SENDING = "Sending your complaint. This can take a few minutes."
 LABELS = {
     "running": "Working on it", "submitting": "Sending the proposal", "submit_retry": "Sending the proposal",
     "awaiting_review": "Waiting for a reviewer", "approved": "Approved, refund in progress",
@@ -125,6 +126,8 @@ def render(body: dict | None, trace_base_url: str | None) -> str:
             line = "**Decision:** passed to a person"
             if decision.get("stage"):
                 line += f" ({decision['stage']}: {decision['reason'].replace('_', ' ')})"
+            elif decision.get("violations"):
+                line += f" ({', '.join(rule.replace('_', ' ') for rule in decision['violations'])})"
             parts.append(line)
     if trace_base_url and body.get("trace_id"):
         parts.append(f"[Open the trace]({trace_base_url}{body['trace_id']})")
@@ -133,6 +136,14 @@ def render(body: dict | None, trace_base_url: str | None) -> str:
 
 def is_final(body: dict | None) -> bool:
     return body is not None and body.get("status") in FINAL
+
+
+def sending_state() -> tuple[str, gr.Button]:
+    return SENDING, gr.Button(interactive=False)
+
+
+def ready_state() -> gr.Button:
+    return gr.Button(interactive=True)
 
 
 def build_ui(config: UiConfig, client_factory: Callable[[], httpx.AsyncClient]) -> gr.Blocks:
@@ -162,7 +173,9 @@ def build_ui(config: UiConfig, client_factory: Callable[[], httpx.AsyncClient]) 
                 body = await read_status(http, complaint_id)
             return render(body, config.trace_base_url), gr.Timer(config.poll_seconds, active=not is_final(body))
 
-        send.click(send_complaint, inputs=[order, kind, text], outputs=[case, notice, status, timer])
+        send.click(sending_state, outputs=[notice, send]).then(
+            send_complaint, inputs=[order, kind, text], outputs=[case, notice, status, timer],
+        ).then(ready_state, outputs=[send])
         timer.tick(refresh, inputs=[case], outputs=[status, timer])
     return demo
 

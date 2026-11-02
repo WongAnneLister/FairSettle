@@ -9,8 +9,8 @@ from fastapi.testclient import TestClient
 
 from fairsettle_agent.complaint import ComplaintInput
 from fairsettle_agent.ui import (
-    FINAL, SUBMIT_TIMEOUT_S, UiConfig, build_ui, is_final, main,
-    new_complaint_id, read_status, render, submit,
+    FINAL, SENDING, SUBMIT_TIMEOUT_S, UiConfig, build_ui, is_final, main,
+    new_complaint_id, read_status, ready_state, render, sending_state, submit,
 )
 import gradio as gr
 
@@ -166,6 +166,15 @@ def test_render():
     assert "passed to a person (decide: decision invalid)" in render(body, None)
     body["decision"] = {"outcome": "escalate"}
     assert "**Decision:** passed to a person" in render(body, None)
+    assert "passed to a person (" not in render(body, None)
+    body["decision"] = {
+        "outcome": "escalate", "decision": "partial_refund", "amount_cents": 1200,
+        "reason_code": "missing_item", "liability": [{"party": "restaurant", "basis_points": 10000}],
+        "violations": ["repeat_complaint"],
+    }
+    assert "**Decision:** passed to a person (repeat complaint)" in render(body, None)
+    body["decision"]["violations"] = ["repeat_complaint", "amount_above_cap"]
+    assert "passed to a person (repeat complaint, amount above cap)" in render(body, None)
     body["decision"] = {"outcome": "reject"}
     assert "**Decision:** reject" in render(body, None)
     # finish: an agent reject ends "declined"; a reviewer's REJECTED ends "rejected".
@@ -187,6 +196,34 @@ def test_build_ui_without_serving():
         return httpx.AsyncClient(base_url="http://agent.invalid", transport=httpx.MockTransport(lambda request: httpx.Response(404)))
     assert isinstance(build_ui(UiConfig.from_env({}), factory), gr.Blocks)
     assert os.environ["GRADIO_ANALYTICS_ENABLED"] == "False"
+
+
+def test_send_shows_progress_and_blocks_a_second_click():
+    def factory():
+        return httpx.AsyncClient(base_url="http://agent.invalid", transport=httpx.MockTransport(lambda request: httpx.Response(404)))
+    demo = build_ui(UiConfig.from_env({}), factory)
+    send = next(block for block in demo.blocks.values()
+                if isinstance(block, gr.Button) and block.value == "Send complaint")
+    notice, button = sending_state()
+    assert notice == SENDING == "Sending your complaint. This can take a few minutes."
+    assert isinstance(button, gr.Button) and button.interactive is False
+    ready = ready_state()
+    assert isinstance(ready, gr.Button) and ready.interactive is True
+
+    first = next(fn for fn in demo.fns.values() if (send._id, "click") in fn.targets)
+    assert first.fn is sending_state
+    assert [block._id for block in first.outputs][1] == send._id
+    chain = [first]
+    while True:
+        following = [fn for fn in demo.fns.values() if fn.trigger_after == chain[-1]._id]
+        if not following:
+            break
+        assert len(following) == 1
+        chain.append(following[0])
+    assert [fn.fn.__name__ for fn in chain] == ["sending_state", "send_complaint", "ready_state"]
+    assert chain[-1].fn is ready_state
+    assert [block._id for block in chain[-1].outputs] == [send._id]
+    assert all(fn.trigger_only_on_success is False for fn in chain[1:])
 
 
 def test_main_launches_with_config():
