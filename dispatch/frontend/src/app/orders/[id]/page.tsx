@@ -379,7 +379,7 @@ function OrderDetail() {
         </div>
 
         <div className="pt-4 border-t border-slate-200/60 flex justify-between items-baseline">
-          <span className="text-xs font-semibold text-slate-500">Total paid</span>
+          <span className="text-xs font-semibold text-slate-500">Total</span>
           <span className="text-2xl font-black text-brand-600">
             {formatCents(order.totalCents)}
           </span>
