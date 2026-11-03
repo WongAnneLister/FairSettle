@@ -22,6 +22,7 @@ import { GET_ORDERS_QUERY } from '@/lib/graphql/queries';
 import { PENDING_ORDERS_SUBSCRIPTION } from '@/lib/graphql/subscriptions';
 import { EDIT_ORDER_MUTATION } from '@/lib/graphql/mutations';
 import { Order, OrderStatus } from '@/lib/types';
+import { ORDER_STATUS_LABELS } from '@/lib/order-actions';
 import { formatCents } from '@/lib/currency';
 import { OrderStatusBadge } from '@/components/order/order-status-badge';
 import { Button } from '@/components/ui/button';
@@ -73,7 +74,7 @@ export default function KitchenOrdersDispatchPage() {
       });
 
       if (res.data?.editOrder?.ok) {
-        success('Order updated', `Order #${orderId} moved to ${nextStatus}`);
+        success('Order updated', `Order #${orderId} moved to ${ORDER_STATUS_LABELS[nextStatus]}`);
         refetch();
       } else {
         error('Action failed', res.data?.editOrder?.error || 'This status change is not allowed');
