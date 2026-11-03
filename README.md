@@ -56,7 +56,7 @@ flowchart LR
 | complaint page | Python, Gradio | 7860 | Complaint intake and status |
 | Langfuse | Langfuse | 3000 | Agent traces |
 
-Each service has its own PostgreSQL; the ledger also uses Redis and Kafka, and dispatch uses Redis. See [PayPal state mapping](docs/adr/paypal-state-mapping.md) for how PayPal states map onto the ledger.
+The ledger, dispatch and agent each have their own PostgreSQL (the agent's runs in the full chain only); the ledger also uses Redis and Kafka, and dispatch uses Redis. See [PayPal state mapping](docs/adr/paypal-state-mapping.md) for how PayPal states map onto the ledger.
 
 ## Quick start
 
