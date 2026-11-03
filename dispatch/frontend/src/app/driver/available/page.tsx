@@ -46,7 +46,7 @@ export default function DriverAvailableOrdersPage() {
     if (cookedSub?.cookedOrders) {
       info(
         '⚡ New order ready to claim',
-        `Restaurant ${cookedSub.cookedOrders.restaurant?.name || 'Restaurant'} has an order ready to claim`
+        `${cookedSub.cookedOrders.restaurant?.name || 'A restaurant'} has an order ready to claim`
       );
       refetch();
     }
