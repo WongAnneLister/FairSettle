@@ -43,7 +43,7 @@ export function CartDrawer() {
                   Your cart
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium">
-                  {itemCount} items selected
+                  {itemCount} {itemCount === 1 ? 'item' : 'items'} selected
                 </p>
               </div>
             </div>

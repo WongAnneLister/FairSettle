@@ -163,7 +163,7 @@ export default function OrdersHistoryPage() {
                       {order.items
                         .map((i) => i.dish?.name || 'Dish')
                         .join(', ')}{' '}
-                      · {order.items.length} items
+                      · {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
                     </p>
                   )}
                 </div>

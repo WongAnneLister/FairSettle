@@ -135,7 +135,7 @@ export default function RestaurantDetailPage() {
                 </p>
               </div>
               <span className="text-xs font-semibold text-slate-600 glass-pill px-3 py-1 rounded-full">
-                {menuDishes.length} dishes
+                {menuDishes.length} {menuDishes.length === 1 ? 'dish' : 'dishes'}
               </span>
             </div>
 
