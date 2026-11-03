@@ -37,12 +37,12 @@ export default function ProfilePage() {
           <UserIcon className="w-8 h-8" />
         </div>
         <h2 className="text-xl font-black text-slate-900 mb-2">
-          请先登录您的账户
+          Sign in to your account
         </h2>
-        <p className="text-xs text-slate-500 mb-6">登录后即可管理个人资料与账户安全</p>
+        <p className="text-xs text-slate-500 mb-6">Manage your profile and account security after signing in</p>
         <Link href="/login">
           <Button variant="primary" size="md" className="shadow-lg shadow-brand-500/20">
-            前往登录
+            Sign in
           </Button>
         </Link>
       </div>
@@ -58,7 +58,7 @@ export default function ProfilePage() {
       if (password) input.password = password;
 
       if (Object.keys(input).length === 0) {
-        error('未做任何修改');
+        error('No changes to save');
         return;
       }
 
@@ -67,14 +67,14 @@ export default function ProfilePage() {
       });
 
       if (res.data?.editProfile?.ok) {
-        success('个人资料更新成功');
+        success('Profile updated');
         setPassword('');
         await refreshUser();
       } else {
-        error('更新失败', res.data?.editProfile?.error || '请稍后重试');
+        error('Update failed', res.data?.editProfile?.error || 'Please try again later');
       }
     } catch (err: any) {
-      error('保存失败', err.message);
+      error('Save failed', err.message);
     }
   };
 
@@ -82,10 +82,10 @@ export default function ProfilePage() {
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col gap-6 relative">
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-          账户与安全设置
+          Account and security
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          管理您的登录认证信息、系统角色身份与安全通行密码
+          Manage your email, role and password
         </p>
       </div>
 
@@ -111,13 +111,13 @@ export default function ProfilePage() {
                 size="sm"
               >
                 {user.role === UserRole.Owner
-                  ? '餐厅店长'
+                  ? 'Restaurant owner'
                   : user.role === UserRole.Delivery
-                  ? '骑手配送员'
-                  : '美食顾客'}
+                  ? 'Driver'
+                  : 'Customer'}
               </Badge>
             </div>
-            <p className="text-xs text-slate-400 mt-1 font-mono">用户 ID: #{user.id}</p>
+            <p className="text-xs text-slate-400 mt-1 font-mono">User ID: #{user.id}</p>
           </div>
         </div>
 
@@ -125,12 +125,12 @@ export default function ProfilePage() {
           {user.emailVerified ? (
             <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 font-bold bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl backdrop-blur-md">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>已验证邮箱</span>
+              <span>Email verified</span>
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 font-bold bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-xl backdrop-blur-md">
               <AlertCircle className="w-4 h-4 text-amber-600" />
-              <span>待验证</span>
+              <span>Not verified</span>
             </span>
           )}
         </div>
@@ -144,25 +144,25 @@ export default function ProfilePage() {
         <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
           <KeyRound className="w-4 h-4 text-brand-500" />
           <h3 className="font-black text-slate-900 text-base">
-            修改登录与密码凭据
+            Update email and password
           </h3>
         </div>
 
         <Input
-          label="登录邮箱"
+          label="Email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="输入新邮箱"
+          placeholder="New email address"
           icon={<Mail className="w-4 h-4 text-slate-400" />}
         />
 
         <Input
-          label="重置安全密码 (留空则不修改)"
+          label="New password (leave blank to keep current password)"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="输入新密码"
+          placeholder="New password"
           icon={<Lock className="w-4 h-4 text-slate-400" />}
         />
 
@@ -175,7 +175,7 @@ export default function ProfilePage() {
             className="gap-2 shadow-lg shadow-brand-500/20 font-bold"
           >
             <Save className="w-4 h-4" />
-            <span>保存资料修改</span>
+            <span>Save changes</span>
           </Button>
         </div>
       </form>

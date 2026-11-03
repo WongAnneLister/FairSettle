@@ -48,10 +48,10 @@ export default function RegisterPage() {
             <UtensilsCrossed className="w-6 h-6 drop-shadow" />
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            创建您的账户
+            Create your account
           </h1>
           <p className="text-xs text-slate-400">
-            加入 CravingFast 高速派单调度平台
+            Join CravingFast
           </p>
         </div>
 
@@ -60,7 +60,7 @@ export default function RegisterPage() {
           {/* Role selector */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-slate-700">
-              请选择您的身份角色
+              Choose your role
             </label>
             <div className="grid grid-cols-3 gap-2">
               <button
@@ -73,7 +73,7 @@ export default function RegisterPage() {
                 }`}
               >
                 <User className="w-4 h-4 mb-1" />
-                <span>美食顾客</span>
+                <span>Customer</span>
               </button>
 
               <button
@@ -86,7 +86,7 @@ export default function RegisterPage() {
                 }`}
               >
                 <ChefHat className="w-4 h-4 mb-1" />
-                <span>餐厅店长</span>
+                <span>Restaurant owner</span>
               </button>
 
               <button
@@ -99,13 +99,13 @@ export default function RegisterPage() {
                 }`}
               >
                 <Bike className="w-4 h-4 mb-1" />
-                <span>配送骑手</span>
+                <span>Driver</span>
               </button>
             </div>
           </div>
 
           <Input
-            label="注册邮箱"
+            label="Email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -115,12 +115,12 @@ export default function RegisterPage() {
           />
 
           <Input
-            label="设置密码"
+            label="Password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            placeholder="至少 6 位字符"
+            placeholder="At least 6 characters"
             icon={<Lock className="w-4 h-4" />}
           />
 
@@ -131,18 +131,18 @@ export default function RegisterPage() {
             loading={loading}
             className="w-full mt-2 text-xs font-bold gap-2"
           >
-            <span>注册并自动登录</span>
+            <span>Sign up and sign in</span>
             <ArrowRight className="w-4 h-4" />
           </Button>
         </form>
 
         <div className="text-center text-xs text-slate-500">
-          已有账户？{' '}
+          Already have an account?{' '}
           <Link
             href="/login"
             className="font-bold text-brand-600 hover:text-brand-700 underline underline-offset-4"
           >
-            直接登录
+            Sign in
           </Link>
         </div>
       </div>

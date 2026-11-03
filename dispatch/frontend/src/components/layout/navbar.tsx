@@ -52,7 +52,7 @@ export function Navbar() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
             }`}
           >
-            探索餐厅
+            Explore restaurants
           </Link>
           <Link
             href="/orders"
@@ -62,7 +62,7 @@ export function Navbar() {
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/40'
             }`}
           >
-            我的订单
+            My orders
           </Link>
 
           {/* Role specific portals */}
@@ -76,7 +76,7 @@ export function Navbar() {
               }`}
             >
               <ChefHat className="w-3.5 h-3.5" />
-              <span>店长后厨</span>
+              <span>Kitchen</span>
             </Link>
           )}
 
@@ -90,7 +90,7 @@ export function Navbar() {
               }`}
             >
               <Bike className="w-3.5 h-3.5" />
-              <span>骑手大厅</span>
+              <span>Driver dashboard</span>
             </Link>
           )}
         </nav>
@@ -101,10 +101,10 @@ export function Navbar() {
           <button
             onClick={() => setIsOpen(true)}
             className="relative flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-br from-brand-50/80 to-amber-50/60 hover:from-brand-100/90 hover:to-amber-100/80 text-brand-700 border border-brand-200/50 shadow-sm shadow-brand-500/10 backdrop-blur-md transition-all active:scale-95 group"
-            aria-label="购物车"
+            aria-label="Cart"
           >
             <ShoppingBag className="w-4 h-4 text-brand-500 group-hover:scale-110 transition-transform" />
-            <span className="hidden sm:inline text-xs font-bold">购物车</span>
+            <span className="hidden sm:inline text-xs font-bold">Cart</span>
             {itemCount > 0 ? (
               <span className="w-5 h-5 rounded-full bg-gradient-to-r from-brand-500 to-amber-500 text-white text-[11px] font-black flex items-center justify-center shadow-sm">
                 {itemCount}
@@ -125,10 +125,10 @@ export function Navbar() {
                   </span>
                   <span className="text-[10px] text-slate-400 font-medium">
                     {user.role === UserRole.Owner
-                      ? '店长'
+                      ? 'Restaurant owner'
                       : user.role === UserRole.Delivery
-                      ? '骑手'
-                      : '顾客'}
+                      ? 'Driver'
+                      : 'Customer'}
                   </span>
                 </div>
                 <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-slate-200 via-slate-100 to-white flex items-center justify-center text-slate-700 font-bold text-xs border border-white/80 shadow-xs">
@@ -145,7 +145,7 @@ export function Navbar() {
                   />
                   <div className="absolute right-0 mt-3 w-60 glass-panel rounded-3xl p-2 z-20 shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-white/90">
                     <div className="px-4 py-2.5 border-b border-slate-100/80">
-                      <p className="text-[11px] text-slate-400 font-medium">当前登录身份</p>
+                      <p className="text-[11px] text-slate-400 font-medium">Signed in as</p>
                       <p className="text-xs font-bold text-slate-900 truncate mt-0.5">
                         {user.email}
                       </p>
@@ -159,7 +159,7 @@ export function Navbar() {
                           className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition-colors"
                         >
                           <ChefHat className="w-4 h-4 text-amber-500" />
-                          <span>店长管理后台</span>
+                          <span>Owner dashboard</span>
                         </Link>
                       )}
 
@@ -170,7 +170,7 @@ export function Navbar() {
                           className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
                         >
                           <Bike className="w-4 h-4 text-emerald-500" />
-                          <span>骑手配送工作台</span>
+                          <span>Driver dashboard</span>
                         </Link>
                       )}
 
@@ -180,7 +180,7 @@ export function Navbar() {
                         className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-brand-50 hover:text-brand-600 transition-colors"
                       >
                         <ShoppingBag className="w-4 h-4 text-brand-500" />
-                        <span>我的历史订单</span>
+                        <span>Order history</span>
                       </Link>
 
                       <Link
@@ -189,7 +189,7 @@ export function Navbar() {
                         className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100/70 transition-colors"
                       >
                         <UserIcon className="w-4 h-4 text-slate-400" />
-                        <span>账户设置</span>
+                        <span>Account settings</span>
                       </Link>
                     </div>
 
@@ -203,7 +203,7 @@ export function Navbar() {
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
                     >
                       <LogOut className="w-3.5 h-3.5" />
-                      <span>退出登录</span>
+                      <span>Sign out</span>
                     </button>
                   </div>
                 </>
@@ -215,13 +215,13 @@ export function Navbar() {
                 href="/login"
                 className="text-xs font-bold text-slate-700 hover:text-brand-600 px-3 py-2 rounded-xl transition-colors"
               >
-                登录
+                Sign in
               </Link>
               <Link
                 href="/register"
                 className="text-xs font-bold text-white bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 px-4 py-2 rounded-2xl shadow-md shadow-brand-500/20 transition-all active:scale-95"
               >
-                注册
+                Sign up
               </Link>
             </div>
           )}

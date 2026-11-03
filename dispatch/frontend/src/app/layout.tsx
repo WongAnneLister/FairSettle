@@ -5,8 +5,8 @@ import { Navbar } from '@/components/layout/navbar';
 import { Footer } from '@/components/layout/footer';
 
 export const metadata: Metadata = {
-  title: 'CravingFast | 即时美食外卖与智能派单系统',
-  description: '下一代高并发外卖点餐、后厨调度与骑手原子抢单平台',
+  title: 'CravingFast | Food delivery and dispatch',
+  description: 'Order food, run the kitchen and dispatch drivers on one platform.',
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN">
+    <html lang="en">
       <body className="flex flex-col min-h-screen bg-[#FAFAF9] text-slate-900 relative">
         {/* Subtle Ambient Background Light Orbs for Frosted Glass Refraction */}
         <div className="ambient-glow-warm w-[650px] h-[550px] -top-32 -left-32 animate-orb-slow" />

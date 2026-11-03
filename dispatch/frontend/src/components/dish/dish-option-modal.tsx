@@ -113,7 +113,7 @@ export function DishOptionModal({
                   <h4 className="text-xs font-bold text-slate-900 dark:text-slate-200 uppercase tracking-wider">
                     {option.name}
                   </h4>
-                  <span className="text-[11px] text-slate-400">请选择一项</span>
+                  <span className="text-[11px] text-slate-400">Choose one</span>
                 </div>
 
                 <div className="grid grid-cols-1 gap-1.5">
@@ -160,7 +160,7 @@ export function DishOptionModal({
                       );
                     })
                   ) : (
-                    <div className="text-xs text-slate-400">暂无子规格可选</div>
+                    <div className="text-xs text-slate-400">No options available</div>
                   )}
                 </div>
               </div>
@@ -194,7 +194,7 @@ export function DishOptionModal({
             className="flex-1 justify-between"
             onClick={handleAddToCart}
           >
-            <span>加入购物车</span>
+            <span>Add to cart</span>
             <span>{formatCents(totalUnitCents * quantity)}</span>
           </Button>
         </div>

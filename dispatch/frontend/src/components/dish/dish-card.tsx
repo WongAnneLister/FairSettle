@@ -60,12 +60,12 @@ export function DishCard({
             {hasOptions ? (
               <>
                 <SlidersHorizontal className="w-3.5 h-3.5 text-brand-500" />
-                <span>选规格</span>
+                <span>Choose options</span>
               </>
             ) : (
               <>
                 <Plus className="w-3.5 h-3.5" />
-                <span>加购</span>
+                <span>Add</span>
               </>
             )}
           </button>

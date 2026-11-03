@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { GET_ORDERS_QUERY } from '@/lib/graphql/queries';
 import { OrderStatus, Order } from '@/lib/types';
+import { isFinished } from '@/lib/order-actions';
 import { formatCents } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 
@@ -37,10 +38,10 @@ export default function DriverDashboardPage() {
   const myOrders: Order[] = myRidesData?.getOrders?.orders || [];
 
   const activeDeliveries = myOrders.filter(
-    (o) => o.status === OrderStatus.PickedUp || o.status === OrderStatus.Cooked
+    (o) => !isFinished(o.status)
   );
   const completedDeliveries = myOrders.filter(
-    (o) => o.status === OrderStatus.Delivered
+    (o) => isFinished(o.status)
   );
 
   return (
@@ -52,13 +53,13 @@ export default function DriverDashboardPage() {
           <div className="flex flex-col gap-2.5">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-xl border border-white/25 text-xs font-semibold w-fit tracking-wide shadow-sm">
               <Bike className="w-4 h-4 text-emerald-200" />
-              <span>骑手极速配送中枢</span>
+              <span>Driver dashboard</span>
             </div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white drop-shadow-sm">
-              高并发原子抢单与极速配送
+              Claim an order and get moving
             </h1>
             <p className="text-xs sm:text-sm text-white/90 max-w-xl leading-relaxed">
-              后厨制作完毕（Cooked）的订单实时就绪广播。单行 SQL 条件写锁保护，杜绝重复接单冲突。
+              See orders ready for pickup and claim one to deliver.
             </p>
           </div>
 
@@ -70,7 +71,7 @@ export default function DriverDashboardPage() {
                 className="bg-white/95 text-slate-900 hover:bg-white font-bold gap-2 shadow-xl shadow-black/10 backdrop-blur-md border border-white"
               >
                 <Zap className="w-4 h-4 text-emerald-600 fill-emerald-600" />
-                <span>进入待抢单大厅 ({availableOrders.length})</span>
+                <span>Find an order ({availableOrders.length})</span>
               </Button>
             </Link>
           </div>
@@ -81,14 +82,14 @@ export default function DriverDashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="glass-card rounded-[28px] p-6 flex items-center justify-between group hover:shadow-glass-hover transition-all duration-300">
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">待抢单池 (Cooked)</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ready for pickup</p>
             <h3 className="text-3xl sm:text-4xl font-black text-slate-900 mt-1.5 tracking-tight">
               {availableOrders.length}
-              <span className="text-sm font-bold text-slate-500 ml-1">单</span>
+              <span className="text-sm font-bold text-slate-500 ml-1">orders</span>
             </h3>
             <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1 mt-1">
               <Radio className="w-3 h-3 animate-pulse" />
-              <span>实时可抢</span>
+              <span>Available now</span>
             </p>
           </div>
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500/10 to-amber-500/20 text-amber-600 flex items-center justify-center font-bold border border-amber-500/20 shadow-inner group-hover:scale-110 transition-transform">
@@ -98,12 +99,12 @@ export default function DriverDashboardPage() {
 
         <div className="glass-card rounded-[28px] p-6 flex items-center justify-between group hover:shadow-glass-hover transition-all duration-300">
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">我的配送中订单</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">My active deliveries</p>
             <h3 className="text-3xl sm:text-4xl font-black text-emerald-600 mt-1.5 tracking-tight">
               {activeDeliveries.length}
-              <span className="text-sm font-bold text-emerald-700/60 ml-1">单</span>
+              <span className="text-sm font-bold text-emerald-700/60 ml-1">orders</span>
             </h3>
-            <p className="text-[11px] text-slate-500 mt-1 font-medium">取餐及配送中</p>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium">Pickup and delivery</p>
           </div>
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500/10 to-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold border border-emerald-500/20 shadow-inner group-hover:scale-110 transition-transform">
             <Bike className="w-7 h-7" />
@@ -112,14 +113,14 @@ export default function DriverDashboardPage() {
 
         <div className="glass-card rounded-[28px] p-6 flex items-center justify-between group hover:shadow-glass-hover transition-all duration-300">
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">今日已送达单量</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed deliveries</p>
             <h3 className="text-3xl sm:text-4xl font-black text-slate-900 mt-1.5 tracking-tight">
               {completedDeliveries.length}
-              <span className="text-sm font-bold text-slate-500 ml-1">单</span>
+              <span className="text-sm font-bold text-slate-500 ml-1">orders</span>
             </h3>
             <p className="text-[11px] text-teal-600 font-medium flex items-center gap-1 mt-1">
               <CheckCircle className="w-3.5 h-3.5" />
-              <span>完美履约</span>
+              <span>Delivery history</span>
             </p>
           </div>
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-500/10 to-teal-500/20 text-teal-600 flex items-center justify-center font-bold border border-teal-500/20 shadow-inner group-hover:scale-110 transition-transform">
@@ -140,15 +141,15 @@ export default function DriverDashboardPage() {
             </div>
             <div>
               <h3 className="font-black text-slate-900 text-lg group-hover:text-emerald-600 transition-colors">
-                实时待抢单大厅
+                Available orders
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                实时广播后厨已出餐（Cooked）的订单。抢单接口配备单行 SQL 条件写锁保护，提供确定性并发控制。
+                Find ready orders. Each order can be claimed by one driver.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 group-hover:translate-x-1.5 transition-transform pt-2 border-t border-slate-100">
-            <span>前往抢单大厅</span>
+            <span>Find an order</span>
             <ArrowRight className="w-4 h-4" />
           </div>
         </Link>
@@ -163,15 +164,15 @@ export default function DriverDashboardPage() {
             </div>
             <div>
               <h3 className="font-black text-slate-900 text-lg group-hover:text-teal-600 transition-colors">
-                当前配送任务看板
+                Current deliveries
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                查看已接单任务，前往餐厅取餐后一键更新为已取餐（PickedUp），送到顾客手中后点击确认送达（Delivered）。
+                View your orders and confirm pickup, delivery or a failed delivery.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-bold text-teal-600 group-hover:translate-x-1.5 transition-transform pt-2 border-t border-slate-100">
-            <span>查看当前配送任务</span>
+            <span>View current deliveries</span>
             <ArrowRight className="w-4 h-4" />
           </div>
         </Link>

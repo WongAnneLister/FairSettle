@@ -45,8 +45,8 @@ export default function KitchenOrdersDispatchPage() {
   useEffect(() => {
     if (pendingData?.pendingOrders) {
       info(
-        '🔔 收到新的待制作订单！',
-        `订单 #${pendingData.pendingOrders.id}，共 ${formatCents(
+        '🔔 New order received',
+        `Order #${pendingData.pendingOrders.id}, total ${formatCents(
           pendingData.pendingOrders.totalCents
         )}`
       );
@@ -73,13 +73,13 @@ export default function KitchenOrdersDispatchPage() {
       });
 
       if (res.data?.editOrder?.ok) {
-        success('出餐状态流转成功', `订单 #${orderId} 已转为 ${nextStatus}`);
+        success('Order updated', `Order #${orderId} moved to ${nextStatus}`);
         refetch();
       } else {
-        error('操作失败', res.data?.editOrder?.error || '状态机拒绝该流转');
+        error('Action failed', res.data?.editOrder?.error || 'This status change is not allowed');
       }
     } catch (err: any) {
-      error('提交失败', err.message);
+      error('Submission failed', err.message);
     }
   };
 
@@ -97,15 +97,15 @@ export default function KitchenOrdersDispatchPage() {
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                后厨实时出单大屏
+                Kitchen orders
               </h1>
               <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 backdrop-blur-md">
                 <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-600" />
-                <span>实时派单流</span>
+                <span>Live orders</span>
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              监听顾客新下单，控制烹饪制作并呼叫周边骑手抢单
+              Track new orders, manage cooking and request a driver
             </p>
           </div>
         </div>
@@ -117,13 +117,13 @@ export default function KitchenOrdersDispatchPage() {
           className="gap-2 glass-panel hover:bg-white/90 shadow-sm text-slate-700 border-white/80 font-semibold"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>刷新出单</span>
+          <span>Refresh orders</span>
         </Button>
       </div>
 
       {/* Kanban dispatch columns with Glassmorphism */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Column 1: Pending (待接单制作) */}
+        {/* Column 1: Pending (Waiting to start cooking) */}
         <div className="glass-panel rounded-[28px] p-5 flex flex-col gap-4 border border-amber-200/50 bg-gradient-to-b from-amber-500/[0.04] to-transparent">
           <div className="flex items-center justify-between pb-3 border-b border-amber-200/40">
             <div className="flex items-center gap-2.5">
@@ -132,9 +132,9 @@ export default function KitchenOrdersDispatchPage() {
               </div>
               <div>
                 <h3 className="font-black text-slate-900 text-sm">
-                  待制作新单
+                  New orders
                 </h3>
-                <p className="text-[10px] text-slate-400">顾客已支付，等待开火</p>
+                <p className="text-[10px] text-slate-400">Paid and waiting for the kitchen</p>
               </div>
             </div>
             <span className="min-w-[24px] h-6 px-2 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-800 text-xs font-black flex items-center justify-center">
@@ -146,7 +146,7 @@ export default function KitchenOrdersDispatchPage() {
             {pendingOrders.length === 0 ? (
               <div className="py-14 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
                 <UtensilsCrossed className="w-8 h-8 stroke-1 text-slate-300" />
-                <span className="text-xs">暂无待制作新订单</span>
+                <span className="text-xs">No new orders</span>
               </div>
             ) : (
               pendingOrders.map((order) => (
@@ -161,11 +161,11 @@ export default function KitchenOrdersDispatchPage() {
                           #{order.id}
                         </span>
                         <span className="text-[10px] bg-amber-500/10 text-amber-700 font-bold px-1.5 py-0.5 rounded">
-                          新单
+                          New
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        {new Date(order.createdAt || Date.now()).toLocaleTimeString()}
+                        {new Date(order.createdAt || Date.now()).toLocaleTimeString('en-US')}
                       </p>
                     </div>
                     <span className="text-sm font-black text-slate-900">
@@ -204,7 +204,7 @@ export default function KitchenOrdersDispatchPage() {
                     className="w-full gap-2 shadow-md shadow-brand-500/20"
                   >
                     <Flame className="w-4 h-4" />
-                    <span>确认接单·开始烹饪</span>
+                    <span>Accept and start cooking</span>
                   </Button>
                 </div>
               ))
@@ -212,7 +212,7 @@ export default function KitchenOrdersDispatchPage() {
           </div>
         </div>
 
-        {/* Column 2: Cooking (烹饪制作中) */}
+        {/* Column 2: Cooking (Preparing in the kitchen) */}
         <div className="glass-panel rounded-[28px] p-5 flex flex-col gap-4 border border-brand-200/50 bg-gradient-to-b from-brand-500/[0.04] to-transparent">
           <div className="flex items-center justify-between pb-3 border-b border-brand-200/40">
             <div className="flex items-center gap-2.5">
@@ -221,9 +221,9 @@ export default function KitchenOrdersDispatchPage() {
               </div>
               <div>
                 <h3 className="font-black text-slate-900 text-sm">
-                  后厨烹饪中
+                  Cooking
                 </h3>
-                <p className="text-[10px] text-slate-400">火热制作，准备打包</p>
+                <p className="text-[10px] text-slate-400">Preparing food for packing</p>
               </div>
             </div>
             <span className="min-w-[24px] h-6 px-2 rounded-full bg-brand-500/15 border border-brand-500/30 text-brand-800 text-xs font-black flex items-center justify-center">
@@ -235,7 +235,7 @@ export default function KitchenOrdersDispatchPage() {
             {cookingOrders.length === 0 ? (
               <div className="py-14 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
                 <Flame className="w-8 h-8 stroke-1 text-slate-300" />
-                <span className="text-xs">暂无烹饪中的订单</span>
+                <span className="text-xs">No orders cooking</span>
               </div>
             ) : (
               cookingOrders.map((order) => (
@@ -250,11 +250,11 @@ export default function KitchenOrdersDispatchPage() {
                           #{order.id}
                         </span>
                         <span className="text-[10px] bg-brand-500/10 text-brand-700 font-bold px-1.5 py-0.5 rounded">
-                          烹饪中
+                          Cooking
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        {new Date(order.createdAt || Date.now()).toLocaleTimeString()}
+                        {new Date(order.createdAt || Date.now()).toLocaleTimeString('en-US')}
                       </p>
                     </div>
                     <span className="text-sm font-black text-slate-900">
@@ -293,7 +293,7 @@ export default function KitchenOrdersDispatchPage() {
                     className="w-full gap-2 shadow-md shadow-emerald-500/20"
                   >
                     <CheckCircle className="w-4 h-4" />
-                    <span>出餐完成·呼叫骑手抢单</span>
+                    <span>Mark ready and request a driver</span>
                   </Button>
                 </div>
               ))
@@ -301,7 +301,7 @@ export default function KitchenOrdersDispatchPage() {
           </div>
         </div>
 
-        {/* Column 3: Cooked & Delivering (出餐就绪 & 配送中) */}
+        {/* Column 3: Cooked & Delivering (Ready and delivering) */}
         <div className="glass-panel rounded-[28px] p-5 flex flex-col gap-4 border border-blue-200/50 bg-gradient-to-b from-blue-500/[0.04] to-transparent">
           <div className="flex items-center justify-between pb-3 border-b border-blue-200/40">
             <div className="flex items-center gap-2.5">
@@ -310,9 +310,9 @@ export default function KitchenOrdersDispatchPage() {
               </div>
               <div>
                 <h3 className="font-black text-slate-900 text-sm">
-                  出餐待抢与配送中
+                  Ready and delivering
                 </h3>
-                <p className="text-[10px] text-slate-400">骑手接单与在途派送</p>
+                <p className="text-[10px] text-slate-400">Driver pickup and delivery</p>
               </div>
             </div>
             <span className="min-w-[24px] h-6 px-2 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-800 text-xs font-black flex items-center justify-center">
@@ -324,7 +324,7 @@ export default function KitchenOrdersDispatchPage() {
             {cookedOrders.length === 0 && activeDeliveryOrders.length === 0 ? (
               <div className="py-14 text-center flex flex-col items-center justify-center gap-2 text-slate-400">
                 <Bike className="w-8 h-8 stroke-1 text-slate-300" />
-                <span className="text-xs">暂无出餐就绪或派送单</span>
+                <span className="text-xs">No orders ready or delivering</span>
               </div>
             ) : (
               <>
@@ -340,7 +340,7 @@ export default function KitchenOrdersDispatchPage() {
                       <OrderStatusBadge status={OrderStatus.Cooked} size="sm" />
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed bg-blue-50/50 rounded-xl p-2 border border-blue-100">
-                      餐品已放置在出餐台，等待骑手并发抢单中...
+                      Packed and ready for a driver to claim...
                     </p>
                   </div>
                 ))}
@@ -357,7 +357,7 @@ export default function KitchenOrdersDispatchPage() {
                       <OrderStatusBadge status={OrderStatus.PickedUp} size="sm" />
                     </div>
                     <p className="text-xs text-slate-600 leading-relaxed bg-purple-50/50 rounded-xl p-2 border border-purple-100">
-                      骑手已取餐，正在飞速配送前往顾客地址。
+                      The driver has picked up the food and is on the way to the customer.
                     </p>
                   </div>
                 ))}

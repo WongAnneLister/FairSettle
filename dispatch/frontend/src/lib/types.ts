@@ -10,6 +10,12 @@ export enum OrderStatus {
   Cooked = 'Cooked',
   PickedUp = 'PickedUp',
   Delivered = 'Delivered',
+  DeliveryFailed = 'DeliveryFailed',
+}
+
+export enum DeliveryFailureReason {
+  DRIVER_FAULT = 'DRIVER_FAULT',
+  PLATFORM_FAULT = 'PLATFORM_FAULT',
 }
 
 export enum OrderPaymentStatus {

@@ -7,7 +7,7 @@ Read before changing anything here: `docs/adr/` (6 ADRs).
 ## Commands
 
 - Infrastructure for local development and e2e: `docker compose up -d` in this folder starts PostgreSQL 16 and Redis 7 on host ports. The whole stack, dispatch included, runs from the repository-root compose (F13).
-- Storefront (`frontend/`, Next.js): `npm ci`, `npm run dev` (port 3001), `npm test` (vitest), `npm run build`. In the live overlay it runs as `storefront` (F33).
+- Storefront (`frontend/`, Next.js): `npm ci`, `npm run dev` (port 3001), `npm test` (vitest), `npm run build`. In the live overlay it runs as `storefront` (F33). English only; `src/lib/english.test.ts` fails on any CJK character in `src/` or the README (F36).
 - Install: `npm ci`. Run: `npm run start:dev` (migrations run on boot outside production). GraphQL at `http://localhost:4000/graphql`.
 - Unit tests: `npm test`.
 - E2E tests against real PostgreSQL and Redis: copy `env.test.example` to `.env.test`, then `npm run test:e2e`.

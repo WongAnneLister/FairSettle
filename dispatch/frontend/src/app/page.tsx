@@ -68,22 +68,22 @@ export default function HomePage() {
             <div className="lg:col-span-7 flex flex-col gap-6">
               <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full glass-pill w-fit text-xs font-bold text-slate-800 shadow-sm">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                <span className="text-brand-600 font-black">全城 27 家匠心名店</span>
+                <span className="text-brand-600 font-black">27 local restaurants</span>
                 <span className="text-slate-300">·</span>
-                <span className="text-slate-700 font-semibold">538+ 道品质佳肴在线热销</span>
+                <span className="text-slate-700 font-semibold">538+ dishes to discover</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.12]">
-                热气出锅，
+                Fresh from the kitchen,
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 via-brand-600 to-amber-500">
-                  30分钟直达
+                  delivered in 30 minutes
                 </span>
-                您的餐桌
+                .
               </h1>
 
               <p className="text-sm sm:text-base text-slate-600 max-w-lg leading-relaxed font-normal">
-                汇聚城中品质手作匠心餐厅。全程透明后厨出餐流水线与骑手原子高并发抢单派送，为您锁住刚出锅的绝佳风味。
+                Find local favorites, order freshly made food and follow your delivery.
               </p>
 
               {/* Frosted Glass Search Bar */}
@@ -94,7 +94,7 @@ export default function HomePage() {
                   </div>
                   <input
                     type="text"
-                    placeholder="搜索餐厅名、披萨、黑松露、炙烤和牛、拉面..."
+                    placeholder="Search restaurants, pizza, burgers, ramen..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full py-2.5 px-2 text-xs sm:text-sm bg-transparent outline-none text-slate-900 placeholder:text-slate-400 font-medium"
@@ -104,7 +104,7 @@ export default function HomePage() {
                       onClick={() => setSearchQuery('')}
                       className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1"
                     >
-                      清空
+                      Clear
                     </button>
                   )}
                   <Button
@@ -112,34 +112,34 @@ export default function HomePage() {
                     size="md"
                     className="rounded-2xl shrink-0 px-5 text-xs font-bold"
                   >
-                    探索美味
+                    Explore food
                   </Button>
                 </div>
               </div>
 
               {/* Quick Role Experience Banners */}
               <div className="flex flex-wrap items-center gap-2.5 pt-1 text-xs">
-                <span className="text-slate-400 font-medium text-[11px]">快速角色体验：</span>
+                <span className="text-slate-400 font-medium text-[11px]">Try a role:</span>
                 <Link
                   href="/login"
                   className="glass-pill px-3 py-1.5 rounded-xl text-slate-700 hover:text-brand-600 hover:border-brand-200 transition-all font-semibold flex items-center gap-1.5"
                 >
                   <Store className="w-3.5 h-3.5 text-brand-500" />
-                  <span>一键免密登录</span>
+                  <span>One-click demo</span>
                 </Link>
                 <Link
                   href="/owner"
                   className="glass-pill px-3 py-1.5 rounded-xl text-amber-800 hover:text-amber-900 hover:border-amber-300 transition-all font-semibold flex items-center gap-1.5"
                 >
                   <ChefHat className="w-3.5 h-3.5 text-amber-500" />
-                  <span>店长后厨大屏</span>
+                  <span>Owner dashboard</span>
                 </Link>
                 <Link
                   href="/driver"
                   className="glass-pill px-3 py-1.5 rounded-xl text-emerald-800 hover:text-emerald-900 hover:border-emerald-300 transition-all font-semibold flex items-center gap-1.5"
                 >
                   <Bike className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>骑手抢单大厅</span>
+                  <span>Available deliveries</span>
                 </Link>
               </div>
             </div>
@@ -162,8 +162,8 @@ export default function HomePage() {
                     <Flame className="w-3.5 h-3.5" />
                   </div>
                   <div className="text-left">
-                    <p className="text-[10px] font-bold text-slate-800 leading-tight">现点现烤出餐中</p>
-                    <p className="text-[9px] text-slate-400">平均出餐 12 分钟</p>
+                    <p className="text-[10px] font-bold text-slate-800 leading-tight">Freshly made to order</p>
+                    <p className="text-[9px] text-slate-400">Average preparation: 12 minutes</p>
                   </div>
                 </div>
 
@@ -177,17 +177,17 @@ export default function HomePage() {
                       <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                         <p className="text-xs font-black text-slate-900">
-                          毫秒级原子抢单调度
+                          Fast driver dispatch
                         </p>
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        TypeORM 状态机 · 零并发重派
+                        One order, one driver
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
                     <span className="text-[11px] font-black text-brand-700 bg-brand-100/80 border border-brand-200/50 px-2.5 py-1 rounded-xl">
-                      99.9% 准时率
+                      99.9% on time
                     </span>
                   </div>
                 </div>
@@ -203,9 +203,9 @@ export default function HomePage() {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <Compass className="w-4 h-4 text-brand-500" />
-              <span>精选风味分类 ({categories.length} 大品类)</span>
+              <span>Browse categories ({categories.length})</span>
             </h2>
-            <span className="text-xs text-slate-400 font-medium">点击分类快速筛选</span>
+            <span className="text-xs text-slate-400 font-medium">Choose a category to filter</span>
           </div>
 
           <CategoryPills
@@ -224,10 +224,10 @@ export default function HomePage() {
               <div>
                 <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-amber-500" />
-                  <span>店长力荐·置顶臻选 ({promotedRestaurants.length} 家名店)</span>
+                  <span>Featured restaurants ({promotedRestaurants.length})</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  全城高口碑人气热销外卖合作餐厅，新鲜食材现点现做
+                  Local favorites, freshly prepared
                 </p>
               </div>
             </div>
@@ -250,12 +250,12 @@ export default function HomePage() {
                 <Store className="w-5 h-5 text-brand-500" />
                 <span>
                   {selectedCategory
-                    ? `${categories.find((c) => c.slug === selectedCategory)?.name || '分类'}美食名店`
-                    : '全部入驻品质餐厅'}
+                    ? `${categories.find((c) => c.slug === selectedCategory)?.name || 'Category'} restaurants`
+                    : 'All restaurants'}
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                共有 <strong className="text-slate-800 font-black">{filteredRestaurants.length}</strong> 家餐厅正在营业接单，点击进入可浏览该店完整特色菜单
+                Browse menus from <strong className="text-slate-800 font-black">{filteredRestaurants.length}</strong> restaurants accepting orders
               </p>
             </div>
           </div>
@@ -263,16 +263,16 @@ export default function HomePage() {
           {restLoading ? (
             <div className="py-20 flex flex-col items-center justify-center gap-3">
               <Spinner className="w-8 h-8 text-brand-500" />
-              <p className="text-xs text-slate-400">正在同步全城餐厅列表...</p>
+              <p className="text-xs text-slate-400">Loading restaurants...</p>
             </div>
           ) : filteredRestaurants.length === 0 ? (
             <div className="py-16 glass-card rounded-3xl text-center p-8 flex flex-col items-center justify-center">
               <Store className="w-12 h-12 text-slate-300 mb-3" />
               <h3 className="font-bold text-slate-800 text-base">
-                未找到相关餐厅
+                No restaurants found
               </h3>
               <p className="text-xs text-slate-400 max-w-sm mt-1 mb-4">
-                尝试换一个关键词，或者清除分类筛选条件
+                Try another search or clear the category filter
               </p>
               <Button
                 variant="secondary"
@@ -282,7 +282,7 @@ export default function HomePage() {
                   setSelectedCategory(null);
                 }}
               >
-                重置筛选条件
+                Reset filters
               </Button>
             </div>
           ) : (

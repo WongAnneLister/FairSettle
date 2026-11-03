@@ -79,14 +79,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(receivedToken);
         await apollo.resetStore();
         await refreshUser();
-        success('登录成功', `欢迎回来，${email}`);
+        success('Signed in', `Welcome back, ${email}`);
         return true;
       } else {
-        error('登录失败', errMessage || '账号或密码不正确');
+        error('Sign-in failed', errMessage || 'Incorrect email or password');
         return false;
       }
     } catch (err: any) {
-      error('网络或服务器错误', err.message || '请检查后端服务是否已启动');
+      error('Network or server error', err.message || 'Please check that the service is running');
       return false;
     } finally {
       setLoading(false);
@@ -107,15 +107,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { ok, error: errMessage } = res.data.createAccount;
       if (ok) {
-        success('注册成功', '已为您自动登录');
+        success('Account created', 'You are now signed in');
         // Auto login after registration
         return await login(email, password);
       } else {
-        error('注册失败', errMessage || '邮箱可能已被注册');
+        error('Sign-up failed', errMessage || 'This email may already be registered');
         return false;
       }
     } catch (err: any) {
-      error('注册失败', err.message);
+      error('Sign-up failed', err.message);
       return false;
     } finally {
       setLoading(false);
@@ -127,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setUser(null);
     apollo.clearStore();
-    success('已退出登录');
+    success('Signed out');
   };
 
   // Quick 1-click test helper that seamlessly registers if missing, then logs in

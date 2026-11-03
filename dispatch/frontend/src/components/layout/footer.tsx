@@ -18,59 +18,59 @@ export function Footer() {
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              现代化即时外卖派单平台。采用并发硬化状态机、基于 Redis 分布式订阅、毫秒级抢单架构。
+              Food delivery, kitchen management and driver dispatch in one place.
             </p>
             <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
               <ShieldCheck className="w-4 h-4" />
-              <span>TypeORM 事务隔离 & 原子抢单保护</span>
+              <span>Reliable order updates and driver claims</span>
             </div>
           </div>
 
           {/* Col 2 */}
           <div className="flex flex-col gap-2">
             <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1">
-              快捷点餐
+              Order food
             </h4>
             <Link href="/" className="text-xs text-slate-500 hover:text-brand-500 transition-colors">
-              全部餐厅
+              All restaurants
             </Link>
             <Link href="/orders" className="text-xs text-slate-500 hover:text-brand-500 transition-colors">
-              我的历史订单
+              Order history
             </Link>
             <Link href="/profile" className="text-xs text-slate-500 hover:text-brand-500 transition-colors">
-              账户与设置
+              Account settings
             </Link>
           </div>
 
           {/* Col 3 */}
           <div className="flex flex-col gap-2">
             <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1">
-              商家与配送工作台
+              Restaurant and driver tools
             </h4>
             <Link href="/owner" className="text-xs text-slate-500 hover:text-brand-500 transition-colors">
-              餐厅店长后台
+              Owner dashboard
             </Link>
             <Link href="/owner/restaurants" className="text-xs text-slate-500 hover:text-brand-500 transition-colors">
-              菜单与菜品配置
+              Menu management
             </Link>
             <Link href="/owner/orders" className="text-xs text-slate-500 hover:text-brand-500 transition-colors">
-              后厨实时出单大屏
+              Kitchen orders
             </Link>
             <Link href="/driver" className="text-xs text-slate-500 hover:text-brand-500 transition-colors">
-              骑手抢单与配送大厅
+              Available deliveries
             </Link>
           </div>
 
           {/* Col 4 */}
           <div className="flex flex-col gap-2">
             <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-1">
-              技术架构
+              Technology
             </h4>
             <p className="text-xs text-slate-500">
-              前端：Next.js 14, React 18, TypeScript, Tailwind CSS, Apollo Client, graphql-ws
+              Frontend: Next.js 14, React 18, TypeScript, Tailwind CSS, Apollo Client, graphql-ws
             </p>
             <p className="text-xs text-slate-500">
-              后端：NestJS 11, GraphQL, PostgreSQL 16, Redis 7, Transactional Outbox
+              Backend: NestJS 11, GraphQL, PostgreSQL 16, Redis 7, Transactional Outbox
             </p>
           </div>
         </div>

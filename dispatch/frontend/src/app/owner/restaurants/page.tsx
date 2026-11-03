@@ -38,7 +38,7 @@ export default function MyRestaurantsPage() {
     'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80'
   );
   const [address, setAddress] = useState('');
-  const [categoryName, setCategoryName] = useState('披萨');
+  const [categoryName, setCategoryName] = useState('Pizza');
 
   const restaurants: Restaurant[] = data?.myRestaurants?.restaurants || [];
 
@@ -57,16 +57,16 @@ export default function MyRestaurantsPage() {
       });
 
       if (res.data?.createRestaurant?.ok) {
-        success('餐厅创建成功', `${name} 已成功入驻平台！`);
+        success('Restaurant created', `${name} is now on the platform`);
         setIsModalOpen(false);
         setName('');
         setAddress('');
         refetch();
       } else {
-        error('创建未成功', res.data?.createRestaurant?.error || '请稍后重试');
+        error('Could not create restaurant', res.data?.createRestaurant?.error || 'Please try again later');
       }
     } catch (err: any) {
-      error('提交失败', err.message);
+      error('Submission failed', err.message);
     }
   };
 
@@ -83,10 +83,10 @@ export default function MyRestaurantsPage() {
           </Link>
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              名下餐厅与菜单管理
+              Your restaurants and menus
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              配置店铺展示信息、上架菜品菜单与多规格自选加料
+              Manage restaurant details, dishes and custom options
             </p>
           </div>
         </div>
@@ -98,7 +98,7 @@ export default function MyRestaurantsPage() {
           className="gap-2 shadow-lg shadow-brand-500/20"
         >
           <Plus className="w-4 h-4" />
-          <span>创建新入驻餐厅</span>
+          <span>Create restaurant</span>
         </Button>
       </div>
 
@@ -106,7 +106,7 @@ export default function MyRestaurantsPage() {
       {loading ? (
         <div className="py-24 flex flex-col items-center justify-center gap-3">
           <Spinner className="w-8 h-8 text-amber-500" />
-          <p className="text-xs text-slate-400">正在同步您的餐厅数据...</p>
+          <p className="text-xs text-slate-400">Loading your restaurants...</p>
         </div>
       ) : restaurants.length === 0 ? (
         <div className="py-20 glass-panel rounded-[32px] text-center p-8 flex flex-col items-center justify-center border border-white/80">
@@ -114,10 +114,10 @@ export default function MyRestaurantsPage() {
             <Store className="w-8 h-8" />
           </div>
           <h3 className="font-black text-slate-900 text-lg">
-            您还没有创建任何餐厅
+            No restaurants yet
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mt-1 mb-6 leading-relaxed">
-            立即创建您的第一家线上门店，开始配置美食菜单并接入自动化智能接单！
+            Create your first restaurant, add a menu and start taking orders.
           </p>
           <Button
             variant="primary"
@@ -126,7 +126,7 @@ export default function MyRestaurantsPage() {
             className="gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>立即创建餐厅</span>
+            <span>Create restaurant</span>
           </Button>
         </div>
       ) : (
@@ -150,7 +150,7 @@ export default function MyRestaurantsPage() {
                   {restaurant.isPromoted && (
                     <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-3 py-1 rounded-full text-xs font-black shadow-lg shadow-amber-500/30 border border-white/25 backdrop-blur-md">
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span>首页置顶曝光中</span>
+                      <span>Featured on the home page</span>
                     </div>
                   )}
 
@@ -173,7 +173,7 @@ export default function MyRestaurantsPage() {
 
                   <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
                     <Layers className="w-3.5 h-3.5" />
-                    <span>在架菜品：<strong className="text-slate-700 font-bold">{restaurant.menu?.length || 0}</strong> 道</span>
+                    <span>Menu: <strong className="text-slate-700 font-bold">{restaurant.menu?.length || 0}</strong> dishes</span>
                   </div>
                 </div>
               </div>
@@ -185,7 +185,7 @@ export default function MyRestaurantsPage() {
                 >
                   <Button variant="primary" size="sm" className="w-full gap-2 shadow-md shadow-brand-500/15">
                     <Utensils className="w-3.5 h-3.5" />
-                    <span>管理菜品与规格</span>
+                    <span>Manage dishes and options</span>
                   </Button>
                 </Link>
 
@@ -194,7 +194,7 @@ export default function MyRestaurantsPage() {
                     variant="secondary"
                     size="sm"
                     className="p-2.5 glass-panel text-slate-700 hover:bg-white"
-                    title="在顾客端预览门店"
+                    title="Preview restaurant as a customer"
                   >
                     <ExternalLink className="w-4 h-4" />
                   </Button>
@@ -209,36 +209,36 @@ export default function MyRestaurantsPage() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="新建外卖入驻餐厅"
+        title="Create a restaurant"
         maxWidth="md"
       >
         <form onSubmit={handleCreate} className="flex flex-col gap-4">
           <Input
-            label="餐厅名称"
+            label="Restaurant name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            placeholder="例如：罗马工坊手工披萨"
+            placeholder="For example: Roma Pizza"
           />
 
           <Input
-            label="门市详细地址"
+            label="Restaurant address"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             required
-            placeholder="例如：朝阳区美食街88号 B座1楼"
+            placeholder="For example: 88 Food Street, Building B, Floor 1"
           />
 
           <Input
-            label="所属菜系分类"
+            label="Cuisine category"
             value={categoryName}
             onChange={(e) => setCategoryName(e.target.value)}
             required
-            placeholder="例如：披萨、汉堡、日料、川湘"
+            placeholder="For example: pizza, burgers, Japanese, Sichuan"
           />
 
           <Input
-            label="门头主图图片 URL"
+            label="Restaurant cover image URL"
             value={coverImage}
             onChange={(e) => setCoverImage(e.target.value)}
             required
@@ -252,7 +252,7 @@ export default function MyRestaurantsPage() {
               size="md"
               onClick={() => setIsModalOpen(false)}
             >
-              取消
+              Cancel
             </Button>
             <Button
               type="submit"
@@ -260,7 +260,7 @@ export default function MyRestaurantsPage() {
               size="md"
               loading={creating}
             >
-              确认入驻创建
+              Create restaurant
             </Button>
           </div>
         </form>

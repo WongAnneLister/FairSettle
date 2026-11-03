@@ -12,7 +12,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { GET_ORDERS_QUERY } from '@/lib/graphql/queries';
-import { Order, OrderStatus } from '@/lib/types';
+import { isFinished } from '@/lib/order-actions';
+import { Order } from '@/lib/types';
 import { formatCents } from '@/lib/currency';
 import { OrderStatusBadge } from '@/components/order/order-status-badge';
 import { Spinner } from '@/components/ui/spinner';
@@ -33,10 +34,10 @@ export default function OrdersHistoryPage() {
 
   const filteredOrders = orders.filter((o) => {
     if (filter === 'active') {
-      return o.status !== OrderStatus.Delivered;
+      return !isFinished(o.status);
     }
     if (filter === 'completed') {
-      return o.status === OrderStatus.Delivered;
+      return isFinished(o.status);
     }
     return true;
   });
@@ -48,14 +49,14 @@ export default function OrdersHistoryPage() {
           <ShoppingBag className="w-8 h-8 text-brand-500" />
         </div>
         <h2 className="text-xl font-bold text-slate-900 mb-2">
-          登录查看您的历史订单
+          Sign in to view your orders
         </h2>
         <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-          登录后即可实时追踪正在配送的美食订单，并随时回顾您的历史外卖记录。
+          Track active deliveries and view your past orders.
         </p>
         <Link href="/login" className="w-full">
           <Button variant="primary" size="lg" className="w-full text-xs font-bold">
-            立即登录
+            Sign in
           </Button>
         </Link>
       </div>
@@ -68,10 +69,10 @@ export default function OrdersHistoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            我的美食订单
+            My orders
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            实时查看配送轨迹、出餐进度与历史消费账单
+            Track order progress and view your history.
           </p>
         </div>
 
@@ -85,7 +86,7 @@ export default function OrdersHistoryPage() {
                 : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            全部 ({orders.length})
+            All ({orders.length})
           </button>
           <button
             onClick={() => setFilter('active')}
@@ -95,7 +96,7 @@ export default function OrdersHistoryPage() {
                 : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            进行中
+            Active
           </button>
           <button
             onClick={() => setFilter('completed')}
@@ -105,7 +106,7 @@ export default function OrdersHistoryPage() {
                 : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            已送达
+            Completed
           </button>
         </div>
       </div>
@@ -114,20 +115,20 @@ export default function OrdersHistoryPage() {
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center gap-3">
           <Spinner className="w-8 h-8 text-brand-500" />
-          <p className="text-xs text-slate-400">正在获取您的订单列表...</p>
+          <p className="text-xs text-slate-400">Loading your orders…</p>
         </div>
       ) : filteredOrders.length === 0 ? (
         <div className="py-16 glass-card rounded-3xl text-center p-8 flex flex-col items-center justify-center border border-white/90">
           <ShoppingBag className="w-12 h-12 text-slate-300 mb-3" />
           <h3 className="font-bold text-slate-800 text-base">
-            暂无相关订单记录
+            No orders found
           </h3>
           <p className="text-xs text-slate-400 max-w-sm mt-1 mb-6">
-            快去挑选您中意的手作餐厅，体验高并发极速派单吧！
+            Choose a restaurant to place your first order.
           </p>
           <Link href="/">
             <Button variant="primary" size="md">
-              去发现美食
+              Find a restaurant
             </Button>
           </Link>
         </div>
@@ -145,24 +146,24 @@ export default function OrdersHistoryPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-slate-900 text-base">
-                      {order.restaurant?.name || '品质合作餐厅'}
+                      {order.restaurant?.name || 'Restaurant'}
                     </h3>
                     <OrderStatusBadge status={order.status} size="sm" />
                   </div>
 
                   <p className="text-xs text-slate-400 mt-1">
-                    订单号 #{order.id} · 下单于{' '}
-                    {new Date(order.createdAt || Date.now()).toLocaleDateString()}{' '}
-                    {new Date(order.createdAt || Date.now()).toLocaleTimeString()}
+                    Order #{order.id} · placed on{' '}
+                    {new Date(order.createdAt || Date.now()).toLocaleDateString('en-US')}{' '}
+                    {new Date(order.createdAt || Date.now()).toLocaleTimeString('en-US')}
                   </p>
 
                   {/* Summary of items */}
                   {order.items && order.items.length > 0 && (
                     <p className="text-xs text-slate-500 mt-2 line-clamp-1">
                       {order.items
-                        .map((i) => i.dish?.name || '精选美食')
-                        .join('、')}{' '}
-                      等共 {order.items.length} 件商品
+                        .map((i) => i.dish?.name || 'Dish')
+                        .join(', ')}{' '}
+                      · {order.items.length} items
                     </p>
                   )}
                 </div>
@@ -170,7 +171,7 @@ export default function OrdersHistoryPage() {
 
               <div className="flex items-center justify-between sm:justify-end gap-4 pt-3 sm:pt-0 border-t sm:border-0 border-slate-200/50">
                 <div className="text-left sm:text-right">
-                  <span className="text-xs text-slate-400 block">合计金额</span>
+                  <span className="text-xs text-slate-400 block">Total</span>
                   <span className="text-base font-black text-slate-900">
                     {formatCents(order.totalCents)}
                   </span>
@@ -178,7 +179,7 @@ export default function OrdersHistoryPage() {
 
                 <Link href={`/orders/${order.id}`}>
                   <Button variant="primary" size="sm" className="gap-1 rounded-2xl text-xs">
-                    <span>实时追踪</span>
+                    <span>Track order</span>
                     <ChevronRight className="w-4 h-4" />
                   </Button>
                 </Link>

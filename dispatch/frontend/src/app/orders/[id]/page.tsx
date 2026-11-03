@@ -18,7 +18,8 @@ import {
 import { GET_ORDER_QUERY } from '@/lib/graphql/queries';
 import { ORDER_UPDATES_SUBSCRIPTION } from '@/lib/graphql/subscriptions';
 import { EDIT_ORDER_MUTATION, TAKE_ORDER_MUTATION } from '@/lib/graphql/mutations';
-import { Order, OrderStatus, UserRole } from '@/lib/types';
+import { DeliveryFailureReason, Order, OrderStatus, UserRole } from '@/lib/types';
+import { DELIVERY_FAILURE_REASONS, ORDER_STATUS_LABELS, markFailedInput, quickActionsFor } from '@/lib/order-actions';
 import { formatCents } from '@/lib/currency';
 import { OrderPaymentCard } from '@/components/order/order-payment-card';
 import { OrderTimeline } from '@/components/order/order-timeline';
@@ -61,7 +62,7 @@ function OrderDetail() {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
         <Spinner className="w-8 h-8 text-brand-500" />
-        <p className="text-xs text-slate-400">正在建立实时订单信道...</p>
+        <p className="text-xs text-slate-400">Connecting to order updates…</p>
       </div>
     );
   }
@@ -69,32 +70,33 @@ function OrderDetail() {
   if (!order) {
     return (
       <div className="glass-card rounded-3xl p-8 mx-auto my-8 max-w-lg text-center flex flex-col items-center gap-4">
-        <p className="font-bold text-slate-900">订单不存在或无权查看</p>
-        <Link href="/orders" className="text-brand-600 font-semibold">返回我的订单</Link>
+        <p className="font-bold text-slate-900">Order not found or access denied</p>
+        <Link href="/orders" className="text-brand-600 font-semibold">Back to my orders</Link>
       </div>
     );
   }
 
+  const actions = quickActionsFor(order, user);
   const isCustomer = user?.role === UserRole.Client && order.customer?.id === user.id;
 
-  const handleAdvanceStatus = async (nextStatus: OrderStatus) => {
+  const handleAdvanceStatus = async (nextStatus: OrderStatus, reason?: DeliveryFailureReason) => {
     try {
       const res = await editOrder({
         variables: {
-          input: {
+          input: reason ? markFailedInput(order.id, reason) : {
             id: order.id,
             status: nextStatus,
           },
         },
       });
       if (res.data.editOrder.ok) {
-        success('状态更新成功', `订单已推进至：${nextStatus}`);
+        success('Order updated', `Order moved to ${ORDER_STATUS_LABELS[nextStatus]}`);
         refetch();
       } else {
-        error('操作受限', res.data.editOrder.error || '无权执行该状态变更');
+        error('Not allowed', res.data.editOrder.error || "You can't make this change.");
       }
     } catch (e: any) {
-      error('更新失败', e.message);
+      error('Not allowed', e.message || "You can't make this change.");
     }
   };
 
@@ -104,13 +106,13 @@ function OrderDetail() {
         variables: { input: { id: order.id } },
       });
       if (res.data.takeOrder.ok) {
-        success('抢单成功！', '您已成为该订单的配送骑手');
+        success('Order claimed', 'You are now the driver for this order.');
         refetch();
       } else {
-        error('抢单未成功', res.data.takeOrder.error || '手慢了，该订单已被其他骑手接走');
+        error('Claim failed', res.data.takeOrder.error || 'Another driver took it first.');
       }
     } catch (e: any) {
-      error('抢单异常', e.message);
+      error('Claim failed', e.message || 'Another driver took it first.');
     }
   };
 
@@ -129,15 +131,15 @@ function OrderDetail() {
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                订单实时追踪 #{order.id}
+                Order #{order.id}
               </h1>
               <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 px-3 py-0.5 rounded-full backdrop-blur-md">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                <span>实时推流已连线</span>
+                <span>Live</span>
               </div>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              下单时间：{new Date(order.createdAt || Date.now()).toLocaleTimeString()}
+              Placed at {new Date(order.createdAt || Date.now()).toLocaleTimeString('en-US')}
             </p>
           </div>
         </div>
@@ -150,7 +152,7 @@ function OrderDetail() {
             className="gap-1.5 glass-pill"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>刷新状态</span>
+            <span>Refresh status</span>
           </Button>
           <OrderStatusBadge status={order.status} />
         </div>
@@ -168,11 +170,11 @@ function OrderDetail() {
       <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-white/90 shadow-[0_20px_50px_0_rgba(15,23,42,0.06)] flex flex-col gap-5">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            实时派送生命周期
+            Order progress
           </span>
           <span className="text-xs text-emerald-600 font-bold flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
-            预计还有 15-20 分钟送达
+            Estimated arrival in 15–20 minutes
           </span>
         </div>
 
@@ -185,85 +187,100 @@ function OrderDetail() {
               <Sparkles className="w-3.5 h-3.5 text-brand-500" />
             </div>
             <span className="text-slate-700 font-medium">
-              {order.status === OrderStatus.Pending && '后厨已收到新订单提醒，即将开始烹饪制作。'}
-              {order.status === OrderStatus.Cooking && '大厨正在后厨制作您的专属美食，请稍候。'}
-              {order.status === OrderStatus.Cooked && '餐品已出餐装袋，周边骑手正在火速抢单接驾！'}
-              {order.status === OrderStatus.PickedUp && '骑手已取餐，正在以安全合规的最快路线飞驰而来。'}
-              {order.status === OrderStatus.Delivered && '餐品已送达，期待为您带来美妙的美食体验！'}
+              {order.status === OrderStatus.Pending && 'The restaurant has your order and will start cooking soon.'}
+              {order.status === OrderStatus.Cooking && 'The kitchen is preparing your food.'}
+              {order.status === OrderStatus.Cooked && 'Your food is ready and waiting for a driver.'}
+              {order.status === OrderStatus.PickedUp && 'Your driver has picked up your food and is on the way.'}
+              {order.status === OrderStatus.Delivered && 'Delivered. Enjoy your meal!'}
+              {order.status === OrderStatus.DeliveryFailed && 'This delivery failed. Our support team has been notified.'}
             </span>
           </div>
         </div>
 
         {/* Role Quick Simulation Controls */}
-        <div className="pt-3 border-t border-slate-200/50 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <span className="text-slate-400 font-medium text-[11px]">快捷推进演示：</span>
-          <div className="flex flex-wrap items-center gap-2">
-            {order.status === OrderStatus.Pending && (
-              <Button
-                variant="outline"
-                size="sm"
-                loading={updating}
-                onClick={() => handleAdvanceStatus(OrderStatus.Cooking)}
-                className="gap-1 glass-pill border-brand-200 text-brand-700 hover:bg-brand-50"
-              >
-                <ChefHat className="w-3.5 h-3.5 text-brand-500" />
-                店长接单制作 (Cooking)
-              </Button>
-            )}
+        {actions.length > 0 && (
+          <div className="pt-3 border-t border-slate-200/50 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <span className="text-slate-400 font-medium text-[11px]">Demo controls</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {actions.includes('startCooking') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={updating}
+                  onClick={() => handleAdvanceStatus(OrderStatus.Cooking)}
+                  className="gap-1 glass-pill border-brand-200 text-brand-700 hover:bg-brand-50"
+                >
+                  <ChefHat className="w-3.5 h-3.5 text-brand-500" />
+                  Start cooking
+                </Button>
+              )}
 
-            {order.status === OrderStatus.Cooking && (
-              <Button
-                variant="outline"
-                size="sm"
-                loading={updating}
-                onClick={() => handleAdvanceStatus(OrderStatus.Cooked)}
-                className="gap-1 glass-pill border-blue-200 text-blue-700 hover:bg-blue-50"
-              >
-                <ChefHat className="w-3.5 h-3.5 text-blue-500" />
-                后厨出餐完成 (Cooked)
-              </Button>
-            )}
+              {actions.includes('finishCooking') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={updating}
+                  onClick={() => handleAdvanceStatus(OrderStatus.Cooked)}
+                  className="gap-1 glass-pill border-blue-200 text-blue-700 hover:bg-blue-50"
+                >
+                  <ChefHat className="w-3.5 h-3.5 text-blue-500" />
+                  Mark ready
+                </Button>
+              )}
 
-            {order.status === OrderStatus.Cooked && (
-              <Button
-                variant="outline"
-                size="sm"
-                loading={claiming}
-                onClick={handleTakeOrder}
-                className="gap-1 glass-pill border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-              >
-                <Bike className="w-3.5 h-3.5 text-emerald-500" />
-                骑手原子抢单 (takeOrder)
-              </Button>
-            )}
+              {actions.includes('takeOrder') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={claiming}
+                  onClick={handleTakeOrder}
+                  className="gap-1 glass-pill border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                >
+                  <Bike className="w-3.5 h-3.5 text-emerald-500" />
+                  Claim order
+                </Button>
+              )}
 
-            {order.status === OrderStatus.Cooked && order.driver && (
-              <Button
-                variant="outline"
-                size="sm"
-                loading={updating}
-                onClick={() => handleAdvanceStatus(OrderStatus.PickedUp)}
-                className="gap-1 glass-pill border-purple-200 text-purple-700 hover:bg-purple-50"
-              >
-                <Bike className="w-3.5 h-3.5 text-purple-500" />
-                骑手到店取餐 (PickedUp)
-              </Button>
-            )}
+              {actions.includes('pickUp') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  loading={updating}
+                  onClick={() => handleAdvanceStatus(OrderStatus.PickedUp)}
+                  className="gap-1 glass-pill border-purple-200 text-purple-700 hover:bg-purple-50"
+                >
+                  <Bike className="w-3.5 h-3.5 text-purple-500" />
+                  Picked up
+                </Button>
+              )}
 
-            {order.status === OrderStatus.PickedUp && (
-              <Button
-                variant="emerald"
-                size="sm"
-                loading={updating}
-                onClick={() => handleAdvanceStatus(OrderStatus.Delivered)}
-                className="gap-1.5"
-              >
-                <PackageCheck className="w-3.5 h-3.5" />
-                确认已送达 (Delivered)
-              </Button>
-            )}
+              {actions.includes('deliver') && (
+                <Button
+                  variant="emerald"
+                  size="sm"
+                  loading={updating}
+                  onClick={() => handleAdvanceStatus(OrderStatus.Delivered)}
+                  className="gap-1.5"
+                >
+                  <PackageCheck className="w-3.5 h-3.5" />
+                  Delivered
+                </Button>
+              )}
+              {actions.includes('markFailed') && DELIVERY_FAILURE_REASONS.map(({ value, label }) => (
+                <Button
+                  key={value}
+                  variant="danger"
+                  size="sm"
+                  loading={updating}
+                  onClick={() => handleAdvanceStatus(OrderStatus.DeliveryFailed, value)}
+                  className="gap-1.5"
+                >
+                  Failed: {label.toLowerCase()}
+                </Button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -271,7 +288,7 @@ function OrderDetail() {
         <div className="glass-card rounded-3xl p-6 flex flex-col justify-between gap-4 border border-white/90">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              配送骑手信息
+              Driver details
             </span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
               <Bike className="w-4 h-4" />
@@ -285,11 +302,11 @@ function OrderDetail() {
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-bold text-slate-900">
-                  认证即时派送员
+                  Delivery driver
                 </h4>
                 <p className="text-xs text-slate-400 truncate">{order.driver.email}</p>
                 <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">
-                  已完成实名与健康证双认证
+                  Identity and health checks completed
                 </p>
               </div>
               <button className="p-2.5 rounded-2xl glass-pill text-slate-600 hover:text-emerald-600 transition-colors">
@@ -301,7 +318,7 @@ function OrderDetail() {
               <div className="w-10 h-10 rounded-2xl glass-pill flex items-center justify-center text-slate-300">
                 <Bike className="w-5 h-5" />
               </div>
-              <p>餐品正在制作中，出餐完成后由认证骑手秒级抢单分配</p>
+              <p>A driver can claim your order when the food is ready.</p>
             </div>
           )}
         </div>
@@ -310,7 +327,7 @@ function OrderDetail() {
         <div className="glass-card rounded-3xl p-6 flex flex-col justify-between gap-4 border border-white/90">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              出餐门店
+              Restaurant
             </span>
             <div className="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 flex items-center justify-center">
               <Store className="w-4 h-4" />
@@ -323,10 +340,10 @@ function OrderDetail() {
             </div>
             <div>
               <h4 className="text-sm font-bold text-slate-900">
-                {order.restaurant?.name || '品质合作餐厅'}
+                {order.restaurant?.name || 'Restaurant'}
               </h4>
               <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">
-                {order.restaurant?.address || '美食街88号'}
+                {order.restaurant?.address || '88 Food Street'}
               </p>
             </div>
           </div>
@@ -336,7 +353,7 @@ function OrderDetail() {
       {/* Items Breakdown */}
       <div className="glass-card rounded-3xl p-6 sm:p-7 flex flex-col gap-4 border border-white/90">
         <h3 className="font-bold text-slate-900 text-base">
-          订单商品明细
+          Order items
         </h3>
 
         <div className="divide-y divide-slate-200/50">
@@ -344,13 +361,13 @@ function OrderDetail() {
             <div key={item.id} className="py-3.5 flex justify-between items-start gap-3">
               <div>
                 <p className="text-sm font-bold text-slate-900">
-                  {item.dish?.name || '精选菜品'}
+                  {item.dish?.name || 'Dish'}
                 </p>
                 {item.options && item.options.length > 0 && (
                   <p className="text-xs text-slate-400 mt-0.5">
                     {item.options
-                      .map((o) => `${o.name}: ${o.choice || '已选'}`)
-                      .join('，')}
+                      .map((o) => `${o.name}: ${o.choice || 'Selected'}`)
+                      .join(', ')}
                   </p>
                 )}
               </div>
@@ -362,7 +379,7 @@ function OrderDetail() {
         </div>
 
         <div className="pt-4 border-t border-slate-200/60 flex justify-between items-baseline">
-          <span className="text-xs font-semibold text-slate-500">实付总计</span>
+          <span className="text-xs font-semibold text-slate-500">Total paid</span>
           <span className="text-2xl font-black text-brand-600">
             {formatCents(order.totalCents)}
           </span>

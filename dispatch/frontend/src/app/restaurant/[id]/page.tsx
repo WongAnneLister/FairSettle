@@ -41,7 +41,7 @@ export default function RestaurantDetailPage() {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
         <Spinner className="w-8 h-8 text-brand-500" />
-        <p className="text-xs text-slate-400">正在加载餐厅菜单与详情...</p>
+        <p className="text-xs text-slate-400">Loading restaurant and menu...</p>
       </div>
     );
   }
@@ -49,8 +49,8 @@ export default function RestaurantDetailPage() {
   if (!backendRestaurant) {
     return (
       <div className="glass-card rounded-3xl p-8 mx-auto my-8 max-w-lg text-center flex flex-col items-center gap-4">
-        <p className="font-bold text-slate-900">餐厅不存在或暂时无法加载</p>
-        <Link href="/" className="text-brand-600 font-semibold">返回首页</Link>
+        <p className="font-bold text-slate-900">Restaurant not found or unavailable</p>
+        <Link href="/" className="text-brand-600 font-semibold">Back to home</Link>
       </div>
     );
   }
@@ -79,7 +79,7 @@ export default function RestaurantDetailPage() {
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl glass-pill text-slate-800 text-xs font-bold shadow-md hover:bg-white transition-all active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>返回餐厅大厅</span>
+            <span>Back to restaurants</span>
           </Link>
         </div>
 
@@ -89,7 +89,7 @@ export default function RestaurantDetailPage() {
             {restaurant.isPromoted && (
               <span className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-3 py-1 rounded-full text-xs font-black shadow-md border border-white/20">
                 <Sparkles className="w-3 h-3 text-amber-200" />
-                精选置顶
+                Featured
               </span>
             )}
             {restaurant.category && (
@@ -99,7 +99,7 @@ export default function RestaurantDetailPage() {
             )}
             <div className="flex items-center gap-1 bg-black/40 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded-full text-xs text-amber-300 font-bold">
               <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <span>4.9 (500+评价)</span>
+              <span>4.9 (500+ reviews)</span>
             </div>
           </div>
 
@@ -114,7 +114,7 @@ export default function RestaurantDetailPage() {
             </div>
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5 text-emerald-400" />
-              <span>预计 25-35 分钟现做现送</span>
+              <span>Freshly prepared, delivered in 25-35 minutes</span>
             </div>
           </div>
         </div>
@@ -128,20 +128,20 @@ export default function RestaurantDetailPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/60">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">
-                  精选菜单
+                  Menu
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  所有餐品现点现做，支持自定义配料与规格
+                  Made to order with your choice of options and extras
                 </p>
               </div>
               <span className="text-xs font-semibold text-slate-600 glass-pill px-3 py-1 rounded-full">
-                共 {menuDishes.length} 道美味
+                {menuDishes.length} dishes
               </span>
             </div>
 
             {menuDishes.length === 0 ? (
               <div className="glass-card rounded-3xl p-8 text-center text-slate-500">
-                该餐厅暂未上架菜品
+                No dishes available yet
               </div>
             ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -163,14 +163,14 @@ export default function RestaurantDetailPage() {
             <div className="glass-card p-6 rounded-3xl flex flex-col gap-3">
               <div className="flex items-center gap-2 text-brand-600 font-bold text-sm">
                 <Info className="w-4 h-4" />
-                <span>进店点单须知</span>
+                <span>Ordering information</span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                下单后订单将进入并发硬化调度状态机。商家接单制作完毕后，平台将以毫秒级时延广播至周边认证骑手。
+                The restaurant prepares your order, then a driver picks it up for delivery.
               </p>
               <div className="pt-3 border-t border-slate-200/60 flex items-center gap-2 text-xs text-emerald-600 font-semibold">
                 <ShieldCheck className="w-4 h-4 shrink-0" />
-                <span>餐损全额赔付 · 准时宝必达保障</span>
+                <span>Support for damaged or delayed deliveries</span>
               </div>
             </div>
           </div>
@@ -198,8 +198,8 @@ export default function RestaurantDetailPage() {
                 {itemCount}
               </div>
               <div className="text-left">
-                <p className="text-xs font-bold text-slate-900 leading-tight">查看购物车小票</p>
-                <p className="text-[10px] text-slate-400">含所选规格加料</p>
+                <p className="text-xs font-bold text-slate-900 leading-tight">View cart</p>
+                <p className="text-[10px] text-slate-400">Includes selected options and extras</p>
               </div>
             </div>
             <div className="flex items-center gap-2 font-black text-base text-brand-600">

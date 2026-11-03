@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { OrderStatus } from '@/lib/types';
-import { Check, Clock, Flame, CheckCircle, Bike, HeartHandshake } from 'lucide-react';
+import { Check, Clock, Flame, CheckCircle, Bike, HeartHandshake, XCircle } from 'lucide-react';
 
 interface OrderTimelineProps {
   status: OrderStatus;
@@ -11,32 +11,32 @@ interface OrderTimelineProps {
 const STEPS = [
   {
     key: OrderStatus.Pending,
-    label: '下单成功',
-    desc: '系统已通知商家接单',
+    label: 'Order placed',
+    desc: 'The restaurant has been notified',
     icon: Clock,
   },
   {
     key: OrderStatus.Cooking,
-    label: '后厨制作',
-    desc: '大厨正在精心烹饪',
+    label: 'Cooking',
+    desc: 'The kitchen is preparing your food',
     icon: Flame,
   },
   {
     key: OrderStatus.Cooked,
-    label: '制作完成',
-    desc: '打包完毕，呼叫骑手',
+    label: 'Ready',
+    desc: 'Packed and waiting for a driver',
     icon: CheckCircle,
   },
   {
     key: OrderStatus.PickedUp,
-    label: '骑手配送',
-    desc: '骑手已取餐，快速配送中',
+    label: 'On the way',
+    desc: 'Your driver has picked it up',
     icon: Bike,
   },
   {
     key: OrderStatus.Delivered,
-    label: '美食送达',
-    desc: '订单已完成，请慢用',
+    label: 'Delivered',
+    desc: 'Enjoy your meal',
     icon: HeartHandshake,
   },
 ];
@@ -47,6 +47,7 @@ const ORDER_RANK: Record<OrderStatus, number> = {
   [OrderStatus.Cooked]: 2,
   [OrderStatus.PickedUp]: 3,
   [OrderStatus.Delivered]: 4,
+  [OrderStatus.DeliveryFailed]: 4,
 };
 
 export function OrderTimeline({ status }: OrderTimelineProps) {
@@ -67,7 +68,8 @@ export function OrderTimeline({ status }: OrderTimelineProps) {
         {STEPS.map((step, idx) => {
           const isDone = idx < currentRank;
           const isCurrent = idx === currentRank;
-          const Icon = step.icon;
+          const isFailed = status === OrderStatus.DeliveryFailed && idx === 4;
+          const Icon = isFailed ? XCircle : step.icon;
 
           return (
             <div
@@ -79,7 +81,7 @@ export function OrderTimeline({ status }: OrderTimelineProps) {
                   isDone
                     ? 'bg-emerald-500 text-white shadow-emerald-500/20'
                     : isCurrent
-                    ? 'bg-gradient-to-tr from-brand-500 to-amber-500 text-white shadow-brand-500/30 scale-110 ring-4 ring-brand-500/20 animate-pulse-subtle'
+                    ? isFailed ? 'bg-red-500 text-white shadow-red-500/20' : 'bg-gradient-to-tr from-brand-500 to-amber-500 text-white shadow-brand-500/30 scale-110 ring-4 ring-brand-500/20 animate-pulse-subtle'
                     : 'bg-white dark:bg-slate-800 text-slate-300 dark:text-slate-600 border border-slate-200 dark:border-slate-700'
                 }`}
               >
@@ -88,16 +90,16 @@ export function OrderTimeline({ status }: OrderTimelineProps) {
               <span
                 className={`text-xs font-bold mt-2.5 ${
                   isCurrent
-                    ? 'text-brand-600 dark:text-brand-400'
+                    ? isFailed ? 'text-red-600' : 'text-brand-600 dark:text-brand-400'
                     : isDone
                     ? 'text-slate-800 dark:text-slate-200'
                     : 'text-slate-400'
                 }`}
               >
-                {step.label}
+                {isFailed ? 'Delivery failed' : step.label}
               </span>
               <span className="text-[10px] text-slate-400 mt-0.5 leading-tight line-clamp-1">
-                {step.desc}
+                {isFailed ? 'The order could not be delivered' : step.desc}
               </span>
             </div>
           );
@@ -109,7 +111,8 @@ export function OrderTimeline({ status }: OrderTimelineProps) {
         {STEPS.map((step, idx) => {
           const isDone = idx < currentRank;
           const isCurrent = idx === currentRank;
-          const Icon = step.icon;
+          const isFailed = status === OrderStatus.DeliveryFailed && idx === 4;
+          const Icon = isFailed ? XCircle : step.icon;
 
           return (
             <div key={step.key} className="flex items-start gap-3 relative">
@@ -118,7 +121,7 @@ export function OrderTimeline({ status }: OrderTimelineProps) {
                   isDone
                     ? 'bg-emerald-500 text-white'
                     : isCurrent
-                    ? 'bg-brand-500 text-white ring-2 ring-brand-400/30 scale-110'
+                    ? isFailed ? 'bg-red-500 text-white shadow-red-500/20' : 'bg-brand-500 text-white ring-2 ring-brand-400/30 scale-110'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border border-slate-200 dark:border-slate-700'
                 }`}
               >
@@ -128,15 +131,15 @@ export function OrderTimeline({ status }: OrderTimelineProps) {
                 <h4
                   className={`text-xs font-bold ${
                     isCurrent
-                      ? 'text-brand-600 dark:text-brand-400'
+                      ? isFailed ? 'text-red-600' : 'text-brand-600 dark:text-brand-400'
                       : isDone
                       ? 'text-slate-900 dark:text-white'
                       : 'text-slate-400'
                   }`}
                 >
-                  {step.label}
+                  {isFailed ? 'Delivery failed' : step.label}
                 </h4>
-                <p className="text-[11px] text-slate-400 mt-0.5">{step.desc}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">{isFailed ? 'The order could not be delivered' : step.desc}</p>
               </div>
             </div>
           );

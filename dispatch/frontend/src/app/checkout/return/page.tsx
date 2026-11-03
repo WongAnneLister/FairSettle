@@ -20,7 +20,7 @@ function CheckoutReturn() {
   return (
     <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
       <Spinner className="w-8 h-8 text-brand-500" />
-      <p className="text-sm text-slate-500">正在返回订单…</p>
+      <p className="text-sm text-slate-500">Returning to your order…</p>
     </div>
   );
 }

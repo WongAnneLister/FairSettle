@@ -60,10 +60,10 @@ function LoginForm() {
           <UtensilsCrossed className="w-6 h-6 drop-shadow" />
         </div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-          欢迎回到 CravingFast
+          Welcome back to CravingFast
         </h1>
         <p className="text-xs text-slate-400">
-          即时外卖派单与智能调度管理中心
+          Food delivery and dispatch
         </p>
       </div>
 
@@ -71,7 +71,7 @@ function LoginForm() {
       <div className="p-4 rounded-2xl glass-card border border-white/90 flex flex-col gap-2.5">
         <div className="flex items-center gap-1.5 text-xs font-bold text-brand-900">
           <Sparkles className="w-3.5 h-3.5 text-brand-500" />
-          <span>一键免密体验（自动注登新账号）</span>
+          <span>One-click demo (creates a new account)</span>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
@@ -82,7 +82,7 @@ function LoginForm() {
             className="flex flex-col items-center justify-center p-2.5 rounded-xl glass-pill text-slate-800 hover:text-brand-600 hover:border-brand-300 transition-all text-xs font-bold shadow-xs active:scale-95"
           >
             <User className="w-4 h-4 text-brand-500 mb-1" />
-            <span>顾客视角</span>
+            <span>Customer</span>
           </button>
 
           <button
@@ -92,7 +92,7 @@ function LoginForm() {
             className="flex flex-col items-center justify-center p-2.5 rounded-xl glass-pill text-slate-800 hover:text-amber-600 hover:border-amber-300 transition-all text-xs font-bold shadow-xs active:scale-95"
           >
             <ChefHat className="w-4 h-4 text-amber-500 mb-1" />
-            <span>店长视角</span>
+            <span>Restaurant owner</span>
           </button>
 
           <button
@@ -102,21 +102,21 @@ function LoginForm() {
             className="flex flex-col items-center justify-center p-2.5 rounded-xl glass-pill text-slate-800 hover:text-emerald-600 hover:border-emerald-300 transition-all text-xs font-bold shadow-xs active:scale-95"
           >
             <Bike className="w-4 h-4 text-emerald-500 mb-1" />
-            <span>骑手视角</span>
+            <span>Driver</span>
           </button>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-slate-200/60" />
-        <span className="text-[11px] text-slate-400 font-medium">或使用常规账号密码登录</span>
+        <span className="text-[11px] text-slate-400 font-medium">Or sign in with email and password</span>
         <div className="flex-1 h-px bg-slate-200/60" />
       </div>
 
       {/* Regular Login Form */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
-          label="登录邮箱"
+          label="Email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -126,12 +126,12 @@ function LoginForm() {
         />
 
         <Input
-          label="登录密码"
+          label="Password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          placeholder="输入您的登录密码"
+          placeholder="Your password"
           icon={<Lock className="w-4 h-4" />}
         />
 
@@ -142,18 +142,18 @@ function LoginForm() {
           loading={loading && demoLoading === null}
           className="w-full mt-2 text-xs font-bold gap-2"
         >
-          <span>登录系统</span>
+          <span>Sign in</span>
           <ArrowRight className="w-4 h-4" />
         </Button>
       </form>
 
       <div className="text-center text-xs text-slate-500">
-        还没有账户？{' '}
+        No account yet?{' '}
         <Link
           href="/register"
           className="font-bold text-brand-600 hover:text-brand-700 underline underline-offset-4"
         >
-          免费注册新角色
+          Sign up
         </Link>
       </div>
     </div>

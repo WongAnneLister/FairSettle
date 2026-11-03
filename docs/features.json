@@ -827,6 +827,25 @@
         "log_sha256": "d1ea50e982847078dbedff926c44882c9e16eca8b477252cc858e8d4f2c57972"
       },
       "started_at": "2026-11-02T00:22:03+09:00"
+    },
+    {
+      "id": "F36",
+      "title": "English storefront",
+      "service": "dispatch",
+      "milestone": "M3",
+      "priority": "P0",
+      "behavior": "The storefront (dispatch/frontend) is English only: every page, toast, status and date. The order page's demo controls appear only to the role that may use them, and a picked-up order can be marked as a failed delivery by its driver, with a driver-fault or platform-fault reason, and shows as Delivery failed.",
+      "verification": {
+        "kind": "command",
+        "command": "cd dispatch/frontend && npm test"
+      },
+      "depends_on": [
+        "F33",
+        "F25"
+      ],
+      "state": "active",
+      "evidence": null,
+      "started_at": "2026-11-04T00:50:42+09:00"
     }
   ]
 }

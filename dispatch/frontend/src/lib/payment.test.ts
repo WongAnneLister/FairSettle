@@ -43,21 +43,21 @@ describe('payment helpers', () => {
     expect(paymentView({
       paymentStatus: OrderPaymentStatus.AwaitingPayment,
       checkoutUrl: sandboxUrl,
-    })).toEqual({ label: '待支付', tone: 'waiting', canPay: true, canRefresh: true });
+    })).toEqual({ label: 'Awaiting payment', tone: 'waiting', canPay: true, canRefresh: true });
     expect(paymentView({ paymentStatus: OrderPaymentStatus.AwaitingPayment })).toEqual({
-      label: '正在创建 PayPal 付款…', tone: 'neutral', canPay: false, canRefresh: false,
+      label: 'Creating PayPal payment…', tone: 'neutral', canPay: false, canRefresh: false,
     });
     expect(paymentView({
       paymentStatus: OrderPaymentStatus.AwaitingPayment,
       checkoutUrl: 'https://www.paypal.com/checkoutnow?token=X',
     })).toEqual({
-      label: '付款链接无效，请联系客服', tone: 'danger', canPay: false, canRefresh: false,
+      label: 'Payment link is invalid. Please contact support.', tone: 'danger', canPay: false, canRefresh: false,
     });
     expect(paymentView({ paymentStatus: OrderPaymentStatus.Paid })).toEqual({
-      label: '已支付', tone: 'success', canPay: false, canRefresh: false,
+      label: 'Paid', tone: 'success', canPay: false, canRefresh: false,
     });
     expect(paymentView({ paymentStatus: OrderPaymentStatus.Failed })).toEqual({
-      label: '支付失败', tone: 'danger', canPay: false, canRefresh: false,
+      label: 'Payment failed', tone: 'danger', canPay: false, canRefresh: false,
     });
   });
 

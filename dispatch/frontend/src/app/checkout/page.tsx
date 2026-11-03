@@ -34,7 +34,7 @@ export default function CheckoutPage() {
   } = useCart();
   const { success, error } = useToast();
 
-  const [address, setAddress] = useState('科技大道99号 创新大厦B座 1802室');
+  const [address, setAddress] = useState('99 Innovation Avenue, Building B, Apt 1802');
   const [phone, setPhone] = useState('13800138000');
   const [notes, setNotes] = useState('');
 
@@ -44,12 +44,12 @@ export default function CheckoutPage() {
     e.preventDefault();
 
     if (!restaurantId || items.length === 0) {
-      error('购物车为空', '请先选购商品');
+      error('Your cart is empty', 'Add dishes to your cart first');
       return;
     }
 
     if (!user) {
-      error('请先登录', '下单前需要先登录您的顾客账号');
+      error('Please sign in', 'Sign in as a customer to place an order');
       router.push('/login?redirect=/checkout');
       return;
     }
@@ -70,13 +70,13 @@ export default function CheckoutPage() {
 
       if (ok && orderId) {
         clearCart();
-        success('下单成功！', `订单编号 #${orderId}，正在前往 PayPal 付款`);
+        success('Order placed', `Order #${orderId}. Opening PayPal for payment`);
         router.push(`/orders/${orderId}?pay=1`);
       } else {
-        error('下单失败', errMessage || '请稍后重试');
+        error('Order failed', errMessage || 'Please try again later');
       }
     } catch (err: any) {
-      error('提交订单异常', err.message || '网络或服务器错误');
+      error('Could not place order', err.message || 'Network or server error');
     }
   };
 
@@ -87,14 +87,14 @@ export default function CheckoutPage() {
           <ShoppingBag className="w-8 h-8" />
         </div>
         <h2 className="text-xl font-bold text-slate-900 mb-2">
-          购物车内暂无商品
+          Your cart is empty
         </h2>
         <p className="text-xs text-slate-400 max-w-sm mb-6 leading-relaxed">
-          您尚未选择任何餐品。挑选您心仪的餐厅与美食，我们将即时为您配送！
+          Find a restaurant and add your favorite dishes to get started.
         </p>
         <Link href="/">
           <Button variant="primary" size="md">
-            立即去探索美食
+            Explore restaurants
           </Button>
         </Link>
       </div>
@@ -113,10 +113,10 @@ export default function CheckoutPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            确认订单并结算
+            Checkout
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            来自「{restaurantName}」的高品质现做餐食
+            Freshly prepared by {restaurantName}
           </p>
         </div>
       </div>
@@ -128,36 +128,36 @@ export default function CheckoutPage() {
           <div className="glass-card rounded-3xl p-6 sm:p-7 border border-white/90 flex flex-col gap-4">
             <div className="flex items-center gap-2 font-bold text-slate-900 text-base">
               <MapPin className="w-5 h-5 text-brand-500" />
-              <span>配送地址与联系方式</span>
+              <span>Delivery address and contact details</span>
             </div>
 
             <Input
-              label="收餐详细地址"
+              label="Delivery address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               required
-              placeholder="例如：科技园中路1号楼 802室"
+              placeholder="For example: 1 Park Avenue, Apt 802"
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                label="联系电话"
+                label="Phone number"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
-                placeholder="收餐人手机号"
+                placeholder="Contact phone number"
               />
               <Input
-                label="订单备注 (可选)"
+                label="Order notes (optional)"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="如：少放辣椒、放门口等"
+                placeholder="For example: less spice, leave at the door"
               />
             </div>
 
             <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-2.5 rounded-2xl backdrop-blur-md">
               <Clock className="w-4 h-4 shrink-0 text-emerald-600" />
-              <span>智能预测：支付后约 25-35 分钟为您送达</span>
+              <span>Estimated delivery: 25-35 minutes after payment</span>
             </div>
           </div>
 
@@ -165,11 +165,11 @@ export default function CheckoutPage() {
           <div className="glass-card rounded-3xl p-6 sm:p-7 border border-white/90 flex flex-col gap-4">
             <div className="flex items-center gap-2 font-bold text-slate-900 text-base">
               <Sparkles className="w-5 h-5 text-amber-500" />
-              <span>支付方式</span>
+              <span>Payment method</span>
             </div>
 
             <p className="text-sm text-slate-600">
-              PayPal（沙盒环境）· 提交订单后将跳转到 PayPal 完成付款
+              PayPal (sandbox). Place your order to continue to PayPal for payment
             </p>
           </div>
 
@@ -177,7 +177,7 @@ export default function CheckoutPage() {
           <div className="glass-card rounded-3xl p-6 sm:p-7 border border-white/90 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="font-bold text-slate-900 text-base">
-                餐品明细 ({items.length} 种)
+                Order items ({items.length})
               </span>
               <span className="text-xs text-slate-400">{restaurantName}</span>
             </div>
@@ -195,7 +195,7 @@ export default function CheckoutPage() {
                     {item.options.length > 0 && (
                       <p className="text-xs text-slate-400 mt-0.5">
                         {item.options
-                          .map((o) => `${o.name}: ${o.choice || '已选'}`)
+                          .map((o) => `${o.name}: ${o.choice || 'Selected'}`)
                           .join(', ')}
                       </p>
                     )}
@@ -213,23 +213,23 @@ export default function CheckoutPage() {
         <div className="lg:col-span-5 flex flex-col gap-4">
           <div className="sticky top-24 glass-panel rounded-3xl p-6 sm:p-7 border border-white/95 shadow-[0_20px_50px_0_rgba(15,23,42,0.08)] flex flex-col gap-5">
             <h3 className="font-bold text-slate-900 text-base">
-              费用结算明细
+              Order summary
             </h3>
 
             <div className="space-y-2.5 text-xs text-slate-600">
               <div className="flex justify-between">
-                <span>商品总额</span>
+                <span>Subtotal</span>
                 <span className="font-semibold text-slate-900">
                   {formatCents(subtotalCents)}
                 </span>
               </div>
               <div className="pt-3 border-t border-slate-200/60 flex justify-between items-baseline text-slate-900">
-                <span className="text-sm font-bold">应付总计</span>
+                <span className="text-sm font-bold">Total due</span>
                 <div className="text-right">
                   <span className="text-2xl font-black text-brand-600">
                     {formatCents(totalCents)}
                   </span>
-                  <p className="text-[10px] text-slate-400">以 PayPal 实际扣款为准</p>
+                  <p className="text-[10px] text-slate-400">Final charge is confirmed by PayPal</p>
                 </div>
               </div>
             </div>
@@ -241,12 +241,12 @@ export default function CheckoutPage() {
               loading={loading}
               className="w-full text-xs font-bold gap-2 shadow-lg shadow-brand-500/25"
             >
-              <span>提交订单并前往 PayPal 付款</span>
+              <span>Place order and pay with PayPal</span>
             </Button>
 
             <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-              <span>原子事务调度保护 · 订单全程实时追踪</span>
+              <span>Track your order from kitchen to doorstep</span>
             </div>
           </div>
         </div>

@@ -88,7 +88,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (restaurantId && restaurantId !== newRestId && items.length > 0) {
         if (
           !confirm(
-            `您的购物车中有来自「${restaurantName}」的菜品。添加「${newRestName}」的菜品将清空之前的商品，是否继续？`
+            `Your cart contains dishes from ${restaurantName}. Adding dishes from ${newRestName} will clear your cart. Continue?`
           )
         ) {
           return;
@@ -136,7 +136,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
       });
 
-      success(`已加入购物车`, `${dish.name} × ${quantity}`);
+      success(`Added to cart`, `${dish.name} × ${quantity}`);
     },
     [restaurantId, restaurantName, items.length, success]
   );
@@ -183,7 +183,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems([]);
     setRestaurantId(null);
     setRestaurantName(null);
-    info('购物车已清空');
+    info('Cart cleared');
   }, [info]);
 
   const itemCount = useMemo(

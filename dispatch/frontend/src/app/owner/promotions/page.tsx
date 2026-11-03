@@ -50,14 +50,14 @@ export default function PromotionsPage() {
       });
 
       if (res.data?.createPayment?.ok) {
-        success('置顶推广开通成功！', '该餐厅将在平台首页享受 7 天专属推荐黄金曝光位');
+        success('Promotion activated', 'Your restaurant will be featured on the home page for 7 days');
         refetchRest();
         refetchPay();
       } else {
-        error('推广未成功', res.data?.createPayment?.error);
+        error('Promotion failed', res.data?.createPayment?.error);
       }
     } catch (err: any) {
-      error('支付推广异常', err.message);
+      error('Promotion payment failed', err.message);
     }
   };
 
@@ -73,10 +73,10 @@ export default function PromotionsPage() {
         </Link>
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            餐厅曝光与置顶推广
+            Restaurant promotions
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            开启首页置顶特权，为您的店铺带来数倍外卖进店客流与爆单机会
+            Feature your restaurant on the home page to reach more customers
           </p>
         </div>
       </div>
@@ -87,27 +87,27 @@ export default function PromotionsPage() {
         <div className="flex flex-col gap-2.5 relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-500/30 backdrop-blur-xl border border-purple-400/30 text-purple-200 text-xs font-bold w-fit shadow-sm">
             <Sparkles className="w-4 h-4 text-purple-300" />
-            <span>黄金推荐位特权套餐</span>
+            <span>Featured restaurant plan</span>
           </div>
           <h2 className="text-xl sm:text-3xl font-black tracking-tight text-white">
-            7 天全城首页置顶曝光
+            7 days featured on the home page
           </h2>
           <p className="text-xs sm:text-sm text-purple-200/90 max-w-lg leading-relaxed">
-            开通后系统自动在首页「店长力荐」展位第一屏展示，附带金色尊享皇冠标。后端 NestJS 定时任务每日 00:00 自动巡检过期状态。
+            Your restaurant appears in the featured section with a gold crown. Promotion expiry is checked daily.
           </p>
         </div>
 
         <div className="p-6 rounded-3xl bg-white/10 backdrop-blur-2xl border border-white/15 text-center shrink-0 shadow-xl relative z-10">
-          <span className="text-xs text-purple-200 font-semibold tracking-wider uppercase">特惠推广计划</span>
+          <span className="text-xs text-purple-200 font-semibold tracking-wider uppercase">Promotion plan</span>
           <p className="text-3xl sm:text-4xl font-black text-white mt-1">$49.90</p>
-          <span className="text-[11px] text-purple-300 font-medium mt-1 block">有效期 7 天 · 即刻生效</span>
+          <span className="text-[11px] text-purple-300 font-medium mt-1 block">Valid for 7 days, starting now</span>
         </div>
       </div>
 
       {/* Select Restaurant to promote */}
       <div className="flex flex-col gap-4">
         <h3 className="font-black text-slate-900 text-lg">
-          选择要推广的店铺
+          Choose a restaurant to promote
         </h3>
 
         {restLoading ? (
@@ -116,10 +116,10 @@ export default function PromotionsPage() {
           </div>
         ) : restaurants.length === 0 ? (
           <div className="p-10 glass-panel rounded-[32px] text-center border border-white/80">
-            <p className="text-xs text-slate-500 mb-4">您目前名下没有餐厅，请先创建您的第一家餐厅</p>
+            <p className="text-xs text-slate-500 mb-4">Create your first restaurant to get started</p>
             <Link href="/owner/restaurants">
               <Button variant="primary" size="sm">
-                去创建餐厅
+                Create restaurant
               </Button>
             </Link>
           </div>
@@ -138,11 +138,11 @@ export default function PromotionsPage() {
                     {rest.isPromoted ? (
                       <span className="text-[11px] bg-gradient-to-r from-amber-500 to-yellow-500 text-white font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm shrink-0">
                         <Sparkles className="w-3 h-3" />
-                        已置顶
+                        Featured
                       </span>
                     ) : (
                       <span className="text-[11px] bg-slate-100 text-slate-500 font-semibold px-2 py-0.5 rounded-full shrink-0">
-                        常规展示
+                        Standard listing
                       </span>
                     )}
                   </div>
@@ -152,7 +152,7 @@ export default function PromotionsPage() {
                   {rest.promotedUntil && (
                     <div className="mt-2.5 p-2 rounded-xl bg-amber-50 border border-amber-200/60 text-[11px] text-amber-800 font-semibold flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                      <span>有效期至：{new Date(rest.promotedUntil).toLocaleDateString()}</span>
+                      <span>Valid until: {new Date(rest.promotedUntil).toLocaleDateString('en-US')}</span>
                     </div>
                   )}
                 </div>
@@ -167,7 +167,7 @@ export default function PromotionsPage() {
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>{rest.isPromoted ? '续期推广 7 天' : '立即开通置顶 ($49.90)'}</span>
+                  <span>{rest.isPromoted ? 'Extend promotion by 7 days' : 'Start promotion ($49.90)'}</span>
                 </Button>
               </div>
             ))}
@@ -179,7 +179,7 @@ export default function PromotionsPage() {
       {payments.length > 0 && (
         <div className="glass-panel rounded-[28px] p-6 border border-white/80 flex flex-col gap-4">
           <h3 className="font-black text-slate-900 text-base">
-            历史推广交易单据
+            Promotion payment history
           </h3>
           <div className="divide-y divide-slate-100 text-xs">
             {payments.map((p) => (
@@ -193,12 +193,12 @@ export default function PromotionsPage() {
                       {p.transactionId}
                     </span>
                     <span className="text-slate-400 ml-2">
-                      店铺 #{p.restaurantId}
+                      Restaurant #{p.restaurantId}
                     </span>
                   </div>
                 </div>
                 <span className="text-slate-500 font-medium">
-                  {new Date(p.createdAt || Date.now()).toLocaleDateString()}
+                  {new Date(p.createdAt || Date.now()).toLocaleDateString('en-US')}
                 </span>
               </div>
             ))}

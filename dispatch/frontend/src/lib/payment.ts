@@ -23,16 +23,16 @@ export function paymentView(order: Pick<Order, 'paymentStatus' | 'checkoutUrl'>)
   switch (order.paymentStatus) {
     case OrderPaymentStatus.AwaitingPayment:
       if (isSandboxCheckoutUrl(order.checkoutUrl)) {
-        return { label: '待支付', tone: 'waiting', canPay: true, canRefresh: true };
+        return { label: 'Awaiting payment', tone: 'waiting', canPay: true, canRefresh: true };
       }
       if (!order.checkoutUrl) {
-        return { label: '正在创建 PayPal 付款…', tone: 'neutral', canPay: false, canRefresh: false };
+        return { label: 'Creating PayPal payment…', tone: 'neutral', canPay: false, canRefresh: false };
       }
-      return { label: '付款链接无效，请联系客服', tone: 'danger', canPay: false, canRefresh: false };
+      return { label: 'Payment link is invalid. Please contact support.', tone: 'danger', canPay: false, canRefresh: false };
     case OrderPaymentStatus.Paid:
-      return { label: '已支付', tone: 'success', canPay: false, canRefresh: false };
+      return { label: 'Paid', tone: 'success', canPay: false, canRefresh: false };
     case OrderPaymentStatus.Failed:
-      return { label: '支付失败', tone: 'danger', canPay: false, canRefresh: false };
+      return { label: 'Payment failed', tone: 'danger', canPay: false, canRefresh: false };
     default:
       return null;
   }

@@ -61,10 +61,10 @@ export default function RestaurantMenuManagerPage() {
     setOptions((prev) => [
       ...prev,
       {
-        name: '规格选择',
+        name: 'Options',
         choices: [
-          { name: '标准款', extraDollars: '0.00' },
-          { name: '升级款', extraDollars: '3.00' },
+          { name: 'Standard', extraDollars: '0.00' },
+          { name: 'Premium', extraDollars: '3.00' },
         ],
       },
     ]);
@@ -77,7 +77,7 @@ export default function RestaurantMenuManagerPage() {
   const handleAddChoice = (groupIndex: number) => {
     setOptions((prev) => {
       const copy = [...prev];
-      copy[groupIndex].choices.push({ name: '新选项', extraDollars: '1.00' });
+      copy[groupIndex].choices.push({ name: 'New option', extraDollars: '1.00' });
       return copy;
     });
   };
@@ -121,22 +121,22 @@ export default function RestaurantMenuManagerPage() {
       });
 
       if (res.data?.createDish?.ok) {
-        success('菜品新增成功', `${name} 已加入菜单`);
+        success('Dish added', `${name} is now on the menu`);
         setIsModalOpen(false);
         setName('');
         setDescription('');
         setOptions([]);
         refetch();
       } else {
-        error('新增菜品失败', res.data?.createDish?.error || '请稍后重试');
+        error('Could not add dish', res.data?.createDish?.error || 'Please try again later');
       }
     } catch (err: any) {
-      error('提交失败', err.message);
+      error('Submission failed', err.message);
     }
   };
 
   const handleDeleteDish = async (dishId: number, dishName: string) => {
-    if (!confirm(`确认要删除菜品「${dishName}」吗？`)) return;
+    if (!confirm(`Delete the dish "${dishName}"?`)) return;
 
     try {
       const res = await deleteDish({
@@ -144,13 +144,13 @@ export default function RestaurantMenuManagerPage() {
       });
 
       if (res.data?.deleteDish?.ok) {
-        success('菜品已删除');
+        success('Dish deleted');
         refetch();
       } else {
-        error('删除失败', res.data?.deleteDish?.error);
+        error('Delete failed', res.data?.deleteDish?.error);
       }
     } catch (err: any) {
-      error('操作失败', err.message);
+      error('Action failed', err.message);
     }
   };
 
@@ -167,10 +167,10 @@ export default function RestaurantMenuManagerPage() {
           </Link>
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              {restaurant?.name ? `${restaurant.name} · 菜单管理` : '菜品与菜单配置'}
+              {restaurant?.name ? `${restaurant.name} · Menu management` : 'Dishes and menu'}
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              新增上架、规格配料定制与以分计费（Integer Cents）精准定价
+              Add dishes, customize options and set prices
             </p>
           </div>
         </div>
@@ -182,7 +182,7 @@ export default function RestaurantMenuManagerPage() {
           className="gap-2 shadow-lg shadow-brand-500/20"
         >
           <Plus className="w-4 h-4" />
-          <span>添加新菜品</span>
+          <span>Add dish</span>
         </Button>
       </div>
 
@@ -190,7 +190,7 @@ export default function RestaurantMenuManagerPage() {
       {loading ? (
         <div className="py-24 flex flex-col items-center justify-center gap-3">
           <Spinner className="w-8 h-8 text-amber-500" />
-          <p className="text-xs text-slate-400">正在同步餐厅菜单...</p>
+          <p className="text-xs text-slate-400">Loading menu...</p>
         </div>
       ) : menu.length === 0 ? (
         <div className="py-20 glass-panel rounded-[32px] text-center p-8 flex flex-col items-center justify-center border border-white/80">
@@ -198,10 +198,10 @@ export default function RestaurantMenuManagerPage() {
             <Utensils className="w-8 h-8" />
           </div>
           <h3 className="font-black text-slate-900 text-lg">
-            当前菜单暂无菜品
+            No dishes on the menu yet
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mt-1 mb-6 leading-relaxed">
-            立即上架您的第一道招牌菜品，顾客便可在店铺页浏览并加购选配！
+            Add your first dish so customers can order it from your restaurant.
           </p>
           <Button
             variant="primary"
@@ -210,7 +210,7 @@ export default function RestaurantMenuManagerPage() {
             className="gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>添加第一道菜</span>
+            <span>Add your first dish</span>
           </Button>
         </div>
       ) : (
@@ -243,7 +243,7 @@ export default function RestaurantMenuManagerPage() {
                           key={i}
                           className="text-[11px] bg-slate-100/90 text-slate-700 px-2 py-0.5 rounded-lg font-medium border border-slate-200/50"
                         >
-                          {opt.name} ({opt.choices?.length || 0}项)
+                          {opt.name} ({opt.choices?.length || 0} options)
                         </span>
                       ))}
                     </div>
@@ -258,7 +258,7 @@ export default function RestaurantMenuManagerPage() {
                     className="text-red-500 hover:text-red-600 hover:bg-red-50 gap-1.5 text-xs font-semibold"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>下架删除</span>
+                    <span>Delete dish</span>
                   </Button>
                 </div>
               </div>
@@ -283,30 +283,30 @@ export default function RestaurantMenuManagerPage() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="上架新菜品与配置规格"
+        title="Add a dish and options"
         maxWidth="lg"
       >
         <form onSubmit={handleCreateDish} className="flex flex-col gap-4">
           <Input
-            label="菜品名称"
+            label="Dish name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            placeholder="例如：特制安格斯牛肉手工披萨"
+            placeholder="For example: Angus beef pizza"
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="基础价格 (支持小数输入，系统换算整数分)"
+              label="Base price (dollars)"
               value={priceDollars}
               onChange={(e) => setPriceDollars(e.target.value)}
               required
-              placeholder="例如：14.50"
+              placeholder="For example: 14.50"
               icon={<DollarSign className="w-4 h-4 text-slate-400" />}
             />
 
             <Input
-              label="菜品实拍图片 URL"
+              label="Dish photo URL"
               value={photo}
               onChange={(e) => setPhoto(e.target.value)}
               placeholder="https://images.unsplash.com/..."
@@ -315,14 +315,14 @@ export default function RestaurantMenuManagerPage() {
 
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-slate-700">
-              菜品详细介绍 (5-256字符)
+              Dish description (5-256 characters)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
               rows={3}
-              placeholder="介绍菜品食材、工艺特色、口感与主厨调味..."
+              placeholder="Describe the ingredients, preparation and flavors..."
               className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-900 text-xs outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all placeholder:text-slate-400"
             />
           </div>
@@ -332,10 +332,10 @@ export default function RestaurantMenuManagerPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                  自定义选项与加料规格
+                  Custom options and extras
                 </h4>
                 <p className="text-[11px] text-slate-400">
-                  例如：饼底尺寸、额外芝士加料、辣度选择等
+                  For example: size, extra cheese or spice level
                 </p>
               </div>
               <Button
@@ -346,7 +346,7 @@ export default function RestaurantMenuManagerPage() {
                 className="gap-1.5 text-xs font-semibold"
               >
                 <PlusCircle className="w-3.5 h-3.5 text-brand-500" />
-                <span>添加选项组</span>
+                <span>Add option group</span>
               </Button>
             </div>
 
@@ -367,7 +367,7 @@ export default function RestaurantMenuManagerPage() {
                         return copy;
                       });
                     }}
-                    placeholder="选项组名称（如：芝士配料）"
+                    placeholder="Option group name (for example: cheese)"
                     className="font-bold text-xs bg-white border border-slate-200 rounded-xl focus:border-brand-500 outline-none px-3 py-1.5 text-slate-900 w-48 shadow-sm"
                   />
                   <button
@@ -394,7 +394,7 @@ export default function RestaurantMenuManagerPage() {
                             return copy;
                           });
                         }}
-                        placeholder="选项名称"
+                        placeholder="Option name"
                         className="text-xs bg-white border border-slate-200 rounded-xl px-3 py-1.5 w-36 text-slate-900 shadow-sm outline-none focus:border-brand-500"
                       />
                       <span className="text-xs text-slate-400 font-bold">+ $</span>
@@ -427,7 +427,7 @@ export default function RestaurantMenuManagerPage() {
                     onClick={() => handleAddChoice(gIdx)}
                     className="text-xs font-bold text-brand-600 hover:underline pt-1 inline-flex items-center gap-1"
                   >
-                    + 添加子选项
+                    + Add choice
                   </button>
                 </div>
               </div>
@@ -441,7 +441,7 @@ export default function RestaurantMenuManagerPage() {
               size="md"
               onClick={() => setIsModalOpen(false)}
             >
-              取消
+              Cancel
             </Button>
             <Button
               type="submit"
@@ -449,7 +449,7 @@ export default function RestaurantMenuManagerPage() {
               size="md"
               loading={creating}
             >
-              确认上架菜品
+              Add dish
             </Button>
           </div>
         </form>

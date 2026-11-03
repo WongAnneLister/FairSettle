@@ -55,10 +55,10 @@ export function OrderPaymentCard({ order, isCustomer, autoPay, canceled, onRefre
       if (result?.ok) {
         onRefreshed();
       } else {
-        error('暂时无法确认付款状态', `请稍后再试（${result?.code ?? 'UNKNOWN'}）`);
+        error('Couldn\'t confirm the payment yet', `Please try again later (${result?.code ?? 'NETWORK'}).`);
       }
     } catch {
-      error('暂时无法确认付款状态', '请稍后再试（NETWORK）');
+      error('Couldn\'t confirm the payment yet', 'Please try again later (NETWORK).');
     } finally {
       refreshing.current = false;
     }
@@ -85,20 +85,20 @@ export function OrderPaymentCard({ order, isCustomer, autoPay, canceled, onRefre
   return (
     <div className="glass-card rounded-3xl p-6 border border-white/90 flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-bold text-slate-900">PayPal 付款</h2>
+        <h2 className="font-bold text-slate-900">PayPal payment</h2>
         <span className={`px-3 py-1 rounded-full text-xs font-bold ${toneClasses[view.tone]}`}>
           {view.label}
         </span>
       </div>
-      <p className="text-sm text-slate-600">金额 {formatCents(order.totalCents ?? 0)}（PayPal 沙盒）</p>
+      <p className="text-sm text-slate-600">Amount {formatCents(order.totalCents ?? 0)} (PayPal sandbox)</p>
       {canceled && (
-        <p className="text-sm text-amber-700">您已取消 PayPal 付款，可以随时重新前往付款。</p>
+        <p className="text-sm text-amber-700">You cancelled the PayPal payment. You can pay again at any time.</p>
       )}
       {isCustomer && view.canPay && (
         <div className="flex flex-wrap gap-3">
-          <Button variant="primary" onClick={goToPayPal}>前往 PayPal 付款</Button>
+          <Button variant="primary" onClick={goToPayPal}>Pay with PayPal</Button>
           <Button variant="secondary" onClick={() => void refresh()} loading={loading}>
-            我已完成付款，刷新状态
+            I&apos;ve paid — refresh status
           </Button>
         </div>
       )}

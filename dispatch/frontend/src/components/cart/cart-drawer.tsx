@@ -40,10 +40,10 @@ export function CartDrawer() {
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 text-base">
-                  我的外卖单
+                  Your cart
                 </h3>
                 <p className="text-[11px] text-slate-400 font-medium">
-                  共 {itemCount} 件已选美味
+                  {itemCount} items selected
                 </p>
               </div>
             </div>
@@ -66,7 +66,7 @@ export function CartDrawer() {
                 onClick={clearCart}
                 className="text-amber-700 hover:text-red-500 font-semibold shrink-0 ml-2"
               >
-                清空
+                Clear
               </button>
             </div>
           )}
@@ -79,17 +79,17 @@ export function CartDrawer() {
                   <ShoppingBag className="w-8 h-8" />
                 </div>
                 <h4 className="font-bold text-slate-800 text-base mb-1">
-                  购物车还是空的
+                  Your cart is empty
                 </h4>
                 <p className="text-xs text-slate-400 max-w-xs mb-6">
-                  挑选您喜爱的特色菜品，我们将即刻为您精心烹饪！
+                  Choose your favorite dishes to get started.
                 </p>
                 <Button
                   variant="primary"
                   size="sm"
                   onClick={() => setIsOpen(false)}
                 >
-                  发现美味
+                  Explore restaurants
                 </Button>
               </div>
             ) : (
@@ -113,7 +113,7 @@ export function CartDrawer() {
                             key={i}
                             className="inline-block text-[10px] glass-pill text-slate-600 px-2 py-0.5 rounded-md font-medium"
                           >
-                            {opt.name}: {opt.choice || '已选'}
+                            {opt.name}: {opt.choice || 'Selected'}
                             {opt.extraCents ? ` (+${formatCents(opt.extraCents)})` : ''}
                           </span>
                         ))}
@@ -143,7 +143,7 @@ export function CartDrawer() {
                       <button
                         onClick={() => removeItem(item.id)}
                         className="text-slate-400 hover:text-red-500 transition-colors p-1"
-                        title="删除该项"
+                        title="Remove item"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -159,13 +159,13 @@ export function CartDrawer() {
             <div className="p-5 border-t border-slate-200/50 bg-white/70 backdrop-blur-xl flex flex-col gap-3">
               <div className="space-y-1.5 text-xs text-slate-500">
                 <div className="flex justify-between">
-                  <span>菜品小计</span>
+                  <span>Subtotal</span>
                   <span className="font-semibold text-slate-800">
                     {formatCents(subtotalCents)}
                   </span>
                 </div>
                 <div className="border-t border-slate-200/60 pt-2 flex justify-between text-sm font-black text-slate-900">
-                  <span>总计金额</span>
+                  <span>Total</span>
                   <span className="text-brand-600 text-lg">
                     {formatCents(totalCents)}
                   </span>
@@ -178,7 +178,7 @@ export function CartDrawer() {
                 className="w-full"
               >
                 <Button variant="primary" size="lg" className="w-full gap-2">
-                  <span>前往提交订单</span>
+                  <span>Checkout</span>
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>

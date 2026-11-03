@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 import { GET_ORDERS_QUERY } from '@/lib/graphql/queries';
 import { EDIT_ORDER_MUTATION } from '@/lib/graphql/mutations';
-import { Order, OrderStatus } from '@/lib/types';
+import { DeliveryFailureReason, Order, OrderStatus } from '@/lib/types';
+import { DELIVERY_FAILURE_REASONS, ORDER_STATUS_LABELS, isFinished, markFailedInput } from '@/lib/order-actions';
 import { formatCents } from '@/lib/currency';
 import { OrderStatusBadge } from '@/components/order/order-status-badge';
 import { Button } from '@/components/ui/button';
@@ -37,16 +38,14 @@ export default function DriverActiveOrdersPage() {
   const [editOrder, { loading: updating }] = useMutation(EDIT_ORDER_MUTATION);
 
   const orders: Order[] = data?.getOrders?.orders || [];
-  const activeOrders = orders.filter(
-    (o) => o.status === OrderStatus.Cooked || o.status === OrderStatus.PickedUp
-  );
-  const deliveredOrders = orders.filter((o) => o.status === OrderStatus.Delivered);
+  const activeOrders = orders.filter((o) => !isFinished(o.status));
+  const deliveredOrders = orders.filter((o) => isFinished(o.status));
 
-  const handleUpdateStatus = async (orderId: number, nextStatus: OrderStatus) => {
+  const handleUpdateStatus = async (orderId: number, nextStatus: OrderStatus, reason?: DeliveryFailureReason) => {
     try {
       const res = await editOrder({
         variables: {
-          input: {
+          input: reason ? markFailedInput(orderId, reason) : {
             id: orderId,
             status: nextStatus,
           },
@@ -54,13 +53,13 @@ export default function DriverActiveOrdersPage() {
       });
 
       if (res.data?.editOrder?.ok) {
-        success('配送进度已更新', `订单 #${orderId} 状态已推进至：${nextStatus}`);
+        success('Delivery updated', `Order #${orderId} moved to ${ORDER_STATUS_LABELS[nextStatus]}`);
         refetch();
       } else {
-        error('操作受限', res.data?.editOrder?.error || '状态流转未获批准');
+        error('Not allowed', res.data?.editOrder?.error || 'This status change is not allowed.');
       }
     } catch (err: any) {
-      error('提交失败', err.message);
+      error('Update failed', err.message);
     }
   };
 
@@ -77,10 +76,10 @@ export default function DriverActiveOrdersPage() {
           </Link>
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              当前配送任务看板
+              Current deliveries
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              执行已接单配送任务，确认到店取餐与交付顾客送达
+              Confirm pickup, delivery or a failed delivery for your orders.
             </p>
           </div>
         </div>
@@ -93,11 +92,11 @@ export default function DriverActiveOrdersPage() {
             className="gap-1.5 glass-panel hover:bg-white text-slate-700 border-white/80 font-semibold shadow-sm"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>刷新进度</span>
+            <span>Refresh status</span>
           </Button>
           <Link href="/driver/available">
             <Button variant="emerald" size="sm" className="shadow-md shadow-emerald-500/20">
-              去抢单大厅
+              Find an order
             </Button>
           </Link>
         </div>
@@ -106,7 +105,7 @@ export default function DriverActiveOrdersPage() {
       {/* Active Orders Section */}
       <div className="flex flex-col gap-4">
         <h2 className="text-base font-black text-slate-900 tracking-tight">
-          正在派送中的任务 ({activeOrders.length})
+          Active deliveries ({activeOrders.length})
         </h2>
 
         {loading && activeOrders.length === 0 ? (
@@ -119,14 +118,14 @@ export default function DriverActiveOrdersPage() {
               <Bike className="w-8 h-8" />
             </div>
             <h3 className="font-black text-slate-900 text-lg">
-              您当前没有进行中的配送任务
+              No active deliveries
             </h3>
             <p className="text-xs text-slate-500 max-w-sm mt-1 mb-6 leading-relaxed">
-              前往待抢单大厅，抢接后厨刚出餐完毕的品质外卖！
+              Find an order that is ready for pickup.
             </p>
             <Link href="/driver/available">
               <Button variant="emerald" size="md" className="shadow-lg shadow-emerald-500/25">
-                前往抢单大厅
+                Find an order
               </Button>
             </Link>
           </div>
@@ -144,10 +143,10 @@ export default function DriverActiveOrdersPage() {
                     </span>
                     <div>
                       <h3 className="font-black text-slate-900 text-base">
-                        {order.restaurant?.name || '品质合作餐厅'}
+                        {order.restaurant?.name || 'Restaurant'}
                       </h3>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        接单时间：{new Date(order.createdAt || Date.now()).toLocaleTimeString()}
+                        Claimed at {new Date(order.createdAt || Date.now()).toLocaleTimeString('en-US')}
                       </p>
                     </div>
                   </div>
@@ -166,10 +165,10 @@ export default function DriverActiveOrdersPage() {
                     <Store className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                     <div>
                       <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">
-                        取餐地点 (商家)
+                        Pickup (restaurant)
                       </span>
                       <p className="font-black text-slate-800 mt-1">
-                        {order.restaurant?.address || '美食街88号'}
+                        {order.restaurant?.address || '88 Food Street'}
                       </p>
                     </div>
                   </div>
@@ -178,13 +177,13 @@ export default function DriverActiveOrdersPage() {
                     <MapPin className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
                     <div>
                       <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">
-                        送达地点 (顾客)
+                        Drop-off (customer)
                       </span>
                       <p className="font-black text-slate-800 mt-1">
-                        科技大道99号 创新大厦B座 1802室
+                        99 Technology Avenue, Building B, Apartment 1802
                       </p>
                       <p className="text-[11px] text-slate-400 mt-0.5">
-                        顾客联络：{order.customer?.email}
+                        Customer contact: {order.customer?.email}
                       </p>
                     </div>
                   </div>
@@ -195,7 +194,7 @@ export default function DriverActiveOrdersPage() {
                   <Link href={`/orders/${order.id}`}>
                     <Button variant="secondary" size="md" className="glass-panel text-slate-700 font-semibold gap-1.5">
                       <ExternalLink className="w-3.5 h-3.5" />
-                      <span>查看订单详情</span>
+                      <span>View order</span>
                     </Button>
                   </Link>
 
@@ -208,7 +207,7 @@ export default function DriverActiveOrdersPage() {
                       className="gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-md shadow-purple-500/20 font-bold"
                     >
                       <Bike className="w-4 h-4" />
-                      <span>已到店取餐 (PickedUp)</span>
+                      <span>Picked up</span>
                     </Button>
                   )}
 
@@ -221,9 +220,20 @@ export default function DriverActiveOrdersPage() {
                       className="gap-2 shadow-lg shadow-emerald-500/25 font-bold"
                     >
                       <PackageCheck className="w-4 h-4" />
-                      <span>已送达顾客 (Delivered)</span>
+                      <span>Delivered</span>
                     </Button>
                   )}
+                  {order.status === OrderStatus.PickedUp && DELIVERY_FAILURE_REASONS.map(({ value, label }) => (
+                    <Button
+                      key={value}
+                      variant="danger"
+                      size="md"
+                      loading={updating}
+                      onClick={() => handleUpdateStatus(order.id, OrderStatus.DeliveryFailed, value)}
+                    >
+                      Failed: {label.toLowerCase()}
+                    </Button>
+                  ))}
                 </div>
               </div>
             ))}
@@ -235,7 +245,7 @@ export default function DriverActiveOrdersPage() {
       {deliveredOrders.length > 0 && (
         <div className="mt-4 flex flex-col gap-4">
           <h2 className="text-base font-black text-slate-900 tracking-tight">
-            今日已送达履约记录 ({deliveredOrders.length})
+            Delivery history ({deliveredOrders.length})
           </h2>
 
           <div className="glass-panel rounded-[28px] p-6 border border-white/80 divide-y divide-slate-100 text-xs">
@@ -243,11 +253,9 @@ export default function DriverActiveOrdersPage() {
               <div key={d.id} className="py-3.5 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <span className="font-bold text-slate-900">
-                    #{d.id} · {d.restaurant?.name || '餐厅'}
+                    #{d.id} · {d.restaurant?.name || 'Restaurant'}
                   </span>
-                  <span className="text-emerald-700 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-[11px]">
-                    已送达
-                  </span>
+                  <OrderStatusBadge status={d.status} size="sm" />
                 </div>
                 <span className="font-black text-slate-800">
                   {formatCents(d.totalCents)}

@@ -45,13 +45,13 @@ export default function OwnerDashboardPage() {
           <div className="flex flex-col gap-2.5">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-xl border border-white/25 text-xs font-semibold w-fit tracking-wide shadow-sm">
               <ChefHat className="w-4 h-4 text-amber-200" />
-              <span>餐厅店长核心控制台</span>
+              <span>Owner dashboard</span>
             </div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white drop-shadow-sm">
-              后厨调度与餐厅数字大屏
+              Kitchen and restaurant dashboard
             </h1>
             <p className="text-xs sm:text-sm text-white/90 max-w-xl leading-relaxed">
-              实时监听顾客外卖订单状态流转，一键控制出餐与呼叫骑手，精细化管理菜单菜品与自选规格。
+              Track orders, manage your kitchen and customize your menu.
             </p>
           </div>
 
@@ -63,7 +63,7 @@ export default function OwnerDashboardPage() {
                 className="bg-white/95 text-slate-900 hover:bg-white font-bold gap-2 shadow-xl shadow-black/10 backdrop-blur-md border border-white"
               >
                 <Flame className="w-4 h-4 text-brand-500 animate-pulse" />
-                <span>进入后厨出单大屏</span>
+                <span>Open kitchen orders</span>
               </Button>
             </Link>
           </div>
@@ -74,12 +74,12 @@ export default function OwnerDashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="glass-card rounded-[28px] p-6 flex items-center justify-between group hover:shadow-glass-hover transition-all duration-300">
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">名下餐厅数量</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Your restaurants</p>
             <h3 className="text-3xl sm:text-4xl font-black text-slate-900 mt-1.5 tracking-tight">
               {restaurants.length}
-              <span className="text-sm font-bold text-slate-500 ml-1">家</span>
+              <span className="text-sm font-bold text-slate-500 ml-1">restaurants</span>
             </h3>
-            <p className="text-[11px] text-slate-500 mt-1 font-medium">已上线正常接单</p>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium">Listed and accepting orders</p>
           </div>
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500/10 to-amber-500/20 text-amber-600 flex items-center justify-center font-bold border border-amber-500/20 shadow-inner group-hover:scale-110 transition-transform">
             <Store className="w-7 h-7" />
@@ -88,14 +88,14 @@ export default function OwnerDashboardPage() {
 
         <div className="glass-card rounded-[28px] p-6 flex items-center justify-between group hover:shadow-glass-hover transition-all duration-300">
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">平台总订单数</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total orders</p>
             <h3 className="text-3xl sm:text-4xl font-black text-slate-900 mt-1.5 tracking-tight">
               {orders.length}
-              <span className="text-sm font-bold text-slate-500 ml-1">单</span>
+              <span className="text-sm font-bold text-slate-500 ml-1">orders</span>
             </h3>
             <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1 mt-1">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>动态累计中</span>
+              <span>Updated as orders arrive</span>
             </p>
           </div>
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-500/10 to-brand-500/20 text-brand-600 flex items-center justify-center font-bold border border-brand-500/20 shadow-inner group-hover:scale-110 transition-transform">
@@ -105,17 +105,17 @@ export default function OwnerDashboardPage() {
 
         <div className="glass-card rounded-[28px] p-6 flex items-center justify-between group hover:shadow-glass-hover transition-all duration-300">
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">后厨监听引擎</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Kitchen updates</p>
             <div className="flex items-center gap-2 mt-1.5">
               <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
               </span>
               <h3 className="text-xl sm:text-2xl font-black text-emerald-600 tracking-tight">
-                实时轮询就绪
+                Live updates ready
               </h3>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 font-medium">毫秒级 WebSocket / 轮询</p>
+            <p className="text-[11px] text-slate-500 mt-1 font-medium">WebSocket updates and polling</p>
           </div>
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-500/10 to-emerald-500/20 text-emerald-600 flex items-center justify-center font-bold border border-emerald-500/20 shadow-inner group-hover:scale-110 transition-transform">
             <Radio className="w-7 h-7 animate-pulse" />
@@ -135,15 +135,15 @@ export default function OwnerDashboardPage() {
             </div>
             <div>
               <h3 className="font-black text-slate-900 text-lg group-hover:text-amber-600 transition-colors">
-                餐厅与菜品规格
+                Restaurants and dish options
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                创建与配置您的外卖门店，上架特色菜品，灵活配置多规格加价与选填配料。
+                Create restaurants, add dishes and customize options and extras.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 group-hover:translate-x-1.5 transition-transform pt-2 border-t border-slate-100">
-            <span>进入餐厅管理</span>
+            <span>Manage restaurants</span>
             <ArrowRight className="w-4 h-4" />
           </div>
         </Link>
@@ -158,15 +158,15 @@ export default function OwnerDashboardPage() {
             </div>
             <div>
               <h3 className="font-black text-slate-900 text-lg group-hover:text-brand-600 transition-colors">
-                后厨出餐大屏 (Kanban)
+                Kitchen order board
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                三阶段可视化流转：新订单待制作（Pending）➔ 烹饪中（Cooking）➔ 打包出餐呼叫骑手（Cooked）。
+                Track orders from new to cooking to ready for pickup.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-bold text-brand-600 group-hover:translate-x-1.5 transition-transform pt-2 border-t border-slate-100">
-            <span>打开出单大屏</span>
+            <span>Open kitchen orders</span>
             <ArrowRight className="w-4 h-4" />
           </div>
         </Link>
@@ -181,15 +181,15 @@ export default function OwnerDashboardPage() {
             </div>
             <div>
               <h3 className="font-black text-slate-900 text-lg group-hover:text-purple-600 transition-colors">
-                置顶推广与付费特权
+                Featured promotions
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                为店铺开启全城首页「店长力荐」黄金展位，尊享 7 天醒目金色皇冠徽章与曝光提升。
+                Feature your restaurant on the home page for 7 days with a gold crown badge.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-xs font-bold text-purple-600 group-hover:translate-x-1.5 transition-transform pt-2 border-t border-slate-100">
-            <span>管理推广权益</span>
+            <span>Manage promotions</span>
             <ArrowRight className="w-4 h-4" />
           </div>
         </Link>
