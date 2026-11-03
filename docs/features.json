@@ -851,6 +851,23 @@
         "log_sha256": "22c06b0597449440d603933afb9967c3ee6041db4536a16ec19bd838fe619d56"
       },
       "started_at": "2026-11-04T00:50:42+09:00"
+    },
+    {
+      "id": "F37",
+      "title": "Driver offers and owner restaurants load",
+      "service": "dispatch",
+      "milestone": "M3",
+      "priority": "P0",
+      "behavior": "Drivers see every ready, unassigned order that is paid or needs no payment, can open it without the customer's details, and can claim only those; unpaid orders are not offered. The owner dashboard and restaurant pages load the owner's restaurants with their menus, order lists carry their customer and driver, and every storefront query runs without a GraphQL error.",
+      "verification": {
+        "kind": "command",
+        "command": "cd dispatch && npm test -- --testPathPattern=driver-offer && npm run test:e2e -- --testPathPattern='driver-offers|storefront-queries' && cd frontend && npm test"
+      },
+      "depends_on": [
+        "F36"
+      ],
+      "state": "not_started",
+      "evidence": null
     }
   ]
 }
