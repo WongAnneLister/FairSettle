@@ -1248,3 +1248,30 @@ Pitfalls found
 - `git log --before=<date>` without a time uses the current time of day. Give a full timestamp with a UTC offset for a reproducible boundary.
 - The Claude in Chrome GIF recorder adds frames only when the browser is driven (click, type, navigate, scroll), not for a bare screenshot. Pages reached by hand, such as PayPal, need their own still frames.
 - The storefront's quick-advance buttons call `editOrder` as the signed-in customer, so they fail with "操作受限" unless the customer owns the restaurant.
+
+## 2026-11-04 · session 28 · F36
+
+### State on 2026-11-04
+
+- passing 33/36
+- recently passing: F27 (7b1923b), F35 (590c17e), F28 (85c7a94), F30 (71ffa5a), F36 (088c9e0)
+- ready next: F31 Demo video, F29 Deployed
+
+Done this session
+- commit b941ca2: F36 plan. Decided with the user: English text in place with no i18n library; the order page's demo controls only for the role that may use them; `DeliveryFailed` in the storefront with driver-fault and platform-fault buttons for the assigned driver.
+- commit fab25b4: work commit (Codex). `src/lib/order-actions.ts` (labels, `isFinished`, `quickActionsFor`, failure reasons, `markFailedInput`), `english.test.ts` (no CJK in `src/` or the README), red `Delivery failed` badge and timeline step, every page and the README in English, dates in `en-US`. Frontend tests 9 → 20.
+- Review (fresh session): 355076e (owner toast uses status labels), 0597ba5 (ready-order toast names the restaurant once), f7d2b2f (singular dish and item counts), 127fd4e (order total label `Total`).
+- Design issues the user asked to fix in review: 82e6b49 (order page refetches on a live update instead of rendering the push, which lacked `createdAt` and dishes), ffeceee (no sideways scroll at 375 px), 088c9e0 (dashboard tile counts, `Past deliveries`). Each is under the plan's Deviations.
+- Live check on the stack rebuilt from `codex/f36`: home, login, restaurant, checkout, order and driver pages in English at desktop and 375 px; a customer sees no demo controls; order 12 went Pending → Cooking → Cooked (owner, order page), claimed by GraphQL `takeOrder`, PickedUp and `Failed: driver fault` (driver, order page). Badge, timeline and driver history show `Delivery failed`; `order_event` 42 has `DRIVER_FAULT`. Agent case `delivery-failed-12` is `escalated` (the order was never paid) and is left for the human.
+- `verify F36` at 088c9e0.
+
+Not done / left half-way
+- Order 13 (unpaid, `Cooking`) was left on the live stack from the live-update check.
+- `docs/media/demo.gif` still shows the Chinese storefront; it is replaced with the F31 recording.
+
+Next
+- F37, being planned in its own session: drivers' available-orders list (`getOrders` for `Delivery` filters `driverId = me`, so `/driver/available` is always empty), drivers reading an available order so the order page's Claim shows, and `myRestaurants` not loading `menu` (GraphQL error, owner dashboard shows 0 restaurants). The user chose: paid (or `NotRequired`) orders only in the available list.
+
+Pitfalls found
+- A driver cannot open an unassigned order (`canRead`), and the storefront never lists unassigned orders, so the driver claim flow works only through GraphQL `takeOrder` until F37.
+- `document.documentElement.scrollWidth` still reports clipped content under `overflow-x: clip`; check `window.scrollX` after `scrollTo` to see whether the page really scrolls sideways.

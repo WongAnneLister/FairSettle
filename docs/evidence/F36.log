@@ -1,0 +1,24 @@
+feature: F36
+kind: command
+command: cd dispatch/frontend && npm test
+commit: 088c9e0c95ede450dcc9d3647275f44dded7e8b1
+started_at: 2026-11-04T01:23:25+09:00
+exit_code: 0
+----
+
+> food-delivery-frontend@0.1.0 test
+> vitest run
+
+
+ RUN  v2.1.9 /Users/anne_lister/proj/FairSettle/dispatch/frontend
+
+ ✓ src/lib/english.test.ts (2 tests) 87ms
+ ✓ src/lib/order-items.test.ts (4 tests) 7ms
+ ✓ src/lib/payment.test.ts (5 tests) 3ms
+ ✓ src/lib/order-actions.test.ts (9 tests) 3ms
+
+ Test Files  4 passed (4)
+      Tests  20 passed (20)
+   Start at  01:23:28
+   Duration  2.24s (transform 1.55s, setup 0ms, collect 1.96s, tests 100ms, environment 2ms, prepare 1.63s)
+
