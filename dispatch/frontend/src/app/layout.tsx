@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="flex flex-col min-h-screen bg-[#FAFAF9] text-slate-900 relative">
+      <body className="flex flex-col min-h-screen bg-[#FAFAF9] text-slate-900 relative overflow-x-clip">
         {/* Subtle Ambient Background Light Orbs for Frosted Glass Refraction */}
         <div className="ambient-glow-warm w-[650px] h-[550px] -top-32 -left-32 animate-orb-slow" />
         <div className="ambient-glow-emerald w-[500px] h-[450px] top-[400px] -right-20 animate-float-slow" />

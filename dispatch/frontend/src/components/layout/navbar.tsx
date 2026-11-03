@@ -36,7 +36,7 @@ export function Navbar() {
             <span className="text-lg font-black tracking-tight text-slate-900 flex items-center gap-1">
               Craving<span className="text-brand-500">Fast</span>
             </span>
-            <span className="text-[9px] text-slate-400 tracking-wider uppercase font-bold -mt-1">
+            <span className="hidden sm:block text-[9px] text-slate-400 tracking-wider uppercase font-bold -mt-1">
               On-Demand Dispatch
             </span>
           </div>
@@ -119,7 +119,7 @@ export function Navbar() {
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-2.5 p-1 pl-3 rounded-2xl bg-white/60 hover:bg-white/90 border border-white/80 shadow-sm backdrop-blur-md transition-all duration-200"
               >
-                <div className="flex flex-col text-left">
+                <div className="hidden sm:flex flex-col text-left">
                   <span className="text-xs font-bold text-slate-800 max-w-[110px] truncate leading-tight">
                     {user.email.split('@')[0]}
                   </span>
