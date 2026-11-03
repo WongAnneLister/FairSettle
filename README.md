@@ -169,10 +169,10 @@ Ten scenarios × 3 runs against the real model, from fixtures, through gather, i
 See [the evaluation results](docs/eval-results.md). To rerun:
 
 ```bash
-cd agent && python -m evals.run --runs 3 --assert-zero-violations --min-accuracy 0.9 --out ../docs/eval-results.md
+cd agent && .venv/bin/python -m evals.run --runs 3 --assert-zero-violations --min-accuracy 0.9 --out ../docs/eval-results.md
 ```
 
-This needs `DEEPSEEK_API_KEY` and takes about 15 minutes.
+This needs the agent's environment from the tests table above and `DEEPSEEK_API_KEY`, and takes about 15 minutes.
 
 ## Pre-existing code and hackathon work
 
