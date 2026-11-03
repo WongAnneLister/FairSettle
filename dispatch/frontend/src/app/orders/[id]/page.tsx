@@ -45,20 +45,22 @@ function OrderDetail() {
     fetchPolicy: 'network-only',
   });
 
-  // WebSocket real-time subscription
-  const { data: subData } = useSubscription(ORDER_UPDATES_SUBSCRIPTION, {
+  // WebSocket real-time subscription. The pushed order lacks createdAt and the
+  // item dishes, so a push only triggers a refetch; the page renders the query.
+  useSubscription(ORDER_UPDATES_SUBSCRIPTION, {
     variables: { input: { id: orderId } },
+    onData: () => {
+      void refetch();
+    },
   });
 
   // Status mutation helpers
   const [editOrder, { loading: updating }] = useMutation(EDIT_ORDER_MUTATION);
   const [takeOrder, { loading: claiming }] = useMutation(TAKE_ORDER_MUTATION);
 
-  const rawOrder: Order | undefined = subData?.orderUpdates || data?.getOrder?.order;
+  const order: Order | undefined = data?.getOrder?.order;
 
-  const order = rawOrder;
-
-  if (loading && !data && !rawOrder) {
+  if (loading && !data) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
         <Spinner className="w-8 h-8 text-brand-500" />
