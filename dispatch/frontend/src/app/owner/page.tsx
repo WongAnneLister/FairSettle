@@ -77,7 +77,7 @@ export default function OwnerDashboardPage() {
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Your restaurants</p>
             <h3 className="text-3xl sm:text-4xl font-black text-slate-900 mt-1.5 tracking-tight">
               {restaurants.length}
-              <span className="text-sm font-bold text-slate-500 ml-1">restaurants</span>
+              <span className="text-sm font-bold text-slate-500 ml-1">{restaurants.length === 1 ? 'restaurant' : 'restaurants'}</span>
             </h3>
             <p className="text-[11px] text-slate-500 mt-1 font-medium">Listed and accepting orders</p>
           </div>
@@ -91,7 +91,7 @@ export default function OwnerDashboardPage() {
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total orders</p>
             <h3 className="text-3xl sm:text-4xl font-black text-slate-900 mt-1.5 tracking-tight">
               {orders.length}
-              <span className="text-sm font-bold text-slate-500 ml-1">orders</span>
+              <span className="text-sm font-bold text-slate-500 ml-1">{orders.length === 1 ? 'order' : 'orders'}</span>
             </h3>
             <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1 mt-1">
               <TrendingUp className="w-3.5 h-3.5" />

@@ -85,7 +85,7 @@ export default function DriverDashboardPage() {
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ready for pickup</p>
             <h3 className="text-3xl sm:text-4xl font-black text-slate-900 mt-1.5 tracking-tight">
               {availableOrders.length}
-              <span className="text-sm font-bold text-slate-500 ml-1">orders</span>
+              <span className="text-sm font-bold text-slate-500 ml-1">{availableOrders.length === 1 ? 'order' : 'orders'}</span>
             </h3>
             <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1 mt-1">
               <Radio className="w-3 h-3 animate-pulse" />
@@ -102,7 +102,7 @@ export default function DriverDashboardPage() {
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">My active deliveries</p>
             <h3 className="text-3xl sm:text-4xl font-black text-emerald-600 mt-1.5 tracking-tight">
               {activeDeliveries.length}
-              <span className="text-sm font-bold text-emerald-700/60 ml-1">orders</span>
+              <span className="text-sm font-bold text-emerald-700/60 ml-1">{activeDeliveries.length === 1 ? 'order' : 'orders'}</span>
             </h3>
             <p className="text-[11px] text-slate-500 mt-1 font-medium">Pickup and delivery</p>
           </div>
@@ -113,10 +113,10 @@ export default function DriverDashboardPage() {
 
         <div className="glass-card rounded-[28px] p-6 flex items-center justify-between group hover:shadow-glass-hover transition-all duration-300">
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed deliveries</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Past deliveries</p>
             <h3 className="text-3xl sm:text-4xl font-black text-slate-900 mt-1.5 tracking-tight">
               {completedDeliveries.length}
-              <span className="text-sm font-bold text-slate-500 ml-1">orders</span>
+              <span className="text-sm font-bold text-slate-500 ml-1">{completedDeliveries.length === 1 ? 'order' : 'orders'}</span>
             </h3>
             <p className="text-[11px] text-teal-600 font-medium flex items-center gap-1 mt-1">
               <CheckCircle className="w-3.5 h-3.5" />
