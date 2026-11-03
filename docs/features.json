@@ -705,8 +705,13 @@
       "depends_on": [
         "F27"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "71ffa5a0518b377d202453b5e542210269f0e964",
+        "verified_at": "2026-11-03T13:07:41+09:00",
+        "log": "docs/evidence/F30.log",
+        "log_sha256": "c8b3fd368c757dc5305873327333781b0aa10dd17bc00c66055e061af82755a2"
+      },
       "started_at": "2026-11-02T21:14:31+09:00"
     },
     {

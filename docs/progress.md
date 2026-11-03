@@ -1203,3 +1203,48 @@ Pitfalls found
 - A synchronous submit that takes minutes needs a visible "sending" state and a disabled button, or people click twice and open a second case. The repeat-complaint rule then escalates it.
 - A model call that fails because the account balance ran out looks like `BadRequestError` ("model unavailable"). Check the balance with `GET https://api.deepseek.com/user/balance` before a demo or an evaluation. Two evaluation runs and the live checks used up the earlier balance.
 - Each live complaint needs a fresh, paid and delivered order from a customer under the 7-day limit. The scratchpad helper (accounts, restaurant, order, PayPal link, then cook and deliver) saves the manual role switching.
+
+## 2026-11-03 · session 27 · F30
+
+### State on 2026-11-03
+
+- passing 31/35
+- active: F30 README and architecture
+- recently passing: F25 (da9ab5d), F26 (9399b4c), F27 (7b1923b), F35 (590c17e), F28 (85c7a94)
+- ready next: F31 Demo video, F29 Deployed
+
+Done this session
+- commit 31e962a: F30 plan. Decided with the user:
+  - a two-part quick start: the core stack needs no credentials; the full chain needs your own PayPal sandbox app, a DeepSeek key and ngrok;
+  - the boundary between pre-existing and hackathon work is 2026-10-01 00:00 UTC+8;
+  - the license is AGPL-3.0;
+  - the demo GIF is added after the work commit.
+
+  Codex stopped once before starting: a bare `git log --before=2026-10-01` fills in the current time of day and listed 20 commits instead of 17. The plan was amended to `--before='2026-10-01T00:00:00+08:00'`.
+- commit 7d26e01: work commit (Codex). Root `README.md`, `LICENSE` (AGPL-3.0 from gnu.org), `scripts/secret_scan.py`, S1–S13 and R1–R10. Scripts suite 47 → 70; scan `0 hits in 426 commits`.
+- Review (fresh session): d87776c (evaluation command uses the agent's venv), eda7a30 (R9 loads the scanner by path), 26b0d0b (names which services have their own PostgreSQL), e589bf2 (records them).
+- commit 71ffa5a: `docs/media/demo.gif`. Order 11 on the live stack: storefront order, PayPal confirmation, paid and delivered, complaint `ui-9431bfd7ded3430c`, proposal `prop_01M6FRNYT02NTP2RG2N07XPHQP` ($3.00 missing item, restaurant 100%), approved by the human, refund `ref_01M6FRTBKR3HRSCT89K18MT7M7`, Refunded.
+  - 960×572, 1.5 MB.
+  - Built from the Claude in Chrome GIF recorder plus full-size screenshots.
+  - The human logged in to PayPal and approved both the payment and the proposal.
+  - The order was advanced to Delivered through dispatch GraphQL by a temporary owner of the demo restaurant, restored afterwards.
+  - An earlier take (order 10) was dropped because it had no PayPal frame.
+- Quick start check: on this Mac, not a second machine.
+  - The live stack was stopped (volumes kept) and `codex/f30` freshly cloned into a temp dir.
+  - `docker compose up -d --wait --build` was healthy in 109 s; all three README checks returned the expected output.
+  - The clone's stack was stopped and the clone removed, then the live stack restarted.
+- `verify F30` by the human at 71ffa5a.
+
+Not done / left half-way
+- The quick start was not run on a second machine; the verify note says so.
+- The README's clone URL is a placeholder until the repository is public.
+- The storefront UI is in Chinese and shows so in the GIF.
+- Two scanner design issues are listed in the plan's Deviations: quoted diff paths, and merge-only changes.
+
+Next
+- Merge `codex/f30` into main, then F31 (demo video): under 3 minutes, public on YouTube; the first 20 seconds state the problem and who pays.
+
+Pitfalls found
+- `git log --before=<date>` without a time uses the current time of day. Give a full timestamp with a UTC offset for a reproducible boundary.
+- The Claude in Chrome GIF recorder adds frames only when the browser is driven (click, type, navigate, scroll), not for a bare screenshot. Pages reached by hand, such as PayPal, need their own still frames.
+- The storefront's quick-advance buttons call `editOrder` as the signed-in customer, so they fail with "操作受限" unless the customer owns the restaurant.

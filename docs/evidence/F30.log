@@ -1,0 +1,8 @@
+feature: F30
+kind: manual
+commit: 71ffa5a0518b377d202453b5e542210269f0e964
+confirmed_at: 2026-11-03T13:07:32+09:00
+----
+[x] Fresh clone on another machine starts with the quick start alone
+[x] No secrets in the repository (git log -p | grep checks)
+note: Same machine (macOS), fresh clone of codex/f30 at 71ffa5a in a temp dir: docker compose up -d --wait --build healthy in 109 s; 8080/8081 health UP, 4000 GraphQL OK. secret scan: 0 hits in 431 commits. Not run on a second machine.
