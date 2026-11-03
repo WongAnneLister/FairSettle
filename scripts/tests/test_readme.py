@@ -1,8 +1,19 @@
+import importlib.util
 from pathlib import Path
 import re
+import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
+SCRIPT = ROOT / "scripts" / "secret_scan.py"
+SPEC = importlib.util.spec_from_file_location("secret_scan", SCRIPT)
+scanner = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = scanner
+SPEC.loader.exec_module(scanner)
+
+
+def log(*lines, path="app/config.txt"):
+    return ["commit " + "1" * 40, f"diff --git a/{path} b/{path}", f"+++ b/{path}", *lines]
 
 
 class ReadmeTest(unittest.TestCase):
@@ -78,8 +89,6 @@ class ReadmeTest(unittest.TestCase):
             self.assertIn(text, section)
 
     def test_no_secrets_in_readme(self):
-        from test_secret_scan import log, scanner
-
         self.assertEqual(scanner.scan_lines(log(*("+" + line for line in self.readme_lines), path="README.md")), [])
 
     def test_license(self):
