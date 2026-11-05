@@ -21,7 +21,8 @@ import {
 import { MY_RESTAURANT_QUERY } from '@/lib/graphql/queries';
 import { CREATE_DISH_MUTATION, DELETE_DISH_MUTATION } from '@/lib/graphql/mutations';
 import { Dish, DishOption } from '@/lib/types';
-import { formatCents, dollarsToCents } from '@/lib/currency';
+import { formatCents } from '@/lib/currency';
+import { createDishInput, DishOptionForm } from '@/lib/dish-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
@@ -43,16 +44,12 @@ export default function RestaurantMenuManagerPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState('');
-  const [priceDollars, setPriceDollars] = useState('12.00');
+  const [priceDollars, setPriceDollars] = useState('');
   const [description, setDescription] = useState('');
-  const [photo, setPhoto] = useState(
-    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80'
-  );
+  const [photo, setPhoto] = useState('');
 
   // Dynamic Options state
-  const [options, setOptions] = useState<
-    { name: string; choices: { name: string; extraDollars: string }[] }[]
-  >([]);
+  const [options, setOptions] = useState<DishOptionForm[]>([]);
 
   const restaurant = data?.myRestaurant?.restaurant;
   const menu: Dish[] = restaurant?.menu || [];
@@ -95,36 +92,24 @@ export default function RestaurantMenuManagerPage() {
   const handleCreateDish = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const result = createDishInput({ restaurantId, name, priceDollars, description, photo, options });
+    if (!result.ok) {
+      error('Check the dish details', result.error);
+      return;
+    }
+
     try {
-      const priceCents = dollarsToCents(priceDollars);
-
-      // Map options
-      const formattedOptions = options.map((opt) => ({
-        name: opt.name,
-        choices: opt.choices.map((c) => ({
-          name: c.name,
-          extraCents: dollarsToCents(c.extraDollars),
-        })),
-      }));
-
       const res = await createDish({
-        variables: {
-          input: {
-            restaurantId,
-            name,
-            priceCents,
-            description,
-            photo,
-            options: formattedOptions.length > 0 ? formattedOptions : undefined,
-          },
-        },
+        variables: { input: result.input },
       });
 
       if (res.data?.createDish?.ok) {
         success('Dish added', `${name} is now on the menu`);
         setIsModalOpen(false);
         setName('');
+        setPriceDollars('');
         setDescription('');
+        setPhoto('');
         setOptions([]);
         refetch();
       } else {
@@ -288,16 +273,18 @@ export default function RestaurantMenuManagerPage() {
       >
         <form onSubmit={handleCreateDish} className="flex flex-col gap-4">
           <Input
-            label="Dish name"
+            label="Dish name (at least 5 characters)"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            minLength={5}
             placeholder="For example: Angus beef pizza"
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Base price (dollars)"
+              inputMode="decimal"
               value={priceDollars}
               onChange={(e) => setPriceDollars(e.target.value)}
               required
@@ -306,7 +293,7 @@ export default function RestaurantMenuManagerPage() {
             />
 
             <Input
-              label="Dish photo URL"
+              label="Dish photo URL (optional)"
               value={photo}
               onChange={(e) => setPhoto(e.target.value)}
               placeholder="https://images.unsplash.com/..."
@@ -321,6 +308,8 @@ export default function RestaurantMenuManagerPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
+              minLength={5}
+              maxLength={256}
               rows={3}
               placeholder="Describe the ingredients, preparation and flavors..."
               className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-slate-900 text-xs outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all placeholder:text-slate-400"
@@ -401,6 +390,8 @@ export default function RestaurantMenuManagerPage() {
                       <input
                         type="text"
                         value={choice.extraDollars}
+                        inputMode="decimal"
+                        onFocus={(e) => e.target.select()}
                         onChange={(e) => {
                           const val = e.target.value;
                           setOptions((prev) => {

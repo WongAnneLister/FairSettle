@@ -38,3 +38,4 @@ Read before changing anything here: `docs/adr/` (6 ADRs).
 - E2E tests use the real database and Redis on purpose. Do not stub them. Do not share process-level singletons between test application instances (a module-level PubSub once made a cross-replica test pass against the bug).
 
 - A new order write site records an `order_event` in the same transaction (F19).
+- Storefront GraphQL documents are checked against the schema: queries run in `test/storefront-queries.e2e-spec.ts` (F37); mutations, with the variables their pages send, are validated without executing in `test/storefront-mutations.e2e-spec.ts` (F38). A new document needs a row in the matching spec.

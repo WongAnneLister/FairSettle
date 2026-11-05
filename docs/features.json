@@ -889,8 +889,9 @@
       "depends_on": [
         "F37"
       ],
-      "state": "not_started",
-      "evidence": null
+      "state": "active",
+      "evidence": null,
+      "started_at": "2026-11-05T22:37:08+09:00"
     }
   ]
 }

@@ -8,6 +8,7 @@ export class EditDishInput extends PickType(PartialType(Dish), [
   'name',
   'priceCents',
   'description',
+  'photo',
   'options',
 ]) {
   @Field(type => Int)

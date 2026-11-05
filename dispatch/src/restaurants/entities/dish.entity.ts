@@ -1,6 +1,6 @@
 import {Column, Entity, ManyToOne, RelationId} from 'typeorm';
 import {Field, InputType, Int, ObjectType} from '@nestjs/graphql';
-import {IsNumber, IsString, Length} from 'class-validator';
+import {IsNumber, IsOptional, IsString, Length} from 'class-validator';
 
 import {CoreEntity} from 'src/common/entities/core.entity';
 import {Restaurant} from './restaurant.entity';
@@ -31,6 +31,8 @@ export class Dish extends CoreEntity {
 
   @Field(type => String, {nullable: true})
   @Column({nullable: true})
+  // The column is nullable and CreateDishInput/EditDishInput pick this field, so a dish without a photo must pass ValidationPipe (F38).
+  @IsOptional()
   @IsString()
   photo?: string;
 

@@ -11,6 +11,7 @@ export class CreateRestaurantInput extends PickType(Restaurant, ['name', 'coverI
 
 @ObjectType()
 export class CreateRestaurantOutput extends CoreOutput {
-  @Field(type => Int)
+  // The failure path returns no id; a non-null field turned ok: false into a GraphQL error (F38).
+  @Field(type => Int, {nullable: true})
   restaurantId?: number;
 }
