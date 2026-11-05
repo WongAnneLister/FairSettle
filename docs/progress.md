@@ -1275,3 +1275,28 @@ Next
 Pitfalls found
 - A driver cannot open an unassigned order (`canRead`), and the storefront never lists unassigned orders, so the driver claim flow works only through GraphQL `takeOrder` until F37.
 - `document.documentElement.scrollWidth` still reports clipped content under `overflow-x: clip`; check `window.scrollX` after `scrollTo` to see whether the page really scrolls sideways.
+
+## 2026-11-05 · session 29 · F37
+
+### State on 2026-11-05
+
+- passing 34/37
+- recently passing: F35 (590c17e), F28 (85c7a94), F30 (71ffa5a), F36 (088c9e0), F37 (85ea521)
+- ready next: F31 Demo video, F29 Deployed
+
+Done this session
+- commit 17e45d4: F37 plan. Decided with the user: drivers are offered only `Cooked`, unassigned orders that are `Paid` or `NotRequired`; `takeOrder` refuses unpaid orders inside its conditional UPDATE (ADR 0001).
+- commit e3467f8: work commit (Codex). `src/orders/driver-offer.ts` (`isOfferedToDrivers`, `driverPreview`), new `availableOrders` query (previews, no customer or checkout link), `getOrder` preview for drivers, `cookedOrders` filtered and previewed, `takeOrder` payment predicate and `Order is not paid yet` (CONFLICT), `getOrders` joins customer and driver, `myRestaurants` loads `menu`. Storefront driver pages use `AVAILABLE_ORDERS_QUERY`, cards link to the order page, claim toasts from `claimFailureMessage`. New e2e `driver-offers` (E1–E14) and `storefront-queries` (runs every storefront query for its role).
+- Review (fresh session): matches the plan. 2d01143 (Prettier formatting in `orders.service.ts`), 85ea521 (E13 owner list must not be empty). Both under the plan's Deviations. Unit 90, e2e 132, frontend 25, `tsc` and `next build` green.
+- `verify F37` at 85ea521.
+
+Not done / left half-way
+- Plan step 6 (rebuild the live `dispatch` and `storefront` and check by hand: a paid order on `/driver/available`, opens with Claim and no customer email; an unpaid one absent; owner dashboard lists restaurants with dish counts) has not been run.
+
+Next
+- Plan step 6 on the live stack, then F31 (demo video). The demo script must pay an order before a driver can see or claim it.
+
+Pitfalls found
+- `getOrders` uses the query builder, which ignores `eager: true`; any relation the storefront reads must be joined explicitly. `storefront-queries` now catches a non-nullable relation that is not loaded.
+- A paid-after-cooked order gets no `cookedOrders` push; drivers see it on the next 3 s poll only.
+- The driver order page receives no `orderUpdates` while previewing; after another driver claims, the next poll shows "Order not found or access denied".

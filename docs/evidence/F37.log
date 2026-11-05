@@ -1,0 +1,55 @@
+feature: F37
+kind: command
+command: cd dispatch && npm test -- --testPathPattern=driver-offer && npm run test:e2e -- --testPathPattern='driver-offers|storefront-queries' && cd frontend && npm test
+commit: 85ea5216bc4eba2c88a14c5892a1ba85d8f0c84b
+started_at: 2026-11-05T21:16:20+09:00
+exit_code: 0
+----
+
+> fairsettle-dispatch@0.0.1 test
+> cross-env NODE_ENV=test jest --testPathPattern=driver-offer
+
+
+> fairsettle-dispatch@0.0.1 test:e2e
+> cross-env NODE_ENV=test jest --config ./test/jest-e2e.json --runInBand --testPathPattern=driver-offers|storefront-queries
+
+
+> food-delivery-frontend@0.1.0 test
+> vitest run
+
+
+ RUN  v2.1.9 /Users/anne_lister/proj/FairSettle/dispatch/frontend
+
+ ✓ src/lib/order-items.test.ts (4 tests) 2ms
+ ✓ src/lib/english.test.ts (2 tests) 18ms
+ ✓ src/lib/payment.test.ts (5 tests) 2ms
+ ✓ src/lib/order-actions.test.ts (12 tests) 3ms
+ ✓ src/lib/driver-pages.test.ts (2 tests) 2ms
+
+ Test Files  5 passed (5)
+      Tests  25 passed (25)
+   Start at  21:16:33
+   Duration  976ms (transform 462ms, setup 0ms, collect 738ms, tests 28ms, environment 1ms, prepare 448ms)
+
+PASS src/orders/driver-offer.spec.ts
+  driver offers
+    ✓ offered when paid or free (5 ms)
+    ✓ unpaid not offered
+    ✓ only Cooked (1 ms)
+    ✓ claimed not offered
+    ✓ preview hides the customer (5 ms)
+    ✓ the set (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        4.391 s
+Ran all test suites matching /driver-offer/i.
+PASS test/driver-offers.e2e-spec.ts (5.426 s)
+PASS test/storefront-queries.e2e-spec.ts
+
+Test Suites: 2 passed, 2 total
+Tests:       17 passed, 17 total
+Snapshots:   0 total
+Time:        7.438 s
+Ran all test suites matching /driver-offers|storefront-queries/i.

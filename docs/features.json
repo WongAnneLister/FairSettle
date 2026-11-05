@@ -866,8 +866,13 @@
       "depends_on": [
         "F36"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "85ea5216bc4eba2c88a14c5892a1ba85d8f0c84b",
+        "verified_at": "2026-11-05T21:16:34+09:00",
+        "log": "docs/evidence/F37.log",
+        "log_sha256": "68631204d558753c765a38253649d42cc4a381dd32017ed9278afab406f48aea"
+      },
       "started_at": "2026-11-04T01:36:58+09:00"
     }
   ]
