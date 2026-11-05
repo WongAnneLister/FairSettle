@@ -1,0 +1,80 @@
+feature: F38
+kind: command
+command: cd dispatch && npm test -- --testPathPattern=dish-input && npm run test:e2e -- --testPathPattern=storefront-mutations && cd frontend && npm test
+commit: 033c17ce47df8b06748b9df03544164ed446485f
+started_at: 2026-11-05T23:32:45+09:00
+exit_code: 0
+----
+
+> fairsettle-dispatch@0.0.1 test
+> cross-env NODE_ENV=test jest --testPathPattern=dish-input
+
+
+> fairsettle-dispatch@0.0.1 test:e2e
+> cross-env NODE_ENV=test jest --config ./test/jest-e2e.json --runInBand --testPathPattern=storefront-mutations
+
+
+> food-delivery-frontend@0.1.0 test
+> vitest run
+
+
+ RUN  v2.1.9 /Users/anne_lister/proj/FairSettle/dispatch/frontend
+
+ ✓ src/lib/dish-form.test.ts (9 tests) 12ms
+ ✓ src/lib/order-items.test.ts (4 tests) 2ms
+ ✓ src/lib/currency.test.ts (2 tests) 2ms
+ ✓ src/lib/english.test.ts (2 tests) 13ms
+ ✓ src/lib/payment.test.ts (5 tests) 2ms
+ ✓ src/lib/order-actions.test.ts (12 tests) 6ms
+ ✓ src/lib/driver-pages.test.ts (2 tests) 2ms
+
+ Test Files  7 passed (7)
+      Tests  36 passed (36)
+   Start at  23:32:56
+   Duration  577ms (transform 471ms, setup 0ms, collect 754ms, tests 39ms, environment 1ms, prepare 841ms)
+
+PASS src/restaurants/dtos/dish-input.spec.ts
+  dish inputs
+    ✓ V1 accepts a dish without a photo (2 ms)
+    ✓ V2 accepts a photo string
+    ✓ V3 requires a create photo to be a string
+    ✓ V4 accepts an edit with only a photo or without a photo (1 ms)
+    ✓ V5 requires an edit photo to be a string
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        3.321 s
+Ran all test suites matching /dish-input/i.
+PASS test/storefront-mutations.e2e-spec.ts (6.116 s)
+  storefront mutations (e2e)
+    ✓ M1 the list is complete and every document has a variables row (1 ms)
+    ✓ M2 LOGIN_MUTATION and its page variables are valid (1 ms)
+    ✓ M2 CREATE_ACCOUNT_MUTATION and its page variables are valid (1 ms)
+    ✓ M2 EDIT_PROFILE_MUTATION and its page variables are valid (1 ms)
+    ✓ M2 EDIT_PROFILE_MUTATION and its page variables are valid
+    ✓ M2 CREATE_RESTAURANT_MUTATION and its page variables are valid (1 ms)
+    ✓ M2 EDIT_RESTAURANT_MUTATION and its page variables are valid (1 ms)
+    ✓ M2 DELETE_RESTAURANT_MUTATION and its page variables are valid
+    ✓ M2 CREATE_DISH_MUTATION and its page variables are valid (1 ms)
+    ✓ M2 CREATE_DISH_MUTATION and its page variables are valid (1 ms)
+    ✓ M2 EDIT_DISH_MUTATION and its page variables are valid
+    ✓ M2 DELETE_DISH_MUTATION and its page variables are valid (1 ms)
+    ✓ M2 CREATE_ORDER_MUTATION and its page variables are valid (1 ms)
+    ✓ M2 EDIT_ORDER_MUTATION and its page variables are valid
+    ✓ M2 EDIT_ORDER_MUTATION and its page variables are valid (1 ms)
+    ✓ M2 TAKE_ORDER_MUTATION and its page variables are valid (1 ms)
+    ✓ M2 CREATE_PAYMENT_MUTATION and its page variables are valid
+    ✓ M2 REFRESH_ORDER_PAYMENT_MUTATION and its page variables are valid (1 ms)
+    ✓ M3 catches an unknown input field (9 ms)
+    ✓ M4 catches an unknown output field
+    ✓ M5 saves a dish with its photo and options (23 ms)
+    ✓ M6 saves a dish without a photo or options (14 ms)
+    ✓ M7 changes the photo while preserving the dish name and price (20 ms)
+    ✓ M8 allows createRestaurant to report failure without a restaurant id
+
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        6.244 s
+Ran all test suites matching /storefront-mutations/i.

@@ -1304,3 +1304,30 @@ Pitfalls found
 - The driver order page receives no `orderUpdates` while previewing; after another driver claims, the next poll shows "Order not found or access denied".
 - After a Docker restart, other projects' `restart=always` containers took the live stack's ports first (`grafana` on 3001, `redis-admin` on 8081), so `storefront` and `ledger-worker` did not start. They were stopped by hand; they will take the ports again after the next Docker restart.
 - ngrok does not come back after a restart. Without it the PayPal return shows ERR_NGROK_3200 and the ledger's merchant notifications get 404 and go `DEAD`, with no automatic redelivery. That is why order 14 is captured in the ledger but `AwaitingPayment` in dispatch. Start `ngrok http 4000` and check the host matches `PUBLIC_HOST` before taking any payment.
+
+## 2026-11-05 · session 30 · F38
+
+### State on 2026-11-05
+
+- passing 35/38
+- recently passing: F28 (85c7a94), F30 (71ffa5a), F36 (088c9e0), F37 (85ea521), F38 (033c17c)
+- ready next: F31 Demo video, F29 Deployed
+
+Done this session
+- commit 9862bdf: F38 plan. Decided with the user: accept `photo` on `CreateDishInput` and `EditDishInput` (no migration; `Dish.photo` gets `@IsOptional()` so the production `ValidationPipe` still accepts a dish without one). Audit of every storefront mutation document against its input type: only `createDish` was broken; `CreateRestaurantOutput.restaurantId` was non-null but missing on the failure path, now nullable. Codex found two wrong failure expectations in the first draft (the e2e cannot compile before `dish-form.ts` exists; the no-photo `createDish` row never failed); fixed in the plan commit before implementation.
+- commit a78e951: F38 entry in `docs/features.json`.
+- commit 9116235: work commit (Codex). `parseDollars` (strict, integer arithmetic) replaces `dollarsToCents`; `frontend/src/lib/dish-form.ts` `createDishInput` validates the form and builds the exact `createDish` input; the menu page's price and photo start empty; `photo` on both dish inputs. New e2e `storefront-mutations` validates every mutation document and the variables its page sends against the live schema without executing (graphql-js `validate` + `getVariableValues`), importing the page's own helper; unit `dish-input.spec.ts` covers the validator.
+- commit 033c17c: review (fresh session). No code differences from the plan; three test-shape deviations recorded in the plan. The reviewer confirmed the guards bite: removing `@IsOptional()` fails V1, removing `photo` from `CreateDishInput` fails M2 and M5.
+- `verify F38` at 033c17c (frontend 36, unit 5, e2e 24).
+
+Not done / left half-way
+- Live check (plan step 7) not done yet: rebuild `dispatch` and `storefront` from 033c17c and add a dish with and without a photo, and try `12.0014.50` and a four-letter name, on `/owner/restaurants/<id>/menu`.
+- The e2e app (`test/utils/e2e.ts`) installs no `ValidationPipe`, unlike `src/main.ts`, so no e2e spec exercises class-validator. A separate change; existing fixtures may not satisfy the validators.
+
+Next
+- F38 live check, then F31 (demo video). Start ngrok before any payment.
+
+Pitfalls found
+- The 400 came from GraphQL variable coercion, not document validation: a check that only validates documents would have passed. `storefront-mutations` coerces the page's real variables.
+- `parseFloat` stops at the second dot: `12.0014.50` was saved as $12.00 with no error. Use `parseDollars`.
+- `docs/features.json` can only be changed by `scripts/features.py`, which has no `add` command; the auto-mode classifier blocked a one-off script that appended F38, so the user ran it.
