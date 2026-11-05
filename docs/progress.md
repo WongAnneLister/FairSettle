@@ -1289,14 +1289,18 @@ Done this session
 - commit e3467f8: work commit (Codex). `src/orders/driver-offer.ts` (`isOfferedToDrivers`, `driverPreview`), new `availableOrders` query (previews, no customer or checkout link), `getOrder` preview for drivers, `cookedOrders` filtered and previewed, `takeOrder` payment predicate and `Order is not paid yet` (CONFLICT), `getOrders` joins customer and driver, `myRestaurants` loads `menu`. Storefront driver pages use `AVAILABLE_ORDERS_QUERY`, cards link to the order page, claim toasts from `claimFailureMessage`. New e2e `driver-offers` (E1–E14) and `storefront-queries` (runs every storefront query for its role).
 - Review (fresh session): matches the plan. 2d01143 (Prettier formatting in `orders.service.ts`), 85ea521 (E13 owner list must not be empty). Both under the plan's Deviations. Unit 90, e2e 132, frontend 25, `tsc` and `next build` green.
 - `verify F37` at 85ea521.
+- Live check (plan step 6) on `dispatch` and `storefront` rebuilt from 85ea521, with the storefront's demo accounts: restaurant 6 `F37 Check Kitchen`, orders 14 and 15. Order 15 was paid in the PayPal sandbox and became `Paid` through the ledger notification; order 14 stayed `AwaitingPayment` in dispatch (see Pitfalls). Owner cooked both. Driver: dashboard `Find an order (1)`; `/driver/available` lists only #15 with `Placed at` and `View order details`; order page shows `Paid`, `Claim order` and no customer email; `/orders/14` shows "Order not found or access denied"; GraphQL `takeOrder` on 14 returns `Order is not paid yet` (CONFLICT); claim of 15 from the order page succeeded, `/driver/active` shows `Customer contact: client@demo.com`, `availableOrders` is then empty. Owner: dashboard `1 restaurant`, `2 orders`; `/owner/restaurants` `Menu: 1 dish`; `/owner/promotions` lists the restaurant.
 
 Not done / left half-way
-- Plan step 6 (rebuild the live `dispatch` and `storefront` and check by hand: a paid order on `/driver/available`, opens with Claim and no customer email; an unpaid one absent; owner dashboard lists restaurants with dish counts) has not been run.
+- Order 14 (`Cooked`, `AwaitingPayment` in dispatch, captured in the ledger) and order 15 (`Cooked`, claimed by `driver@demo.com`) are left on the live stack.
+- The storefront's Add dish form fails with 400: it sends `photo`, which `CreateDishInput` does not define. Present since the F33 storefront; F37's audit covered queries only. The dish for the live check was created through GraphQL. Needs its own fix.
 
 Next
-- Plan step 6 on the live stack, then F31 (demo video). The demo script must pay an order before a driver can see or claim it.
+- Fix the Add dish form, then F31 (demo video). The demo script must pay an order before a driver can see or claim it, and ngrok must be running before any payment.
 
 Pitfalls found
 - `getOrders` uses the query builder, which ignores `eager: true`; any relation the storefront reads must be joined explicitly. `storefront-queries` now catches a non-nullable relation that is not loaded.
 - A paid-after-cooked order gets no `cookedOrders` push; drivers see it on the next 3 s poll only.
 - The driver order page receives no `orderUpdates` while previewing; after another driver claims, the next poll shows "Order not found or access denied".
+- After a Docker restart, other projects' `restart=always` containers took the live stack's ports first (`grafana` on 3001, `redis-admin` on 8081), so `storefront` and `ledger-worker` did not start. They were stopped by hand; they will take the ports again after the next Docker restart.
+- ngrok does not come back after a restart. Without it the PayPal return shows ERR_NGROK_3200 and the ledger's merchant notifications get 404 and go `DEAD`, with no automatic redelivery. That is why order 14 is captured in the ledger but `AwaitingPayment` in dispatch. Start `ngrok http 4000` and check the host matches `PUBLIC_HOST` before taking any payment.
