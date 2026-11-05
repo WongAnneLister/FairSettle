@@ -15,15 +15,15 @@ import {
   TrendingUp,
   Radio,
 } from 'lucide-react';
-import { GET_ORDERS_QUERY } from '@/lib/graphql/queries';
-import { OrderStatus, Order } from '@/lib/types';
+import { AVAILABLE_ORDERS_QUERY, GET_ORDERS_QUERY } from '@/lib/graphql/queries';
+import { Order } from '@/lib/types';
 import { isFinished } from '@/lib/order-actions';
 import { formatCents } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 
 export default function DriverDashboardPage() {
-  const { data: cookedData } = useQuery(GET_ORDERS_QUERY, {
-    variables: { input: { status: OrderStatus.Cooked, page: 1 } },
+  const { data: availableData } = useQuery(AVAILABLE_ORDERS_QUERY, {
+    variables: { input: { page: 1 } },
     pollInterval: 3000,
     errorPolicy: 'all',
   });
@@ -34,7 +34,7 @@ export default function DriverDashboardPage() {
     errorPolicy: 'all',
   });
 
-  const availableOrders: Order[] = (cookedData?.getOrders?.orders || []).filter((o: Order) => !o.driver);
+  const availableCount: number = availableData?.availableOrders?.totalResults ?? 0;
   const myOrders: Order[] = myRidesData?.getOrders?.orders || [];
 
   const activeDeliveries = myOrders.filter(
@@ -71,7 +71,7 @@ export default function DriverDashboardPage() {
                 className="bg-white/95 text-slate-900 hover:bg-white font-bold gap-2 shadow-xl shadow-black/10 backdrop-blur-md border border-white"
               >
                 <Zap className="w-4 h-4 text-emerald-600 fill-emerald-600" />
-                <span>Find an order ({availableOrders.length})</span>
+                <span>Find an order ({availableCount})</span>
               </Button>
             </Link>
           </div>
@@ -84,8 +84,8 @@ export default function DriverDashboardPage() {
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ready for pickup</p>
             <h3 className="text-3xl sm:text-4xl font-black text-slate-900 mt-1.5 tracking-tight">
-              {availableOrders.length}
-              <span className="text-sm font-bold text-slate-500 ml-1">{availableOrders.length === 1 ? 'order' : 'orders'}</span>
+              {availableCount}
+              <span className="text-sm font-bold text-slate-500 ml-1">{availableCount === 1 ? 'order' : 'orders'}</span>
             </h3>
             <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1 mt-1">
               <Radio className="w-3 h-3 animate-pulse" />

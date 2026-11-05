@@ -30,6 +30,8 @@ import {CreateOrderInput, CreateOrderOutput} from './dto/create-order.dto';
 import {EditOrderInput, EditOrderOutput} from './dto/edit-order.dto';
 import {GetOrderInput, GetOrderOutput} from './dto/get-order.dto';
 import {GetOrdersInput, GetOrdersOutput} from './dto/get-orders.dto';
+import {AvailableOrdersInput, AvailableOrdersOutput} from './dto/available-orders.dto';
+import {OFFERED_PAYMENT_STATUSES, driverPreview, isOfferedToDrivers} from './driver-offer';
 import {TakeOrderInput, TakeOrderOutput} from './dto/take-order.dto';
 import {TransitionActor, evaluateTransition, failureReasonCheck} from './order-state-machine';
 import {OrderItem} from './entities/order-item.entity';
@@ -182,9 +184,14 @@ export class OrderService {
       // loads customer, driver, restaurant and items — and then filter by status
       // in Node. A restaurant with three years of history returned one page by
       // pulling tens of thousands of rows into process memory first.
+      // The query builder ignores eager: true, so every relation the storefront
+      // reads is joined here. Without these joins, customer and driver came
+      // back null for every role (F37).
       const query = this.orders
         .createQueryBuilder('order')
         .leftJoinAndSelect('order.restaurant', 'restaurant')
+        .leftJoinAndSelect('order.customer', 'customer')
+        .leftJoinAndSelect('order.driver', 'driver')
         .leftJoinAndSelect('order.items', 'item')
         .leftJoinAndSelect('item.dish', 'dish')
         .orderBy('order.createdAt', 'DESC')
@@ -225,6 +232,28 @@ export class OrderService {
     }
   }
 
+  async availableOrders(driver: User, {page}: AvailableOrdersInput): Promise<AvailableOrdersOutput> {
+    try {
+      // These three conditions are the SQL form of isOfferedToDrivers (F37).
+      const [orders, totalResults] = await this.orders
+        .createQueryBuilder('order')
+        .leftJoinAndSelect('order.restaurant', 'restaurant')
+        .leftJoinAndSelect('order.items', 'item')
+        .leftJoinAndSelect('item.dish', 'dish')
+        .where('order.status = :cooked', {cooked: OrderStatus.Cooked})
+        .andWhere('order.driverId IS NULL')
+        .andWhere('order.paymentStatus IN (:...offered)', {offered: [...OFFERED_PAYMENT_STATUSES]})
+        .orderBy('order.createdAt', 'ASC')
+        .addOrderBy('order.id', 'ASC')
+        .take(ORDERS_PAGE_SIZE)
+        .skip((page - 1) * ORDERS_PAGE_SIZE)
+        .getManyAndCount();
+      return {ok: true, orders: orders.map(driverPreview), totalResults, totalPages: Math.ceil(totalResults / ORDERS_PAGE_SIZE)};
+    } catch (error) {
+      return failure(error, this.logger, {op: 'availableOrders', driverId: driver.id, page});
+    }
+  }
+
   async getOrder(caller: Caller, getOrderInput: GetOrderInput): Promise<GetOrderOutput> {
     try {
       const order = await this.orders.findOne({
@@ -240,6 +269,12 @@ export class OrderService {
       }
 
       if (!this.canRead(caller, order)) {
+        // A driver may look at an order on offer before claiming it, without the
+        // customer's details (F37). The claim itself is still decided by takeOrder's
+        // conditional UPDATE, so this read cannot let two drivers win.
+        if (caller.kind === 'user' && caller.user.role === UserRole.Delivery && isOfferedToDrivers(order)) {
+          return {ok: true, order: driverPreview(order)};
+        }
         throw new ForbiddenError("You can't see that.");
       }
 
@@ -397,6 +432,8 @@ export class OrderService {
       // One atomic statement. The eligibility check lives in the WHERE clause,
       // so the database decides the winner instead of the application guessing
       // from a value it read moments earlier.
+      // The payment precondition is part of the same WHERE clause (F37), so an
+      // unpaid order cannot be claimed; rows affected still decide the winner.
       //
       // Under PostgreSQL's default READ COMMITTED, a second concurrent UPDATE
       // blocks on the first, then RE-EVALUATES its predicate against the newly
@@ -410,6 +447,7 @@ export class OrderService {
           .where('id = :id', {id})
           .andWhere('"driverId" IS NULL')
           .andWhere('status = :cooked', {cooked: OrderStatus.Cooked})
+          .andWhere('"paymentStatus" IN (:...offered)', {offered: [...OFFERED_PAYMENT_STATUSES]})
           .execute();
         if (claimed.affected === 1) {
           await recordOrderEvent(manager, {
@@ -450,7 +488,10 @@ export class OrderService {
       // the useful client response is "refresh the list", not "you may not".
       throw new ConflictError('This order already has a driver');
     }
-    throw new ConflictError(`Order is ${order.status}, not ${OrderStatus.Cooked}`);
+    if (order.status !== OrderStatus.Cooked) {
+      throw new ConflictError(`Order is ${order.status}, not ${OrderStatus.Cooked}`);
+    }
+    throw new ConflictError('Order is not paid yet');
   }
 
   /**

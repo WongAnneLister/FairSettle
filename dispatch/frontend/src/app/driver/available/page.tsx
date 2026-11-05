@@ -18,10 +18,11 @@ import {
   Bike,
   Sparkles,
 } from 'lucide-react';
-import { GET_ORDERS_QUERY } from '@/lib/graphql/queries';
+import { AVAILABLE_ORDERS_QUERY } from '@/lib/graphql/queries';
 import { COOKED_ORDERS_SUBSCRIPTION } from '@/lib/graphql/subscriptions';
 import { TAKE_ORDER_MUTATION } from '@/lib/graphql/mutations';
-import { Order, OrderStatus } from '@/lib/types';
+import { Order } from '@/lib/types';
+import { claimFailureMessage } from '@/lib/order-actions';
 import { formatCents } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -31,8 +32,8 @@ export default function DriverAvailableOrdersPage() {
   const router = useRouter();
   const { success, error, info } = useToast();
 
-  const { data, loading, refetch } = useQuery(GET_ORDERS_QUERY, {
-    variables: { input: { status: OrderStatus.Cooked, page: 1 } },
+  const { data, loading, refetch } = useQuery(AVAILABLE_ORDERS_QUERY, {
+    variables: { input: { page: 1 } },
     pollInterval: 3000,
     errorPolicy: 'all',
   });
@@ -52,9 +53,7 @@ export default function DriverAvailableOrdersPage() {
     }
   }, [cookedSub, info, refetch]);
 
-  const allCookedOrders: Order[] = data?.getOrders?.orders || [];
-  // Only show orders that do not have a driver assigned yet
-  const availableOrders = allCookedOrders.filter((o) => !o.driver);
+  const availableOrders: Order[] = data?.availableOrders?.orders || [];
 
   const handleClaim = async (orderId: number) => {
     try {
@@ -62,19 +61,15 @@ export default function DriverAvailableOrdersPage() {
         variables: { input: { id: orderId } },
       });
 
-      const { ok, error: errMessage, code } = res.data?.takeOrder || {};
+      const { ok, error: errMessage } = res.data?.takeOrder || {};
 
       if (ok) {
         success('🎉 Order claimed', `You claimed order #${orderId}. Head to the restaurant for pickup`);
         router.push('/driver/active');
-      } else if (code === 'CONFLICT' || errMessage?.includes('already has a driver')) {
-        error(
-          'Another driver claimed this order',
-          'Available orders have been refreshed'
-        );
-        refetch();
       } else {
-        error('Claim failed', errMessage || 'Please try again later');
+        const { title, description } = claimFailureMessage(errMessage);
+        error(title, description);
+        refetch();
       }
     } catch (err: any) {
       error('Network error while claiming order', err.message);
@@ -135,7 +130,7 @@ export default function DriverAvailableOrdersPage() {
           <span className="font-medium">
             Each order can be claimed by one driver.
             <code className="bg-white/80 px-2 py-0.5 rounded-lg font-mono text-[11px] ml-1.5 border border-emerald-200/60 text-emerald-800">
-              WHERE id = $1 AND driverId IS NULL AND status = Cooked
+              WHERE id = $1 AND driverId IS NULL AND status = Cooked AND paymentStatus IN (Paid, NotRequired)
             </code>
           </span>
         </div>
@@ -199,7 +194,7 @@ export default function DriverAvailableOrdersPage() {
                   </div>
                   <div className="flex items-center gap-2 text-slate-500">
                     <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>Ready at: {new Date(order.createdAt || Date.now()).toLocaleTimeString('en-US')}</span>
+                    <span>Placed at: {new Date(order.createdAt || Date.now()).toLocaleTimeString('en-US')}</span>
                   </div>
                 </div>
 
@@ -210,6 +205,7 @@ export default function DriverAvailableOrdersPage() {
                     <span>{order.items.map((i) => i.dish?.name).join(', ')}</span>
                   </div>
                 )}
+                <Link href={`/orders/${order.id}`} className="mt-3 inline-block text-xs font-semibold text-emerald-700 hover:text-emerald-800">View order details</Link>
               </div>
 
               <Button

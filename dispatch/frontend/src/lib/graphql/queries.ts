@@ -103,30 +103,6 @@ export const ALL_CATEGORIES_QUERY = gql`
   }
 `;
 
-export const CATEGORY_QUERY = gql`
-  query Category($input: CategoryInput!) {
-    category(input: $input) {
-      ok
-      error
-      totalPages
-      totalResults
-      category {
-        id
-        name
-        coverImage
-        slug
-      }
-      restaurants {
-        id
-        name
-        coverImage
-        address
-        isPromoted
-      }
-    }
-  }
-`;
-
 export const SEARCH_RESTAURANT_QUERY = gql`
   query SearchRestaurant($input: SearchRestaurantInput!) {
     searchRestaurant(input: $input) {
@@ -231,6 +207,42 @@ export const GET_ORDERS_QUERY = gql`
           id
           email
         }
+        restaurant {
+          id
+          name
+          coverImage
+          address
+        }
+        items {
+          id
+          dish {
+            id
+            name
+            priceCents
+          }
+          options {
+            name
+            choice
+          }
+        }
+      }
+    }
+  }
+`;
+
+export const AVAILABLE_ORDERS_QUERY = gql`
+  query AvailableOrders($input: AvailableOrdersInput!) {
+    availableOrders(input: $input) {
+      ok
+      error
+      totalPages
+      totalResults
+      orders {
+        id
+        status
+        totalCents
+        paymentStatus
+        createdAt
         restaurant {
           id
           name

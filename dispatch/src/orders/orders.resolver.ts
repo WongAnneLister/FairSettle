@@ -9,6 +9,8 @@ import {AuthUser} from 'src/auth/auth-user.decorator';
 import {User} from 'src/users/entities/user.entity';
 import {CreateOrderInput, CreateOrderOutput} from './dto/create-order.dto';
 import {GetOrdersInput, GetOrdersOutput} from './dto/get-orders.dto';
+import {AvailableOrdersInput, AvailableOrdersOutput} from './dto/available-orders.dto';
+import {driverPreview, isOfferedToDrivers} from './driver-offer';
 import {GetOrderInput, GetOrderOutput} from './dto/get-order.dto';
 import {Role} from 'src/auth/role.decorator';
 import {EditOrderInput, EditOrderOutput} from './dto/edit-order.dto';
@@ -46,6 +48,15 @@ export class OrderResolver {
     @Args('input') getOrdersInput: GetOrdersInput,
   ): Promise<GetOrdersOutput> {
     return this.orderService.getOrders(user, getOrdersInput);
+  }
+
+  @Query(returns => AvailableOrdersOutput)
+  @Role(['Delivery'])
+  availableOrders(
+    @AuthUser() driver: User,
+    @Args('input') availableOrdersInput: AvailableOrdersInput,
+  ): Promise<AvailableOrdersOutput> {
+    return this.orderService.availableOrders(driver, availableOrdersInput);
   }
 
   @Query(returns => GetOrderOutput)
@@ -98,7 +109,11 @@ export class OrderResolver {
     return this.pubsub.asyncIterableIterator(NEW_PENDING_ORDER);
   }
 
-  @Subscription(returns => Order)
+  // Drivers hear only about orders they could claim, and without the customer (F37).
+  @Subscription(returns => Order, {
+    filter: ({cookedOrders}) => isOfferedToDrivers(cookedOrders),
+    resolve: ({cookedOrders}) => driverPreview(cookedOrders),
+  })
   @Role(['Delivery'])
   cookedOrders() {
     return this.pubsub.asyncIterableIterator(NEW_COOKED_ORDER);

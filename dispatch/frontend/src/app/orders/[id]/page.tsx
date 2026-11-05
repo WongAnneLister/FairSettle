@@ -19,7 +19,7 @@ import { GET_ORDER_QUERY } from '@/lib/graphql/queries';
 import { ORDER_UPDATES_SUBSCRIPTION } from '@/lib/graphql/subscriptions';
 import { EDIT_ORDER_MUTATION, TAKE_ORDER_MUTATION } from '@/lib/graphql/mutations';
 import { DeliveryFailureReason, Order, OrderStatus, UserRole } from '@/lib/types';
-import { DELIVERY_FAILURE_REASONS, ORDER_STATUS_LABELS, markFailedInput, quickActionsFor } from '@/lib/order-actions';
+import { DELIVERY_FAILURE_REASONS, ORDER_STATUS_LABELS, claimFailureMessage, markFailedInput, quickActionsFor } from '@/lib/order-actions';
 import { formatCents } from '@/lib/currency';
 import { OrderPaymentCard } from '@/components/order/order-payment-card';
 import { OrderTimeline } from '@/components/order/order-timeline';
@@ -111,7 +111,8 @@ function OrderDetail() {
         success('Order claimed', 'You are now the driver for this order.');
         refetch();
       } else {
-        error('Claim failed', res.data.takeOrder.error || 'Another driver took it first.');
+        const { title, description } = claimFailureMessage(res.data.takeOrder.error);
+        error(title, description);
       }
     } catch (e: any) {
       error('Claim failed', e.message || 'Another driver took it first.');

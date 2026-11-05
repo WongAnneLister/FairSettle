@@ -20,6 +20,7 @@ Read before changing anything here: `docs/adr/` (6 ADRs).
 | Path | Role |
 | --- | --- |
 | `src/orders/order-events.ts` | The order event log: one row per applied order change, in the change's own transaction; read by `orderTimeline` (F19) |
+| `src/orders/driver-offer.ts` | Which orders a driver is offered (Cooked, unassigned, `Paid` or `NotRequired`) and what a driver sees before claiming (no customer, no checkout link); used by `availableOrders`, `getOrder`, `cookedOrders` and `takeOrder` (F37) |
 | `src/orders/order-state-machine.ts` | The only place order status changes. API calls, provider callbacks and new ledger notifications all go through it |
 | `frontend/` | Customer, owner and driver storefront. Talks to dispatch GraphQL only; pays through the order's PayPal sandbox `checkoutUrl` and asks dispatch to read the payment with `refreshOrderPayment` (F33) |
 | `src/ledger/` | The only place dispatch calls the ledger. Payment creation goes through the outbox (`order.payment`); the key is derived from the order id (F15); receives signed ledger payment notifications at `POST /webhooks/ledger` (raw-byte HMAC, inbox by eventId) and moves `paymentStatus` through the state machine (F16); `refreshOrderPayment` reads the ledger payment so the ledger captures, and `GET /checkout/success` / `/checkout/cancel` redirect PayPal's return to the storefront (F33) |

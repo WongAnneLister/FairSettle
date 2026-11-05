@@ -178,7 +178,9 @@ export class RestaurantService {
     try {
       const restaurants = await this.restaurants.find({
         where: {owner: {id: owner.id}},
-        relations: ['category'],
+        // Restaurant.menu is non-nullable in GraphQL and the owner pages ask
+        // for it; without this relation the whole query failed (F37).
+        relations: ['category', 'menu'],
       });
       return {ok: true, restaurants};
     } catch (error) {

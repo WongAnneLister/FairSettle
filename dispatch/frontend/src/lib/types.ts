@@ -160,6 +160,12 @@ export interface GetOrdersOutput extends CoreOutput {
   orders?: Order[];
 }
 
+export interface AvailableOrdersOutput extends CoreOutput {
+  totalPages?: number;
+  totalResults?: number;
+  orders?: Order[];
+}
+
 export interface GetOrderOutput extends CoreOutput {
   order?: Order;
 }

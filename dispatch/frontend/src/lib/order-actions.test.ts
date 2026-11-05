@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DELIVERY_FAILURE_REASONS, ORDER_STATUS_LABELS, isFinished,
-  markFailedInput, quickActionsFor,
+  claimFailureMessage, markFailedInput, quickActionsFor,
 } from './order-actions';
 import { DeliveryFailureReason, OrderStatus, User, UserRole } from './types';
 
@@ -69,5 +69,24 @@ describe('order actions', () => {
       id: 7, status: 'DeliveryFailed', failureReason: 'DRIVER_FAULT',
     });
     expect(DELIVERY_FAILURE_REASONS.map(reason => reason.value)).toEqual(['DRIVER_FAULT', 'PLATFORM_FAULT']);
+  });
+
+  it('lost race', () => {
+    expect(claimFailureMessage('This order already has a driver')).toEqual({
+      title: 'Another driver claimed this order', description: 'Available orders have been refreshed',
+    });
+  });
+
+  it('unpaid', () => {
+    expect(claimFailureMessage('Order is not paid yet')).toEqual({
+      title: 'Order not paid yet', description: 'Only paid orders can be claimed',
+    });
+  });
+
+  it('other', () => {
+    expect(claimFailureMessage('Order is Cooking, not Cooked')).toEqual({
+      title: 'Claim failed', description: 'Order is Cooking, not Cooked',
+    });
+    expect(claimFailureMessage(null)).toEqual({title: 'Claim failed', description: 'Please try again later'});
   });
 });

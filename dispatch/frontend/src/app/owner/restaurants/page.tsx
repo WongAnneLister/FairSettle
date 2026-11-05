@@ -173,7 +173,7 @@ export default function MyRestaurantsPage() {
 
                   <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
                     <Layers className="w-3.5 h-3.5" />
-                    <span>Menu: <strong className="text-slate-700 font-bold">{restaurant.menu?.length || 0}</strong> dishes</span>
+                    <span>Menu: <strong className="text-slate-700 font-bold">{restaurant.menu?.length || 0}</strong> {(restaurant.menu?.length || 0) === 1 ? 'dish' : 'dishes'}</span>
                   </div>
                 </div>
               </div>

@@ -57,3 +57,7 @@ the transition was validated against. Worth recognising as a general rule:
 the write itself.**
 
 Correctness under both isolation levels is covered in [ADR 0005](./0005-transaction-isolation.md).
+
+Since F37, the WHERE clause also carries `"paymentStatus" IN ('Paid', 'NotRequired')`.
+A claim on an unpaid order loses the same way and is explained as `Order is not paid yet`
+(`CONFLICT`). Same mechanism, one more predicate.

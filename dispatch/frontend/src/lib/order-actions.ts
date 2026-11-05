@@ -48,3 +48,20 @@ export function markFailedInput(orderId: number, reason: DeliveryFailureReason):
   { id: number; status: OrderStatus.DeliveryFailed; failureReason: DeliveryFailureReason } {
   return { id: orderId, status: OrderStatus.DeliveryFailed, failureReason: reason };
 }
+
+/** Toast text for a takeOrder that returned ok: false (F37). */
+export function claimFailureMessage(error: string | null | undefined): { title: string; description: string } {
+  if (error?.includes('already has a driver')) {
+    return {
+      title: 'Another driver claimed this order',
+      description: 'Available orders have been refreshed',
+    };
+  }
+  if (error?.includes('not paid')) {
+    return {
+      title: 'Order not paid yet',
+      description: 'Only paid orders can be claimed',
+    };
+  }
+  return { title: 'Claim failed', description: error || 'Please try again later' };
+}
