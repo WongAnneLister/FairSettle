@@ -232,7 +232,10 @@ export class OrderService {
     }
   }
 
-  async availableOrders(driver: User, {page}: AvailableOrdersInput): Promise<AvailableOrdersOutput> {
+  async availableOrders(
+    driver: User,
+    {page}: AvailableOrdersInput,
+  ): Promise<AvailableOrdersOutput> {
     try {
       // These three conditions are the SQL form of isOfferedToDrivers (F37).
       const [orders, totalResults] = await this.orders
@@ -248,7 +251,12 @@ export class OrderService {
         .take(ORDERS_PAGE_SIZE)
         .skip((page - 1) * ORDERS_PAGE_SIZE)
         .getManyAndCount();
-      return {ok: true, orders: orders.map(driverPreview), totalResults, totalPages: Math.ceil(totalResults / ORDERS_PAGE_SIZE)};
+      return {
+        ok: true,
+        orders: orders.map(driverPreview),
+        totalResults,
+        totalPages: Math.ceil(totalResults / ORDERS_PAGE_SIZE),
+      };
     } catch (error) {
       return failure(error, this.logger, {op: 'availableOrders', driverId: driver.id, page});
     }
@@ -272,7 +280,11 @@ export class OrderService {
         // A driver may look at an order on offer before claiming it, without the
         // customer's details (F37). The claim itself is still decided by takeOrder's
         // conditional UPDATE, so this read cannot let two drivers win.
-        if (caller.kind === 'user' && caller.user.role === UserRole.Delivery && isOfferedToDrivers(order)) {
+        if (
+          caller.kind === 'user' &&
+          caller.user.role === UserRole.Delivery &&
+          isOfferedToDrivers(order)
+        ) {
           return {ok: true, order: driverPreview(order)};
         }
         throw new ForbiddenError("You can't see that.");
