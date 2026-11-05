@@ -874,6 +874,23 @@
         "log_sha256": "68631204d558753c765a38253649d42cc4a381dd32017ed9278afab406f48aea"
       },
       "started_at": "2026-11-04T01:36:58+09:00"
+    },
+    {
+      "id": "F38",
+      "title": "Owner adds dishes from the storefront",
+      "service": "dispatch",
+      "milestone": "M3",
+      "priority": "P0",
+      "behavior": "An owner can add a dish from the storefront's Add dish form, with an optional photo URL that is saved and shown on the menu. The price field starts empty and accepts only a dollar amount with at most two decimals; any other entry is refused with a message instead of being saved as a different price. Every storefront mutation document, with the variables its page sends, is valid against the dispatch schema.",
+      "verification": {
+        "kind": "command",
+        "command": "cd dispatch && npm test -- --testPathPattern=dish-input && npm run test:e2e -- --testPathPattern=storefront-mutations && cd frontend && npm test"
+      },
+      "depends_on": [
+        "F37"
+      ],
+      "state": "not_started",
+      "evidence": null
     }
   ]
 }
