@@ -1319,13 +1319,14 @@ Done this session
 - commit 9116235: work commit (Codex). `parseDollars` (strict, integer arithmetic) replaces `dollarsToCents`; `frontend/src/lib/dish-form.ts` `createDishInput` validates the form and builds the exact `createDish` input; the menu page's price and photo start empty; `photo` on both dish inputs. New e2e `storefront-mutations` validates every mutation document and the variables its page sends against the live schema without executing (graphql-js `validate` + `getVariableValues`), importing the page's own helper; unit `dish-input.spec.ts` covers the validator.
 - commit 033c17c: review (fresh session). No code differences from the plan; three test-shape deviations recorded in the plan. The reviewer confirmed the guards bite: removing `@IsOptional()` fails V1, removing `photo` from `CreateDishInput` fails M2 and M5.
 - `verify F38` at 033c17c (frontend 36, unit 5, e2e 24).
+- Live check (plan step 7) on `dispatch` and `storefront` rebuilt from 86fead0, as `owner@demo.com` on `/owner/restaurants/6/menu` (`F37 Check Kitchen`). The Add dish form opens with every field empty (price placeholder `For example: 14.50`). `12.0014.50` is refused with "Enter the price in dollars, for example 14.50" and nothing is saved. `Taco` is blocked by the browser ("Please lengthen this text to 5 characters or more"). Clicking the prefilled `3.00` extra and typing `2.50` replaces it. `F38 Photo Pizza` ($14.50, photo URL, option group Standard +$0.00 / Premium +$2.50) is added and its photo shows on the card; reopening the form shows it reset. `F38 Plain Focaccia` (`9`, no photo) is added at $9.00. In `dish`: id 11 `1450`, the photo URL, options `[{"name":"Options","choices":[{"name":"Standard","extraCents":0},{"name":"Premium","extraCents":250}]}]`; id 12 `900`, `photo` and `options` null.
 
 Not done / left half-way
-- Live check (plan step 7) not done yet: rebuild `dispatch` and `storefront` from 033c17c and add a dish with and without a photo, and try `12.0014.50` and a four-letter name, on `/owner/restaurants/<id>/menu`.
+- Dishes 11 and 12 are left in restaurant 6 on the live stack.
 - The e2e app (`test/utils/e2e.ts`) installs no `ValidationPipe`, unlike `src/main.ts`, so no e2e spec exercises class-validator. A separate change; existing fixtures may not satisfy the validators.
 
 Next
-- F38 live check, then F31 (demo video). Start ngrok before any payment.
+- F31 (demo video). Start ngrok before any payment.
 
 Pitfalls found
 - The 400 came from GraphQL variable coercion, not document validation: a check that only validates documents would have passed. `storefront-mutations` coerces the page's real variables.
