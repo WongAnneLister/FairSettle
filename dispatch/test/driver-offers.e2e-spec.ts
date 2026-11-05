@@ -329,6 +329,7 @@ describe('Driver offers (e2e)', () => {
       `query { getOrders(input: {status: Cooked}) { orders { id customer { email } } } }`,
       ownerToken,
     );
+    expect(owner.body.data.getOrders.orders.length).toBeGreaterThan(0);
     owner.body.data.getOrders.orders.forEach((entry: {customer: {email: string}}) => {
       expect(entry.customer.email).toBe('client@offers.test');
     });
