@@ -1,13 +1,608 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Refund proposals · Payments Ledger</title><link rel="stylesheet" href="/ops-console.css"><script type="module" src="/refund-proposals.mjs"></script></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Refund proposals · Payments Ledger</title>
+  <link rel="stylesheet" href="/ops-console.css">
+  <style>
+    :root {
+      --brand-orange: #f56311;
+      --brand-teal: #087f83;
+      --brand-navy: #0f172a;
+      --brand-emerald: #059669;
+      --brand-rose: #e11d48;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-600: #475569;
+      --slate-900: #0f172a;
+    }
+    body {
+      background: #f8fafc;
+      color: #1e293b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+    }
+    .topbar {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: white;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .topbar-brand h1 {
+      font-size: 18px;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: -0.01em;
+      color: #f8fafc;
+    }
+    .topbar-badge {
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 2px 8px;
+      border-radius: 9999px;
+    }
+    .topbar a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    .topbar a:hover {
+      color: #f8fafc;
+    }
+    .main-wrapper {
+      max-width: 1040px;
+      margin: 28px auto;
+      padding: 0 20px;
+    }
+    .auth-banner {
+      background: white;
+      border: 1px solid var(--slate-200);
+      border-radius: 16px;
+      padding: 18px 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+    }
+    .auth-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 14px;
+    }
+    .auth-row label {
+      flex: 1;
+      min-width: 260px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--slate-600);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .auth-row input {
+      margin-top: 6px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 13px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .btn-demo-key {
+      background: var(--slate-100);
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .btn-demo-key:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .btn-signin {
+      background: var(--brand-teal);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-signin:hover {
+      background: #06686b;
+    }
+    .identity-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    .identity-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .identity-badge.role-ops_reviewer {
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+    }
+    .identity-badge.role-ops_viewer {
+      background: #eff6ff;
+      color: #2563eb;
+      border: 1px solid #bfdbfe;
+    }
+    .notice-callout {
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 13px;
+      border-left: 3px solid #94a3b8;
+    }
+    .notice-callout:empty {
+      display: none;
+    }
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: white;
+      border: 1px solid var(--slate-200);
+      border-radius: 14px;
+      padding: 12px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
+    }
+    .filter-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .filter-controls label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--slate-600);
+    }
+    .filter-controls select {
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      background: #f8fafc;
+      cursor: pointer;
+    }
+    .btn-action {
+      background: white;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-action:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+    .btn-retry {
+      background: #fffbeb;
+      color: #b45309;
+      border: 1px solid #fde68a;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Proposal Cards */
+    .proposals-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .proposal-card {
+      background: white;
+      border: 1px solid var(--slate-200);
+      border-radius: 18px;
+      padding: 22px 26px;
+      box-shadow: 0 6px 24px -4px rgba(15, 23, 42, 0.05);
+      transition: border-color 0.2s ease;
+    }
+    .proposal-card:hover {
+      border-color: #cbd5e1;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--slate-100);
+      margin-bottom: 16px;
+    }
+    .id-group {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .badge-prop-id {
+      font-family: ui-monospace, monospace;
+      font-size: 13px;
+      font-weight: 700;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+    .badge-order {
+      font-size: 12px;
+      font-weight: 700;
+      background: #eff6ff;
+      color: #1d4ed8;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #bfdbfe;
+    }
+    .badge-subtle {
+      font-size: 11px;
+      color: #64748b;
+      font-family: ui-monospace, monospace;
+    }
+    .status-badge {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-pending_review {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+    .status-approved {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+    .status-rejected {
+      background: #fff1f2;
+      color: #9f1239;
+      border: 1px solid #fecdd3;
+    }
+
+    /* Metrics Row */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .metric-box {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-100);
+      border-radius: 12px;
+      padding: 12px 16px;
+    }
+    .metric-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .metric-amount {
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--brand-emerald);
+      letter-spacing: -0.02em;
+    }
+    .metric-val {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    /* Liability Section */
+    .liability-section {
+      background: #fafaf9;
+      border: 1px solid #e7e5e4;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #57534e;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 10px;
+    }
+    .liability-bar {
+      height: 16px;
+      border-radius: 9999px;
+      overflow: hidden;
+      display: flex;
+      background: #e2e8f0;
+      margin-bottom: 12px;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);
+    }
+    .bar-seg {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .party-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .party-card {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-top-width: 3px;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+    .party-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .party-pct {
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 2px;
+    }
+    .party-bp {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    /* Explanation & Metadata */
+    .explanation-box {
+      background: #fffbeb;
+      border-left: 3px solid #f59e0b;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+    }
+    .box-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #92400e;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+    .explanation-text {
+      font-size: 13px;
+      color: #78350f;
+      line-height: 1.4;
+      margin: 0;
+    }
+    .meta-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+      font-size: 12px;
+    }
+    .meta-label {
+      font-weight: 700;
+      color: #64748b;
+    }
+    .evidence-chips {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+    }
+    .meta-details {
+      display: grid;
+      grid-template-columns: max-content 1fr;
+      gap: 4px 12px;
+      margin: 0 0 16px;
+      font-size: 12px;
+    }
+    .meta-details dd {
+      margin: 0;
+      font-family: ui-monospace, monospace;
+      color: #334155;
+      overflow-wrap: anywhere;
+    }
+
+    /* Actions Panel */
+    .action-panel {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-top: 14px;
+      border-top: 1px solid var(--slate-100);
+    }
+    .btn-approve {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 22px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25);
+      transition: all 0.2s;
+    }
+    .btn-approve:hover {
+      box-shadow: 0 6px 18px rgba(5, 150, 105, 0.35);
+      transform: translateY(-1px);
+    }
+    .reject-details {
+      margin-left: auto;
+    }
+    .reject-summary {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      cursor: pointer;
+    }
+    .reject-summary:hover {
+      color: #e11d48;
+    }
+    .reject-body {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .reject-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+    }
+    .reject-body textarea {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      padding: 8px;
+      font-size: 12px;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    .btn-reject {
+      background: #fff1f2;
+      color: #e11d48;
+      border: 1px solid #fecdd3;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      align-self: flex-start;
+    }
+    .btn-reject:hover {
+      background: #ffe4e6;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #64748b;
+      font-size: 14px;
+      background: white;
+      border-radius: 16px;
+      border: 1px dashed #cbd5e1;
+    }
+  </style>
+  <script type="module" src="/refund-proposals.mjs"></script>
+</head>
 <body>
-<header class="topbar"><h1>Refund proposals</h1><a href="/ops-console.html">Operations console</a></header>
-<main>
-<form id="identity-form"><label>Ops credential<input id="credential" type="password" autocomplete="off" spellcheck="false" placeholder="ops_…"></label><button type="submit">Sign in</button></form>
-<p id="identity"></p><p id="notice" role="status" aria-live="polite"></p>
-<label>Proposal status<select id="status-filter"><option value="PENDING_REVIEW">Pending review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select></label>
-<button id="refresh" type="button">Refresh</button><button id="retry" type="button" hidden>Retry pending decision</button>
-<section id="proposals" aria-label="Proposals"></section>
-</main>
-</body></html>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span style="font-size: 20px;">⚖️</span>
+      <h1>Refund proposals</h1>
+      <span class="topbar-badge">Ledger Review · Live</span>
+    </div>
+    <a href="/ops-console.html">Operations console →</a>
+  </header>
+
+  <main class="main-wrapper">
+    <section class="auth-banner">
+      <form id="identity-form">
+        <div class="auth-row">
+          <label>Ops credential
+            <input id="credential" type="password" autocomplete="off" spellcheck="false" placeholder="ops_…" required>
+          </label>
+          <button id="btn-demo-fill" type="button" class="btn-demo-key" title="Fill reviewer credential prefix">⚡ Demo Key Prefix</button>
+          <button type="submit" class="btn-signin">Sign in</button>
+        </div>
+      </form>
+      <div class="identity-row">
+        <span id="identity"></span>
+      </div>
+      <p id="notice" class="notice-callout" role="status" aria-live="polite"></p>
+    </section>
+
+    <div class="filter-bar">
+      <div class="filter-controls">
+        <label>Proposal status
+          <select id="status-filter">
+            <option value="PENDING_REVIEW">Pending review</option>
+            <option value="APPROVED">Approved</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+        </label>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button id="refresh" type="button" class="btn-action">↻ Refresh</button>
+        <button id="retry" type="button" class="btn-retry" hidden>⚠️ Retry pending decision</button>
+      </div>
+    </div>
+
+    <section id="proposals" class="proposals-grid" aria-label="Proposals"></section>
+  </main>
+</body>
+</html>
