@@ -912,8 +912,13 @@
       "depends_on": [
         "F28"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "36d0d798c97d226bb085df2f5afd3a7db16ac73a",
+        "verified_at": "2026-11-12T12:15:51+09:00",
+        "log": "docs/evidence/F39.log",
+        "log_sha256": "a6cfc328cfe1adc375e2a92bb28c13284fd6efcfee2be4e0a3cd4feda561e4be"
+      },
       "started_at": "2026-11-12T11:09:56+08:00"
     }
   ]

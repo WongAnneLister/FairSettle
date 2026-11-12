@@ -1332,3 +1332,27 @@ Pitfalls found
 - The 400 came from GraphQL variable coercion, not document validation: a check that only validates documents would have passed. `storefront-mutations` coerces the page's real variables.
 - `parseFloat` stops at the second dot: `12.0014.50` was saved as $12.00 with no error. Use `parseDollars`.
 - `docs/features.json` can only be changed by `scripts/features.py`, which has no `add` command; the auto-mode classifier blocked a one-off script that appended F38, so the user ran it.
+
+## 2026-11-12 · session 31 · F39
+
+### State on 2026-11-12
+
+- passing 36/39
+- recently passing: F30 (71ffa5a), F36 (088c9e0), F37 (85ea521), F38 (033c17c), F39 (36d0d79)
+- ready next: F31 Demo video, F29 Deployed
+
+Done this session
+- commit 1b9c839: F39 plan (food-safety complaints may refund up to the order total, delivered orders only, restaurant 10000 bp by default).
+- commit 36d0d79: work commit. Agent: `food_safety` complaint type, reason code, cap and delivered-order rule, prompt lines; ledger: `FOOD_SAFETY` reason code (V21 migration, `ProposalRequests`, contract).
+- `verify F39` at 36d0d79: agent 58 passed (12 subtests), `RefundProposalApiTest` green.
+
+Not done / left half-way
+- No fresh-session review ran before `verify`; the plan's Deviations section is still empty.
+- Eval scenarios and `docs/eval-results.md` for food safety are out of scope (they need a live model run).
+
+Next
+- Review F39 against its plan in a fresh session, then F31 (demo video). Start ngrok before any payment.
+
+Pitfalls found
+- `verify` failed first with "release version 21 not supported": the shell default is JDK 17. Set `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home` for the command. Docker Desktop must also be running for the ledger test.
+- `verify` refuses a dirty tree; uncommitted UI work was stashed for the run and restored afterwards.
