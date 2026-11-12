@@ -6,6 +6,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery, useSubscription, useMutation } from '@apollo/client';
 import {
   ArrowLeft,
+  ArrowRight,
   Store,
   Bike,
   Clock,
@@ -24,10 +25,20 @@ import { formatCents } from '@/lib/currency';
 import { OrderPaymentCard } from '@/components/order/order-payment-card';
 import { OrderTimeline } from '@/components/order/order-timeline';
 import { OrderStatusBadge } from '@/components/order/order-status-badge';
+import { SafeImage } from '@/components/ui/safe-image';
+import { DEFAULT_DISH_PHOTO, getDishPhoto } from '@/lib/image-helper';
 import { Spinner } from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/lib/toast-context';
+
+// The agent's complaint page (F28). Set NEXT_PUBLIC_COMPLAINT_PAGE_URL when it is not on this machine.
+const COMPLAINT_PAGE_URL = process.env.NEXT_PUBLIC_COMPLAINT_PAGE_URL || 'http://localhost:7860/';
+const complaintPageUrl = (orderId: number) => {
+  const url = new URL(COMPLAINT_PAGE_URL);
+  url.searchParams.set('order_id', String(orderId));
+  return url.toString();
+};
 
 function OrderDetail() {
   const params = useParams();
@@ -92,7 +103,17 @@ function OrderDetail() {
         },
       });
       if (res.data.editOrder.ok) {
-        success('Order updated', `Order moved to ${ORDER_STATUS_LABELS[nextStatus]}`);
+        const descriptions: Partial<Record<OrderStatus, string>> = {
+          [OrderStatus.Cooking]: 'The kitchen has started cooking your food.',
+          [OrderStatus.Cooked]: 'Your food is prepared and ready for courier pickup.',
+          [OrderStatus.PickedUp]: 'Your driver has collected the food and is on the way.',
+          [OrderStatus.Delivered]: 'Delivered! Enjoy your meal or report any issue.',
+          [OrderStatus.DeliveryFailed]: 'Order marked as failed delivery. Support notified.',
+        };
+        success(
+          `Moved to ${ORDER_STATUS_LABELS[nextStatus]}`,
+          descriptions[nextStatus] || `Order status updated to ${ORDER_STATUS_LABELS[nextStatus]}.`
+        );
         refetch();
       } else {
         error('Not allowed', res.data.editOrder.error || "You can't make this change.");
@@ -108,7 +129,7 @@ function OrderDetail() {
         variables: { input: { id: order.id } },
       });
       if (res.data.takeOrder.ok) {
-        success('Order claimed', 'You are now the driver for this order.');
+        success('Order claimed', 'You are now the assigned driver. Head to the restaurant to pick up.');
         refetch();
       } else {
         const { title, description } = claimFailureMessage(res.data.takeOrder.error);
@@ -147,7 +168,7 @@ function OrderDetail() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <Button
             variant="outline"
             size="sm"
@@ -155,8 +176,17 @@ function OrderDetail() {
             className="gap-1.5 glass-pill"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Refresh status</span>
+            <span>Refresh</span>
           </Button>
+          <a
+            href={complaintPageUrl(order.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-bold text-brand-700 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/20 transition-all hover:scale-102"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-brand-500" />
+            <span>AI Support</span>
+          </a>
           <OrderStatusBadge status={order.status} />
         </div>
       </div>
@@ -286,6 +316,33 @@ function OrderDetail() {
         )}
       </div>
 
+      {/* AI Dispute & Settlement Entrypoint */}
+      <div className="glass-card rounded-3xl p-5 sm:p-6 border border-white/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_10px_30px_-5px_rgba(15,23,42,0.04)]">
+        <div className="flex items-start gap-3.5">
+          <div className="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 flex items-center justify-center shrink-0 mt-0.5">
+            <Sparkles className="w-5 h-5 text-brand-500" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-900">Need help or missing an item?</h3>
+              <span className="text-[10px] font-bold text-brand-600 bg-brand-500/10 border border-brand-500/20 px-2.5 py-0.5 rounded-full">AI Settlement</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              File a claim with FairSettle AI. It proposes a refund and who pays; a person reviews it before PayPal refunds you.
+            </p>
+          </div>
+        </div>
+        <a
+          href={complaintPageUrl(order.id)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold text-white bg-gradient-to-r from-brand-500 to-amber-500 hover:from-brand-600 hover:to-amber-600 shadow-md shadow-brand-500/20 transition-all shrink-0"
+        >
+          <span>File AI Dispute</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </a>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Driver Card if assigned */}
         <div className="glass-card rounded-3xl p-6 flex flex-col justify-between gap-4 border border-white/90">
@@ -361,18 +418,30 @@ function OrderDetail() {
 
         <div className="divide-y divide-slate-200/50">
           {order.items?.map((item) => (
-            <div key={item.id} className="py-3.5 flex justify-between items-start gap-3">
-              <div>
-                <p className="text-sm font-bold text-slate-900">
-                  {item.dish?.name || 'Dish'}
-                </p>
-                {item.options && item.options.length > 0 && (
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {item.options
-                      .map((o) => `${o.name}: ${o.choice || 'Selected'}`)
-                      .join(', ')}
+            <div key={item.id} className="py-3.5 flex justify-between items-center gap-3">
+              <div className="flex items-center gap-3.5">
+                <div className="relative w-12 h-12 rounded-2xl overflow-hidden shrink-0 bg-slate-100 border border-white/90 shadow-sm">
+                  <SafeImage
+                    src={getDishPhoto(item.dish)}
+                    fallback={DEFAULT_DISH_PHOTO}
+                    alt={item.dish?.name || 'Dish'}
+                    fill
+                    className="object-cover"
+                    sizes="48px"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-900">
+                    {item.dish?.name || 'Dish'}
                   </p>
-                )}
+                  {item.options && item.options.length > 0 && (
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {item.options
+                        .map((o) => `${o.name}: ${o.choice || 'Selected'}`)
+                        .join(', ')}
+                    </p>
+                  )}
+                </div>
               </div>
               <span className="text-sm font-bold text-slate-900">
                 {formatCents(item.dish?.priceCents)}

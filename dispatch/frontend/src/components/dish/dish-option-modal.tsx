@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { SafeImage } from '../ui/safe-image';
-import { DEFAULT_DISH_PHOTO } from '@/lib/image-helper';
+import { DEFAULT_DISH_PHOTO, getDishPhoto } from '@/lib/image-helper';
 import { Plus, Minus, Check } from 'lucide-react';
 import { Dish, DishOption } from '@/lib/types';
 import { formatCents } from '@/lib/currency';
@@ -76,19 +76,17 @@ export function DishOptionModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} maxWidth="md">
       <div className="flex flex-col gap-5">
-        {/* Photo if present */}
-        {dish.photo && (
-          <div className="relative w-full h-48 rounded-2xl overflow-hidden -mt-2">
-            <SafeImage
-              src={dish.photo}
-              fallback={DEFAULT_DISH_PHOTO}
-              alt={dish.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 500px"
-            />
-          </div>
-        )}
+        {/* Photo header */}
+        <div className="relative w-full h-48 rounded-2xl overflow-hidden -mt-2 bg-slate-100">
+          <SafeImage
+            src={getDishPhoto(dish)}
+            fallback={DEFAULT_DISH_PHOTO}
+            alt={dish.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 500px"
+          />
+        </div>
 
         <div>
           <div className="flex items-baseline justify-between gap-2">

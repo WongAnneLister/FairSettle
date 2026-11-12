@@ -6,7 +6,7 @@ import { Dish } from '@/lib/types';
 import { formatCents } from '@/lib/currency';
 import { useCart } from '@/lib/cart-context';
 import { SafeImage } from '@/components/ui/safe-image';
-import { DEFAULT_DISH_PHOTO } from '@/lib/image-helper';
+import { DEFAULT_DISH_PHOTO, getDishPhoto } from '@/lib/image-helper';
 
 interface DishCardProps {
   dish: Dish;
@@ -72,18 +72,16 @@ export function DishCard({
         </div>
       </div>
 
-      {dish.photo && (
-        <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 rounded-2xl overflow-hidden bg-slate-100 border border-white/90 shadow-inner">
-          <SafeImage
-            src={dish.photo}
-            fallback={DEFAULT_DISH_PHOTO}
-            alt={dish.name}
-            fill
-            className="object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
-            sizes="120px"
-          />
-        </div>
-      )}
+      <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 rounded-2xl overflow-hidden bg-slate-100 border border-white/90 shadow-inner">
+        <SafeImage
+          src={getDishPhoto(dish)}
+          fallback={DEFAULT_DISH_PHOTO}
+          alt={dish.name}
+          fill
+          className="object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
+          sizes="120px"
+        />
+      </div>
     </div>
   );
 }
