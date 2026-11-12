@@ -2,6 +2,8 @@
 
 An AI agent decides how much to refund a food-delivery customer and who pays for it — the restaurant, the driver or the platform — and a double-entry ledger moves the money on PayPal.
 
+![FairSettle: fair disputes, settled on the books. An AI referee for delivery disputes.](docs/media/banner.webp)
+
 Built for the PayPal AI Hackathon (2026); sandbox only.
 
 ## Demo
