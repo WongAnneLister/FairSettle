@@ -10,7 +10,7 @@ os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
 import gradio as gr
 import httpx
 
-COMPLAINT_TYPES = ("late_delivery", "missing_item", "wrong_item", "quality", "other")
+COMPLAINT_TYPES = ("late_delivery", "missing_item", "wrong_item", "quality", "food_safety", "other")
 FINAL = frozenset({"rejected", "declined", "escalated", "refunded", "refund_failed"})
 SUBMIT_TIMEOUT_S = 660.0
 SENDING = "Sending your complaint. This can take a few minutes."

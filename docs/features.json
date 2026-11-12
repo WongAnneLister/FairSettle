@@ -912,8 +912,9 @@
       "depends_on": [
         "F28"
       ],
-      "state": "not_started",
-      "evidence": null
+      "state": "active",
+      "evidence": null,
+      "started_at": "2026-11-12T11:09:56+08:00"
     }
   ]
 }

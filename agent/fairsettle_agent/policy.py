@@ -71,7 +71,7 @@ def reason_cap_cents(decision: RefundDecision, evidence: Evidence, config: Polic
         )
     if decision.reason_code == "quality":
         return (evidence.order.total_cents or 0) * config.quality_cap_basis_points // 10000
-    if decision.reason_code == "delivery_failed":
+    if decision.reason_code in ("delivery_failed", "food_safety"):
         return evidence.order.total_cents or 0
     return 0
 
@@ -118,7 +118,7 @@ def check_evidence_refs(decision: RefundDecision, evidence: Evidence) -> Violati
 
 def check_not_delivered(decision: RefundDecision, evidence: Evidence) -> Violation | None:
     if (
-        decision.reason_code in ("late_delivery", "quality")
+        decision.reason_code in ("late_delivery", "quality", "food_safety")
         and evidence.order.status != OrderStatus.DELIVERED
     ):
         return Violation(

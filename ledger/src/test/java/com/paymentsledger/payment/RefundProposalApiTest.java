@@ -95,6 +95,26 @@ class RefundProposalApiTest extends PayPalCaptureFixture {
     }
 
     @Test
+    void foodSafetyReasonIsStored() {
+        paid();
+        var result = proposals.create(
+                agent, key("food-safety"), body("food-safety", 450, 10000, 0, 0).put("reasonCode", "FOOD_SAFETY"));
+        var b = result.body();
+        assertThat(b.path("status").asText()).isEqualTo("PENDING_REVIEW");
+        assertThat(b.path("reasonCode").asText()).isEqualTo("FOOD_SAFETY");
+        assertThat(jdbc.queryForObject(
+                        "SELECT reason_code FROM platform.refund_proposal WHERE id=?", String.class, proposalId(b)))
+                .isEqualTo("FOOD_SAFETY");
+    }
+
+    @Test
+    void unknownReasonIsRejected() {
+        paid();
+        invalid("contamination", b -> b.put("reasonCode", "CONTAMINATION"), ErrorCode.VALIDATION_ERROR);
+        assertThat(count("refund_proposal")).isZero();
+    }
+
+    @Test
     void sameKeySameBodyReplays() {
         paid();
         var b = body("replay", 450, 10000, 0, 0);

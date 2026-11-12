@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 Party = Literal["restaurant", "driver", "platform"]
 DecisionKind = Literal["full_refund", "partial_refund", "reject", "escalate"]
 ReasonCode = Literal[
-    "late_delivery", "missing_item", "wrong_item", "quality", "delivery_failed", "other",
+    "late_delivery", "missing_item", "wrong_item", "quality", "food_safety", "delivery_failed", "other",
 ]
 
 

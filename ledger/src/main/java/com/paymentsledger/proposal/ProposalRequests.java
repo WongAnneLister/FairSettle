@@ -88,7 +88,14 @@ public final class ProposalRequests {
         require(currency.matches("[A-Z]{3}"), message);
         String reason = text(body, "reasonCode", 1, 32, false, message);
         require(
-                Set.of("LATE_DELIVERY", "MISSING_ITEM", "WRONG_ITEM", "QUALITY", "DELIVERY_FAILED", "OTHER")
+                Set.of(
+                                "LATE_DELIVERY",
+                                "MISSING_ITEM",
+                                "WRONG_ITEM",
+                                "QUALITY",
+                                "FOOD_SAFETY",
+                                "DELIVERY_FAILED",
+                                "OTHER")
                         .contains(reason),
                 message);
         var liability = body.get("liability");

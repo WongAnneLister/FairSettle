@@ -154,6 +154,11 @@ class LedgerContractTest(unittest.TestCase):
         self.assertEqual(set(share["required"]), {"party", "basisPoints"})
         self.assertFalse(share["additionalProperties"])
 
+    def test_reason_codes(self):
+        self.assertEqual(self.schemas["RefundReasonCode"]["enum"], [
+            "LATE_DELIVERY", "MISSING_ITEM", "WRONG_ITEM", "QUALITY", "FOOD_SAFETY", "DELIVERY_FAILED", "OTHER",
+        ])
+
     def test_allocation_example_follows_the_rule(self):
         example = self.schemas["LiabilityAllocation"]["example"]
         self.assertEqual(example["amountMinor"], 1250)

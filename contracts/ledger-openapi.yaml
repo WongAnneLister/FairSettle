@@ -1107,6 +1107,7 @@ components:
       - MISSING_ITEM
       - WRONG_ITEM
       - QUALITY
+      - FOOD_SAFETY
       - DELIVERY_FAILED
       - OTHER
     ProposalDecision:

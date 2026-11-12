@@ -216,7 +216,7 @@ class ProposalRequest(Outgoing):
     decision: Literal["FULL_REFUND", "PARTIAL_REFUND"]
     amount_minor: Annotated[StrictInt, Field(ge=1)]
     currency: Currency
-    reason_code: Literal["LATE_DELIVERY", "MISSING_ITEM", "WRONG_ITEM", "QUALITY", "DELIVERY_FAILED", "OTHER"]
+    reason_code: Literal["LATE_DELIVERY", "MISSING_ITEM", "WRONG_ITEM", "QUALITY", "FOOD_SAFETY", "DELIVERY_FAILED", "OTHER"]
     liability: tuple[ProposalShare, ProposalShare, ProposalShare]
     explanation: Annotated[str, StringConstraints(min_length=1, max_length=2000)]
     evidence_refs: Annotated[
