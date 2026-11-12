@@ -920,6 +920,23 @@
         "log_sha256": "a6cfc328cfe1adc375e2a92bb28c13284fd6efcfee2be4e0a3cd4feda561e4be"
       },
       "started_at": "2026-11-12T11:09:56+08:00"
+    },
+    {
+      "id": "F40",
+      "title": "Food-safety complaints are decided on the customer's report",
+      "service": "agent",
+      "milestone": "M3",
+      "priority": "P0",
+      "behavior": "A food_safety complaint on a delivered order is decided on the customer's own report. The prompt tells the model that no photo, inspection or chat reaches it, so their absence is no reason to escalate, and that the report supports the complaint unless the order, timeline or payment contradicts it. `python -m evals.food_safety --runs 3` runs one food-safety fixture against the real model and passes only if every run proposes a full refund of the order total charged 10000 bp to the restaurant. The ten PRD scenarios and docs/eval-results.md are unchanged.",
+      "verification": {
+        "kind": "command",
+        "command": "cd agent && PYTHONUTF8=1 uv run --frozen python -m pytest -q tests/test_food_safety_eval.py tests/test_food_safety.py tests/test_evals.py::test_prompt_and_policy_carry_the_prd_defaults && uv run --frozen python -m evals.food_safety --runs 3"
+      },
+      "depends_on": [
+        "F39"
+      ],
+      "state": "not_started",
+      "evidence": null
     }
   ]
 }
