@@ -377,7 +377,7 @@ def render_timeline_html(status: str) -> str:
         ("1. Order Intake", "Claim & context", s1),
         ("2. Telemetry Audit", "Fulfillment & ledger", s2),
         ("3. AI Fault Attribution", "Liability split & safety", s3),
-        ("4. Ledger Settlement", "Ops review & PayPal", s4),
+        ("4. Ledger Settlement", "Ops review & refund", s4),
     ]
 
     items = []
@@ -461,7 +461,7 @@ def build_ui(config: UiConfig, client_factory: Callable[[], httpx.AsyncClient]) 
             <span>⚖️ FairSettle Dispute Center</span>
             <span class="fs-hero-badge">AI Settlement · Live</span>
           </div>
-          <p class="fs-hero-desc">AI proposes the refund and liability split; a person approves it before the ledger refunds on PayPal.</p>
+          <p class="fs-hero-desc">AI proposes the refund and liability split; a person approves it before the ledger refunds the payment.</p>
         </div>
         """)
 
