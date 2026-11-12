@@ -1356,3 +1356,31 @@ Next
 Pitfalls found
 - `verify` failed first with "release version 21 not supported": the shell default is JDK 17. Set `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home` for the command. Docker Desktop must also be running for the ledger test.
 - `verify` refuses a dirty tree; uncommitted UI work was stashed for the run and restored afterwards.
+
+## 2026-11-12 · session 31 (continued) · F40
+
+### State on 2026-11-12
+
+- passing 37/40
+- recently passing: F36 (088c9e0), F37 (85ea521), F38 (033c17c), F39 (36d0d79), F40 (608d120)
+- ready next: F31 Demo video, F29 Deployed
+
+Done this session
+- Demo rehearsal on the live stack: Malatang House (restaurant 7, owner@demo.com) with Spicy Malatang Bowl 1680 and Sour Plum Drink 350. Orders 16 and 17 (2030 each, new rehearsal customers) paid, delivered, and their `food_safety` complaints escalated by the model itself (no policy violation): "no photo or inspection confirms contamination". No refund or liability was posted for either.
+- commit 0ea9f6c: F40 plan (food-safety complaints decided on the customer's report); the user added the F40 entry to `docs/features.json`.
+- commit 2365a74: F40 work commit, implemented by Claude Code at the user's request (not Codex). One prompt line, `evals/food_safety.py` (one fixture, real model, writes no file), `tests/test_food_safety_eval.py`.
+- commit 608d120: `agent: keep PayPal out of the complaint page copy (F31), review fix`. The F31 restyle (53a14b0) put "PayPal" in `ui.py`, which `test_execute::test_ledger_is_the_only_money_path` forbids; the full agent suite was not run before that commit.
+- `verify F40` at 608d120: unit tests green; real model (deepseek-v4-pro) 3/3 `propose full_refund food_safety 1500 restaurant`.
+
+Not done / left half-way
+- No fresh-session review ran before `verify`; the plan's Deviations section is still empty.
+- `docs/eval-results.md` was not rerun after the F39/F40 prompt lines; rerun F27 before publishing the evaluation line again.
+- `quality` complaints rest on the customer's report too and may escalate the same way (out of scope for F40).
+
+Next
+- Rebuild the live agent, rehearse the food-safety flow again, then record F31.
+
+Pitfalls found
+- Merchant notifications stuck `HELD` / `INVALID_DESTINATION` again, this time from Clash Verge's TUN fake-IP DNS (Shadowrocket was off). Fix: `+.ngrok-free.dev` in Clash Verge's fake-ip-filter (or TUN off), restart the core; held tasks deliver within 60 s.
+- A complaint text that mentions a photo pushes the model to escalate: the agent never receives photos.
+- Run the full agent suite before committing agent changes, not only the touched test file.

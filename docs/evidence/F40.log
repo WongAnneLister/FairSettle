@@ -1,0 +1,20 @@
+feature: F40
+kind: command
+command: cd agent && PYTHONUTF8=1 uv run --frozen python -m pytest -q tests/test_food_safety_eval.py tests/test_food_safety.py tests/test_evals.py::test_prompt_and_policy_carry_the_prd_defaults && uv run --frozen python -m evals.food_safety --runs 3
+commit: 608d12030e2b69a00680d78b4691101d9e62d36b
+started_at: 2026-11-12T21:47:26+09:00
+exit_code: 0
+----
+.................                                                        [100%]
+=============================== warnings summary ===============================
+tests/test_food_safety_eval.py::test_passes_when_every_run_proposes_the_default
+  /Users/anne_lister/proj/FairSettle/agent/.venv/lib/python3.11/site-packages/pydantic/_internal/_generate_schema.py:1463: UserWarning: Item 'summary' on TypedDict class 'ChatCompletionReasoningItem' is using the `ReadOnly` qualifier. Pydantic will not protect items from any mutation on dictionary instances.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+17 passed, 1 warning in 8.08s
+expected: propose full_refund food_safety 1500 restaurant
+run 1: propose full_refund food_safety 1500 restaurant
+run 2: propose full_refund food_safety 1500 restaurant
+run 3: propose full_refund food_safety 1500 restaurant
+correct: 3/3

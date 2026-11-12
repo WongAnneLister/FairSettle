@@ -935,8 +935,13 @@
       "depends_on": [
         "F39"
       ],
-      "state": "active",
-      "evidence": null,
+      "state": "passing",
+      "evidence": {
+        "commit": "608d12030e2b69a00680d78b4691101d9e62d36b",
+        "verified_at": "2026-11-12T21:50:02+09:00",
+        "log": "docs/evidence/F40.log",
+        "log_sha256": "c9fec543f88f72cabaa32f4fa298eec0dab6cdd2ebc0ef6e4b10c510d0e5d1cd"
+      },
       "started_at": "2026-11-12T21:39:01+09:00"
     }
   ]
