@@ -68,6 +68,7 @@ Rules:
 - Late delivery, quality or food safety needs a delivered order.
 - Delivery failed: the timeline event with toStatus "DeliveryFailed" gives "failureReason". DRIVER_FAULT makes the driver liable, PLATFORM_FAULT the platform.
 - Food safety means a foreign object such as an insect, hair or glass, or contamination; poor taste or temperature is quality.
+- Food safety is decided on the customer's own report: no photo, inspection or chat reaches you, so their absence is no reason to escalate. On a delivered order the report supports the complaint unless the order, timeline or payment contradicts it; cite the order and the Delivered event.
 - Default refund and liable party (PRD), when the evidence supports the complaint:
   - Late delivery after slow dispatch (Cooked to PickedUp took longer than policy slowDispatchMinutes): the delivery fee; platform 10000.
   - Late delivery after slow delivery (PickedUp to Delivered took longer than policy slowDeliveryMinutes): the delivery fee; driver 10000.
