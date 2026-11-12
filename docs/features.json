@@ -897,6 +897,23 @@
         "log_sha256": "9f5fc98d34883b006df7bc55da3bf7fc56c857e51a00120147878f2619eca01b"
       },
       "started_at": "2026-11-05T22:37:08+09:00"
+    },
+    {
+      "id": "F39",
+      "title": "Food-safety complaints refund the order total",
+      "service": "agent",
+      "milestone": "M3",
+      "priority": "P0",
+      "behavior": "A complaint can be filed as food_safety (a foreign object such as an insect, or contamination). The agent may propose up to the order total for it, only for a delivered order, and by default charges the restaurant 10000 bp. The ledger accepts and stores the FOOD_SAFETY reason code; every other reason code and cap is unchanged.",
+      "verification": {
+        "kind": "command",
+        "command": "cd agent && PYTHONUTF8=1 uv run --frozen python -m pytest -q tests/test_food_safety.py tests/test_policy.py tests/test_evals.py::test_prompt_and_policy_carry_the_prd_defaults ../scripts/tests/test_ledger_contract.py && cd ../ledger && ./mvnw -q -Dtest='RefundProposalApiTest' test"
+      },
+      "depends_on": [
+        "F28"
+      ],
+      "state": "not_started",
+      "evidence": null
     }
   ]
 }
