@@ -1,0 +1,61 @@
+# Public deploy overlay (F29); layer it on docker-compose.yml and docker-compose.live.yml:
+#   docker compose --env-file .env.live --env-file deploy/.env.deploy \
+#     -f docker-compose.yml -f docker-compose.live.yml -f deploy/docker-compose.deploy.yml up -d --build --wait
+# Caddy is the only service on public ports (80/443); everything else binds to 127.0.0.1 because
+# Docker-published ports bypass the host firewall. Hosts (one per service, first-level so a
+# Cloudflare proxy's certificate covers them) and basic auth come from deploy/.env.deploy.
+services:
+  ledger-api:
+    ports: !override
+      - "127.0.0.1:8080:8080"
+    environment:
+      # PayPal webhooks: https://<OPS_HOST>/webhooks/paypal, signature-verified against this webhook id.
+      PAYPAL_WEBHOOK_ENABLED: "true"
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:?PAYPAL_WEBHOOK_ID is required in deploy/.env.deploy}
+  ledger-worker:
+    ports: !override
+      - "127.0.0.1:8081:8081"
+  dispatch:
+    ports: !override
+      - "127.0.0.1:4000:4000"
+    environment:
+      STOREFRONT_URL: https://${SHOP_HOST:?SHOP_HOST is required in deploy/.env.deploy}
+  storefront:
+    build:
+      args:
+        NEXT_PUBLIC_COMPLAINT_PAGE_URL: https://${CLAIM_HOST:?CLAIM_HOST is required in deploy/.env.deploy}/
+        NEXT_PUBLIC_WS_GRAPHQL_ENDPOINT: wss://${API_HOST:?API_HOST is required in deploy/.env.deploy}/graphql
+  complaint-ui:
+    environment:
+      TRACE_BASE_URL: https://${LF_HOST:?LF_HOST is required in deploy/.env.deploy}/project/fairsettle-local/traces/
+  langfuse-web:
+    environment:
+      NEXTAUTH_URL: https://${LF_HOST:?LF_HOST is required in deploy/.env.deploy}
+  langfuse-worker:
+    environment:
+      NEXTAUTH_URL: https://${LF_HOST:?LF_HOST is required in deploy/.env.deploy}
+  caddy:
+    image: caddy:2.8.4
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SHOP_HOST: ${SHOP_HOST:?SHOP_HOST is required in deploy/.env.deploy}
+      API_HOST: ${API_HOST:?API_HOST is required in deploy/.env.deploy}
+      CLAIM_HOST: ${CLAIM_HOST:?CLAIM_HOST is required in deploy/.env.deploy}
+      OPS_HOST: ${OPS_HOST:?OPS_HOST is required in deploy/.env.deploy}
+      LF_HOST: ${LF_HOST:?LF_HOST is required in deploy/.env.deploy}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:?BASIC_AUTH_USER is required in deploy/.env.deploy}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?BASIC_AUTH_HASH is required in deploy/.env.deploy}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      storefront:
+        condition: service_healthy
+
+volumes:
+  caddy-data:
+  caddy-config:

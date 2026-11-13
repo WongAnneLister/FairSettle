@@ -685,8 +685,9 @@
         "F24",
         "F34"
       ],
-      "state": "not_started",
-      "evidence": null
+      "state": "active",
+      "evidence": null,
+      "started_at": "2026-11-13T10:12:31+09:00"
     },
     {
       "id": "F30",

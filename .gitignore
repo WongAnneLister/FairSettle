@@ -2,3 +2,7 @@
 .env
 .env.*
 !.env.example
+
+# Deploy secrets (F29)
+deploy/.env.deploy
+deploy/basic-auth.txt

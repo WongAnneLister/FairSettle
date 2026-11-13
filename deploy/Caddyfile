@@ -1,0 +1,39 @@
+# Public routes (F29). TLS certificates are issued automatically for each host.
+(protected) {
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+}
+
+# Storefront: public.
+{$SHOP_HOST} {
+	reverse_proxy storefront:3001
+}
+
+# Dispatch: PayPal return/cancel redirects, ledger notifications, GraphQL websocket. Public (each endpoint checks its own signature or token).
+{$API_HOST} {
+	reverse_proxy dispatch:4000
+}
+
+# Complaint page: public.
+{$CLAIM_HOST} {
+	reverse_proxy complaint-ui:7860
+}
+
+# Ledger: review page and ops console behind basic auth; PayPal webhooks stay open (they are signature-verified).
+{$OPS_HOST} {
+	@paypal path /webhooks/paypal
+	handle @paypal {
+		reverse_proxy ledger-api:8080
+	}
+	handle {
+		import protected
+		reverse_proxy ledger-api:8080
+	}
+}
+
+# Langfuse: basic auth in front of its own sign-in.
+{$LF_HOST} {
+	import protected
+	reverse_proxy langfuse-web:3000
+}
