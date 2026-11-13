@@ -12,7 +12,9 @@ Built for the PayPal AI Hackathon (2026); sandbox only.
 
 A customer pays with PayPal, complains about a missing item, the agent proposes a refund charged to the restaurant, a reviewer approves, and the refund lands in PayPal and the ledger.
 
-Video: coming with F31.
+Video: https://youtu.be/g9w2s7BuSjc
+
+Live demo: https://fairsettle.michikatsu.top (PayPal sandbox only; use the one-click demo logins).
 
 ## How it works
 
@@ -64,10 +66,10 @@ The ledger, dispatch and agent each have their own PostgreSQL (the agent's runs 
 
 ### 1. Core stack (no credentials)
 
-You need Git, Docker with Compose v2 and at least 4 GB of memory for Docker, and ports 8080, 8081 and 4000 free. The clone URL will be filled in when the repository goes public.
+You need Git, Docker with Compose v2 and at least 4 GB of memory for Docker, and ports 8080, 8081 and 4000 free.
 
 ```bash
-git clone https://github.com/<owner>/FairSettle.git
+git clone https://github.com/WongAnneLister/FairSettle.git
 ```
 
 ```bash
@@ -221,10 +223,10 @@ Service guides: [ledger/README.md](ledger/README.md), [dispatch/README.md](dispa
 ## Limitations
 
 - Sandbox only; never run it with live PayPal credentials.
-- Not deployed; everything runs locally.
-- The live overlay keeps PayPal webhooks off. Payments are captured when read, and refunds post from PayPal's synchronous response.
-- The agent API and the complaint page have no authentication. They bind to 127.0.0.1 and must not be exposed.
-- The storefront's quick demo login is for local demos only.
+- The public demo runs the live stack with the `deploy/` overlay (F29): Caddy behind Cloudflare, the review page and Langfuse behind basic auth, PayPal webhooks on. Its network path to the PayPal API sometimes stalls, so captures and refunds there can take minutes to confirm.
+- The local live overlay keeps PayPal webhooks off. Payments are captured when read, and refunds post from PayPal's synchronous response.
+- The agent API and the complaint page have no authentication. Locally they bind to 127.0.0.1; on the public demo the agent API stays internal and the complaint page is public.
+- The storefront's quick demo logins use fixed passwords; the public demo keeps them because it is sandbox only.
 - See [known issues](docs/known-issues.md).
 
 ## License
